@@ -10,6 +10,7 @@ func NewRootCmd() *cobra.Command {
 		Long:  "Sigil turns declarative YAML configs into framework-specific UI code.",
 	}
 	cmd.AddCommand(NewInitCmd())
+	cmd.AddCommand(NewNewCmd())
 	cmd.AddCommand(NewValidateCmd())
 	return cmd
 }
