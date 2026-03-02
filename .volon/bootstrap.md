@@ -16,7 +16,7 @@ generation + preview + export/import. Dogfood configs created for Sigil's own GU
 ## What exists
 
 - Full architecture docs in `docs/` (8 files)
-- Sprint guides in `artifacts/plan/sprints/` (Sprint 0–5, 34 tasks total)
+- Sprint guides in `artifacts/plan/sprints/` (Sprint 0–8, 47 tasks total)
 - Go module with Cobra CLI and yaml.v3
 - Core types: Page, Component, Action, ProjectConfig, etc.
 - YAML parser, defaults, writer, templates
@@ -46,11 +46,9 @@ generation + preview + export/import. Dogfood configs created for Sigil's own GU
 
 ## Next action
 
-**MVP complete.** All 6 sprints done. Next steps are post-MVP:
-- GUI implementation using the dogfood Sigil configs
-- React/shadcn renderer (priority 2)
-- Nanite integration for config sharing
-- Plugin system for custom renderers
+**Start Sprint 6** — "Live Dev Server + Watch Mode"
+
+Read `artifacts/plan/sprints/sprint-6.md` for the full sprint guide.
 
 ## Sprint roadmap
 
@@ -62,6 +60,9 @@ generation + preview + export/import. Dogfood configs created for Sigil's own GU
 | 3 | Go/Templ Renderer | **done** | 4 |
 | 4 | MCP Server + Agent Integration | **done** | 3 |
 | 5 | Preview + Polish + Dogfood | **done** | 3 |
+| 6 | Live Dev Server + Watch Mode | **next** | 3 |
+| 7 | React/shadcn Renderer | todo | 4 |
+| 8 | Config Diffing + Migration + Polish | todo | 3 |
 
 ## Decision log
 
@@ -75,3 +76,4 @@ generation + preview + export/import. Dogfood configs created for Sigil's own GU
 - 2026-03-02: Sprint 3 complete. Go/Templ renderer with page generation, shared components, theme CSS, handler stubs.
 - 2026-03-02: Sprint 4 complete. MCP server with JSON-RPC 2.0. 9 tools, 7 resources, 2 prompts. Full agent workflow tested.
 - 2026-03-02: Sprint 5 complete. Preview, export/import, CLI polish, 6 dogfood page configs. MVP done.
+- 2026-03-02: Phase 2 planned: Sprint 6 (live dev server), Sprint 7 (React renderer), Sprint 8 (diffing + polish).
