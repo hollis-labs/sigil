@@ -122,3 +122,29 @@ type PageMeta struct {
 type ComponentRegistry interface {
 	Has(componentType string) bool
 }
+
+// ProjectConfig represents the .sigil/sigil.yaml project configuration.
+type ProjectConfig struct {
+	Version  string `yaml:"version" json:"version"`
+	Name     string `yaml:"name" json:"name"`
+	Defaults struct {
+		Theme    string `yaml:"theme" json:"theme"`
+		Renderer string `yaml:"renderer" json:"renderer"`
+		Output   string `yaml:"output" json:"output"`
+	} `yaml:"defaults" json:"defaults"`
+	Components struct {
+		Builtin   bool   `yaml:"builtin" json:"builtin"`
+		CustomDir string `yaml:"custom_dir" json:"custom_dir"`
+	} `yaml:"components" json:"components"`
+	DataSources struct {
+		Dir string `yaml:"dir" json:"dir"`
+	} `yaml:"datasources" json:"datasources"`
+	Themes struct {
+		Dir string `yaml:"dir" json:"dir"`
+	} `yaml:"themes" json:"themes"`
+	Generation struct {
+		Clean     bool   `yaml:"clean" json:"clean"`
+		GoPackage string `yaml:"go_package,omitempty" json:"go_package,omitempty"`
+		GoModule  string `yaml:"go_module,omitempty" json:"go_module,omitempty"`
+	} `yaml:"generation" json:"generation"`
+}
