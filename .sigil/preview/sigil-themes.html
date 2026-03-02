@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theme Editor — Sigil Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --sigil-accent: 79 70 229;
+      --sigil-accent-hover: 67 56 202;
+      --sigil-background: 9 9 11;
+      --sigil-border: 63 63 70;
+      --sigil-danger: 239 68 68;
+      --sigil-danger-hover: 220 38 38;
+      --sigil-info: 59 130 246;
+      --sigil-success: 16 185 129;
+      --sigil-surface: 24 24 27;
+      --sigil-surface-2: 39 39 42;
+      --sigil-text: 244 244 245;
+      --sigil-text-muted: 161 161 170;
+      --sigil-warning: 245 158 11;
+      --sigil-font-mono: JetBrains Mono, monospace;
+      --sigil-font-sans: Inter, system-ui, sans-serif;
+      --sigil-full: 9999px;
+      --sigil-lg: 0.5rem;
+      --sigil-md: 0.375rem;
+      --sigil-sm: 0.125rem;
+    }
+
+    .sigil-btn {
+      font-size: 0.875rem; padding: 0.5rem 1rem; cursor: pointer;
+      transition: opacity 150ms; border: none; border-radius: var(--sigil-radius-md);
+      display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .sigil-btn-primary { background: rgb(var(--sigil-accent)); color: white; }
+    .sigil-btn-primary:hover { opacity: 0.9; }
+    .sigil-btn-secondary { background: rgb(var(--sigil-surface)); color: rgb(var(--sigil-text)); border: 1px solid rgb(var(--sigil-border)); }
+    .sigil-btn-destructive { background: #ef4444; color: white; }
+    .sigil-btn-ghost { background: transparent; color: rgb(var(--sigil-text)); }
+    .sigil-btn-ghost:hover { background: rgb(var(--sigil-surface)); }
+    .sigil-badge { padding: 0.125rem 0.5rem; border-radius: var(--sigil-radius-full, 9999px); font-size: 0.75rem; font-weight: 500; }
+    .sigil-badge-default { background: rgb(var(--sigil-surface)); color: rgb(var(--sigil-text)); }
+    .sigil-badge-success { background: #dcfce7; color: #166534; }
+    .sigil-badge-warning { background: #fef9c3; color: #854d0e; }
+    .sigil-badge-error { background: #fee2e2; color: #991b1b; }
+    .sigil-badge-info { background: #dbeafe; color: #1e40af; }
+    .sigil-input {
+      padding: 0.5rem 0.75rem; border-radius: var(--sigil-radius-md);
+      border: 1px solid rgb(var(--sigil-border)); background: rgb(var(--sigil-surface));
+      color: rgb(var(--sigil-text)); font-size: 0.875rem; outline: none;
+    }
+    .sigil-input:focus { border-color: rgb(var(--sigil-accent)); box-shadow: 0 0 0 2px rgba(var(--sigil-accent), 0.2); }
+    .sigil-label { font-size: 0.875rem; font-weight: 500; color: rgb(var(--sigil-text)); }
+    .sigil-separator { border: none; border-top: 1px solid rgb(var(--sigil-border)); margin: 0.5rem 0; }
+    .sigil-form { max-width: 32rem; }
+    .sigil-data-table { width: 100%; }
+    .sigil-data-table table { width: 100%; border-collapse: collapse; }
+    .sigil-data-table th, .sigil-data-table td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid rgb(var(--sigil-border)); }
+    .sigil-data-table th { font-weight: 600; color: rgb(var(--sigil-text-muted)); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .sigil-data-table tbody tr:hover { background: rgb(var(--sigil-surface)); }
+    .sigil-alert { padding: 0.75rem 1rem; border-radius: var(--sigil-radius-md); font-size: 0.875rem; }
+    .sigil-alert-info { background: #dbeafe; color: #1e40af; }
+    .sigil-alert-warning { background: #fef9c3; color: #854d0e; }
+    .sigil-alert-error { background: #fee2e2; color: #991b1b; }
+    .sigil-alert-success { background: #dcfce7; color: #166534; }
+    .sigil-progress { width: 100%; accent-color: rgb(var(--sigil-accent)); }
+    .sigil-avatar { border-radius: var(--sigil-radius-full, 9999px); object-fit: cover; }
+    .sigil-avatar-sm { width: 2rem; height: 2rem; }
+    .sigil-avatar-md { width: 2.5rem; height: 2.5rem; }
+    .sigil-avatar-lg { width: 3rem; height: 3rem; }
+    .sigil-modal { background: rgb(var(--sigil-surface)); border-radius: var(--sigil-radius-lg); box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); overflow: hidden; }
+    .sigil-modal-header { padding: 1rem 1.5rem; border-bottom: 1px solid rgb(var(--sigil-border)); }
+    .sigil-modal-content { padding: 1.5rem; }
+    .sigil-sheet { background: rgb(var(--sigil-surface)); box-shadow: -4px 0 15px rgb(0 0 0 / 0.1); }
+    .sigil-sheet-header { padding: 1rem 1.5rem; border-bottom: 1px solid rgb(var(--sigil-border)); }
+    .sigil-sheet-content { padding: 1.5rem; }
+  </style>
+</head>
+<body class="bg-[rgb(var(--sigil-background))] text-[rgb(var(--sigil-text))] font-[var(--sigil-font-sans)] min-h-screen">
+  <div class="max-w-6xl mx-auto p-6">
+    <div class="flex flex-col gap-6 p-6">
+      <div class="flex flex-row gap-4 justify-between items-center">
+        <h1 class="text-2xl font-bold text-[rgb(var(--sigil-text))]">Themes</h1>
+        <button class="sigil-btn sigil-btn-primary"><span class="text-sm">+</span> New Theme</button>
+      </div>
+      <div class="flex flex-row gap-6">
+        <div class="sigil-data-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Extends</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Dashboard Overview</td>
+                <td>Primary dashboard view</td>
+                <td>Extends-1</td>
+              </tr>
+              <tr>
+                <td>User Management</td>
+                <td>User account management</td>
+                <td>Extends-2</td>
+              </tr>
+              <tr>
+                <td>Settings Panel</td>
+                <td>Application configuration</td>
+                <td>Extends-3</td>
+              </tr>
+              <tr>
+                <td>Report Builder</td>
+                <td>Custom report builder</td>
+                <td>Extends-4</td>
+              </tr>
+              <tr>
+                <td>Data Explorer</td>
+                <td>Data analysis tools</td>
+                <td>Extends-5</td>
+              </tr>
+              <tr>
+                <td>Theme Editor</td>
+                <td>Theme customization</td>
+                <td>Extends-6</td>
+              </tr>
+              <tr>
+                <td>Component Library</td>
+                <td>UI component browser</td>
+                <td>Extends-7</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex flex-col gap-4">
+          <h3 class="text-lg font-semibold text-[rgb(var(--sigil-text))]">Token Editor</h3>
+          <form class="sigil-form flex flex-col gap-4" onsubmit="event.preventDefault()">
+            <div class="flex flex-col gap-1">
+              <label class="sigil-label">Background</label>
+              <input type="text" name="background" class="sigil-input" placeholder="9 9 11"/>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="sigil-label">Surface</label>
+              <input type="text" name="surface" class="sigil-input" placeholder="24 24 27"/>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="sigil-label">Accent</label>
+              <input type="text" name="accent" class="sigil-input" placeholder="79 70 229"/>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="sigil-label">Text</label>
+              <input type="text" name="text-color" class="sigil-input" placeholder="244 244 245"/>
+            </div>
+            <button type="submit" class="sigil-btn sigil-btn-primary">Update Tokens</button>
+          </form>
+          <div class="flex flex-col gap-2">
+            <h4 class="text-base font-medium text-[rgb(var(--sigil-text))]">Live Preview</h4>
+            <button class="sigil-btn sigil-btn-primary">Sample Button</button>
+            <span class="sigil-badge sigil-badge-default"></span>
+            <input type="text" name="" class="sigil-input" placeholder="Sample input"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
