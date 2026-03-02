@@ -6,6 +6,7 @@ overlay: modal
 module: auth
 
 layout:
+  id: root
   type: rows
   props:
     gap: 6
