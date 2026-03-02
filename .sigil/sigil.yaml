@@ -1,0 +1,16 @@
+version: "1.0"
+name: sigil-gui
+defaults:
+  theme: default
+  renderer: go-templ
+  output: internal/ui/
+components:
+  builtin: true
+  custom_dir: .sigil/components
+datasources:
+  dir: .sigil/datasources
+themes:
+  dir: .sigil/themes
+generation:
+  clean: false
+  go_module: github.com/chrispian/sigil

@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/chrispian/sigil/internal/components"
 	"github.com/chrispian/sigil/internal/config"
@@ -14,9 +15,14 @@ func NewValidateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "validate [path]",
 		Short: "Validate Sigil configs",
-		Long:  "Validate Sigil YAML configs against component schemas.",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  runValidate,
+		Long: `Validate Sigil YAML configs against component schemas.
+
+Examples:
+  sigil validate                     Validate all pages in .sigil/pages/
+  sigil validate my-page.yaml        Validate a specific file
+  sigil validate --strict            Fail on warnings too`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: runValidate,
 	}
 	cmd.Flags().Bool("strict", false, "Fail on warnings too")
 	return cmd
@@ -43,12 +49,13 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	registry := components.NewDefaultRegistry()
+	allTypes := registry.Types()
 
 	hasErrors := false
 	for _, path := range paths {
 		page, err := config.ParseFile(path)
 		if err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "\u2717 %s \u2014 parse error: %v\n", path, err)
+			fmt.Fprintf(cmd.ErrOrStderr(), "%s %s — parse error: %v\n", red("\u2717"), path, err)
 			hasErrors = true
 			continue
 		}
@@ -56,24 +63,34 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		result := config.Validate(page, registry)
 
 		if result.Valid && len(result.Warnings) == 0 {
-			fmt.Fprintf(cmd.OutOrStdout(), "\u2713 %s \u2014 valid\n", path)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s %s — %s\n", green("\u2713"), path, green("valid"))
 			continue
 		}
 
 		if result.Valid && !strict {
-			fmt.Fprintf(cmd.OutOrStdout(), "\u2713 %s \u2014 valid (%d warning(s))\n", path, len(result.Warnings))
+			fmt.Fprintf(cmd.OutOrStdout(), "%s %s — %s (%d warning(s))\n", green("\u2713"), path, green("valid"), len(result.Warnings))
 		} else {
 			warnCount := len(result.Warnings)
 			errCount := len(result.Errors)
-			fmt.Fprintf(cmd.OutOrStdout(), "\u2717 %s \u2014 %d error(s), %d warning(s)\n", path, errCount, warnCount)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s %s — %s\n", red("\u2717"), path, red(fmt.Sprintf("%d error(s), %d warning(s)", errCount, warnCount)))
 			hasErrors = true
 		}
 
 		for _, e := range result.Errors {
-			fmt.Fprintf(cmd.OutOrStdout(), "  ERROR [%s]: %s\n", e.Path, e.Message)
+			msg := fmt.Sprintf("  %s [%s]: %s", red("ERROR"), e.Path, e.Message)
+			// Add "did you mean?" suggestions for unknown component types
+			if strings.Contains(e.Message, "unknown component type") {
+				typeName := extractQuoted(e.Message)
+				if typeName != "" {
+					if suggestion := SuggestComponentType(typeName, allTypes); suggestion != "" {
+						msg += yellow(fmt.Sprintf(" (did you mean %q?)", suggestion))
+					}
+				}
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), msg)
 		}
 		for _, w := range result.Warnings {
-			fmt.Fprintf(cmd.OutOrStdout(), "  WARN  [%s]: %s\n", w.Path, w.Message)
+			fmt.Fprintf(cmd.OutOrStdout(), "  %s [%s]: %s\n", yellow("WARN "), w.Path, w.Message)
 		}
 
 		if strict && len(result.Warnings) > 0 {
@@ -85,4 +102,17 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("validation failed")
 	}
 	return nil
+}
+
+// extractQuoted extracts the first quoted string from a message.
+func extractQuoted(s string) string {
+	start := strings.Index(s, `"`)
+	if start < 0 {
+		return ""
+	}
+	end := strings.Index(s[start+1:], `"`)
+	if end < 0 {
+		return ""
+	}
+	return s[start+1 : start+1+end]
 }

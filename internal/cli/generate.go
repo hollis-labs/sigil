@@ -14,8 +14,16 @@ func NewGenerateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "generate",
 		Short: "Generate framework-specific code from Sigil configs",
-		Long:  "Parse, validate, and render all page configs into the target framework's source files.",
-		RunE:  runGenerate,
+		Long: `Parse, validate, and render all page configs into the target framework's source files.
+
+Examples:
+  sigil generate                           Generate with defaults
+  sigil generate --target go-templ         Specify renderer target
+  sigil generate --output internal/ui      Set output directory
+  sigil generate --pages dashboard,users   Generate specific pages
+  sigil generate --dry-run                 List files without writing
+  sigil generate --clean                   Clean output dir first`,
+		RunE: runGenerate,
 	}
 	cmd.Flags().StringP("target", "t", "go-templ", "Renderer target (go-templ)")
 	cmd.Flags().StringP("output", "o", "", "Output directory (default: from sigil.yaml)")
@@ -66,7 +74,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	fmt.Fprintf(out, "Generated %d files from %d pages\n", len(result.Files), result.PageCount)
+	fmt.Fprintf(out, "%s Generated %d files from %d pages\n", green("\u2713"), len(result.Files), result.PageCount)
 	fmt.Fprintf(out, "Target: %s\n", target)
 	fmt.Fprintf(out, "Output: %s/\n\n", output)
 

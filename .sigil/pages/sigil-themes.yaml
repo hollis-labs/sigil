@@ -1,0 +1,140 @@
+sigil: "1.0"
+kind: page
+id: sigil-themes
+title: Theme Editor
+overlay: page
+module: sigil
+
+datasources:
+  - alias: SigilTheme
+    capabilities: [list, read, update, create]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - id: theme-title
+          type: heading
+          props:
+            level: 1
+            text: Themes
+        - id: new-theme-btn
+          type: button
+          props:
+            label: New Theme
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: modal
+              title: New Theme
+              fields:
+                - name: name
+                  label: Theme Name
+                  type: text
+                  required: true
+                  placeholder: my-theme
+                - name: description
+                  label: Description
+                  type: text
+                  placeholder: Describe this theme
+                - name: extends
+                  label: Extends
+                  type: select
+                  options:
+                    - value: ""
+                      label: None
+                    - value: default
+                      label: Default
+              submit:
+                datasource: SigilTheme
+                method: POST
+    - id: theme-content
+      type: columns
+      props:
+        gap: 6
+      children:
+        - id: theme-list
+          type: data-table
+          props:
+            datasource: SigilTheme
+            columns:
+              - label: Name
+                field: name
+                sortable: true
+              - label: Description
+                field: description
+              - label: Extends
+                field: extends
+        - id: token-editor
+          type: rows
+          props:
+            gap: 4
+          children:
+            - id: token-heading
+              type: heading
+              props:
+                level: 3
+                text: Token Editor
+            - id: color-form
+              type: form
+              props:
+                fields:
+                  - name: background
+                    label: Background
+                    type: text
+                    placeholder: "9 9 11"
+                  - name: surface
+                    label: Surface
+                    type: text
+                    placeholder: "24 24 27"
+                  - name: accent
+                    label: Accent
+                    type: text
+                    placeholder: "79 70 229"
+                  - name: text-color
+                    label: Text
+                    type: text
+                    placeholder: "244 244 245"
+                submit:
+                  label: Update Tokens
+                  datasource: SigilTheme
+                  method: PUT
+            - id: preview-section
+              type: rows
+              props:
+                gap: 2
+              children:
+                - id: preview-heading
+                  type: heading
+                  props:
+                    level: 4
+                    text: Live Preview
+                - id: preview-sample-btn
+                  type: button
+                  props:
+                    label: Sample Button
+                    variant: primary
+                - id: preview-sample-badge
+                  type: badge
+                  props:
+                    text: "sample"
+                    variant: default
+                - id: preview-sample-input
+                  type: input
+                  props:
+                    placeholder: Sample input
+
+shortcuts:
+  - key: Escape
+    action:
+      type: close

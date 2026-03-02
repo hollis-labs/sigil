@@ -1,0 +1,131 @@
+sigil: "1.0"
+kind: page
+id: sigil-components
+title: Component Browser
+overlay: page
+module: sigil
+
+datasources:
+  - alias: SigilComponent
+    capabilities: [search, filter, list]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - id: comp-title
+          type: heading
+          props:
+            level: 1
+            text: Components
+        - id: comp-count
+          type: badge
+          props:
+            text: "49 types"
+            variant: default
+    - id: search
+      type: search-bar
+      props:
+        placeholder: Search components...
+        datasource: SigilComponent
+    - id: comp-layout
+      type: columns
+      props:
+        gap: 6
+      children:
+        - id: category-list
+          type: rows
+          props:
+            gap: 2
+          children:
+            - id: cat-heading
+              type: heading
+              props:
+                level: 3
+                text: Categories
+            - id: cat-primitives
+              type: button
+              props:
+                label: Primitives
+                variant: ghost
+              actions:
+                click:
+                  type: emit
+                  event: filter-category
+            - id: cat-layouts
+              type: button
+              props:
+                label: Layouts
+                variant: ghost
+              actions:
+                click:
+                  type: emit
+                  event: filter-category
+            - id: cat-navigation
+              type: button
+              props:
+                label: Navigation
+                variant: ghost
+              actions:
+                click:
+                  type: emit
+                  event: filter-category
+            - id: cat-composites
+              type: button
+              props:
+                label: Composites
+                variant: ghost
+              actions:
+                click:
+                  type: emit
+                  event: filter-category
+            - id: cat-data
+              type: button
+              props:
+                label: Data
+                variant: ghost
+              actions:
+                click:
+                  type: emit
+                  event: filter-category
+            - id: cat-forms
+              type: button
+              props:
+                label: Forms
+                variant: ghost
+              actions:
+                click:
+                  type: emit
+                  event: filter-category
+        - id: comp-table
+          type: data-table
+          props:
+            datasource: SigilComponent
+            columns:
+              - label: Type
+                field: type
+                sortable: true
+              - label: Category
+                field: category
+                sortable: true
+              - label: Description
+                field: description
+
+shortcuts:
+  - key: /
+    action:
+      type: focus
+      target: "#search"
+    description: Focus search
+  - key: Escape
+    action:
+      type: close

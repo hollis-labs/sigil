@@ -14,8 +14,14 @@ func NewInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize a Sigil project",
-		Long:  "Create a .sigil/ directory with project config, default theme, and empty directories.",
-		RunE:  runInit,
+		Long: `Create a .sigil/ directory with project config, default theme, and empty directories.
+
+Examples:
+  sigil init                  Initialize with default dark theme
+  sigil init --theme light    Initialize with light theme
+  sigil init --name myapp     Set project name explicitly
+  sigil init --force          Overwrite existing .sigil/ directory`,
+		RunE: runInit,
 	}
 	cmd.Flags().String("name", "", "Project name (defaults to directory name)")
 	cmd.Flags().String("theme", "dark", "Initial theme preset (dark or light)")
@@ -88,7 +94,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("writing default theme: %w", err)
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "Initialized Sigil project %q\n", name)
+	fmt.Fprintf(cmd.OutOrStdout(), "%s Initialized Sigil project %q\n", green("\u2713"), name)
 	fmt.Fprintln(cmd.OutOrStdout(), "")
 	fmt.Fprintln(cmd.OutOrStdout(), "Created:")
 	fmt.Fprintln(cmd.OutOrStdout(), "  .sigil/sigil.yaml          Project config")

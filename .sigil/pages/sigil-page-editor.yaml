@@ -1,0 +1,122 @@
+sigil: "1.0"
+kind: page
+id: sigil-page-editor
+title: Page Editor
+overlay: page
+module: sigil
+
+datasources:
+  - alias: SigilPage
+    capabilities: [read, update, create]
+
+layout:
+  id: root
+  type: columns
+  props:
+    gap: 0
+  children:
+    - id: sidebar
+      type: rows
+      props:
+        gap: 4
+        padding: 4
+      children:
+        - id: sidebar-header
+          type: heading
+          props:
+            level: 3
+            text: Page Config
+        - id: meta-form
+          type: form
+          props:
+            fields:
+              - name: id
+                label: Page ID
+                type: text
+                placeholder: my-page
+                required: true
+              - name: title
+                label: Title
+                type: text
+                placeholder: Page Title
+                required: true
+              - name: overlay
+                label: Overlay
+                type: select
+                options:
+                  - value: page
+                    label: Page
+                  - value: modal
+                    label: Modal
+                  - value: sheet
+                    label: Sheet
+                  - value: drawer
+                    label: Drawer
+                  - value: fullscreen
+                    label: Fullscreen
+              - name: module
+                label: Module
+                type: text
+                placeholder: module-name
+            submit:
+              label: Save
+              datasource: SigilPage
+              method: PUT
+    - id: editor-panel
+      type: rows
+      props:
+        gap: 2
+        padding: 4
+      children:
+        - id: editor-toolbar
+          type: columns
+          props:
+            justify: between
+            align: center
+          children:
+            - id: editor-title
+              type: heading
+              props:
+                level: 3
+                text: YAML Editor
+            - id: editor-actions
+              type: columns
+              props:
+                gap: 2
+              children:
+                - id: validate-btn
+                  type: button
+                  props:
+                    label: Validate
+                    variant: secondary
+                  actions:
+                    click:
+                      type: http
+                      url: /api/sigil/validate
+                      method: POST
+                - id: preview-btn
+                  type: button
+                  props:
+                    label: Preview
+                    variant: secondary
+                  actions:
+                    click:
+                      type: navigate
+                      page: sigil-preview
+        - id: yaml-editor
+          type: input
+          props:
+            type: text
+            placeholder: "# Paste or edit YAML here"
+
+shortcuts:
+  - key: "Ctrl+s"
+    action:
+      type: http
+      url: /api/sigil/pages
+      method: PUT
+    description: Save page
+  - key: Escape
+    action:
+      type: navigate
+      page: sigil-pages

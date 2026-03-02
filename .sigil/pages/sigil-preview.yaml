@@ -1,0 +1,87 @@
+sigil: "1.0"
+kind: page
+id: sigil-preview
+title: Page Preview
+overlay: page
+module: sigil
+
+datasources:
+  - alias: SigilPage
+    capabilities: [read]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 4
+    padding: 4
+  children:
+    - id: preview-header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - id: preview-title
+          type: heading
+          props:
+            level: 2
+            text: Preview
+        - id: preview-controls
+          type: columns
+          props:
+            gap: 2
+          children:
+            - id: theme-select
+              type: select
+              props:
+                placeholder: Select theme
+                options:
+                  - value: default
+                    label: Default (Dark)
+                  - value: light
+                    label: Light
+            - id: overlay-select
+              type: select
+              props:
+                placeholder: Select overlay
+                options:
+                  - value: page
+                    label: Page
+                  - value: modal
+                    label: Modal
+                  - value: sheet
+                    label: Sheet
+            - id: refresh-btn
+              type: button
+              props:
+                label: Refresh
+                variant: secondary
+                icon: refresh
+              actions:
+                click:
+                  type: http
+                  url: /api/sigil/preview/refresh
+                  method: POST
+    - id: preview-frame
+      type: rows
+      props:
+        gap: 0
+      children:
+        - id: preview-content
+          type: text
+          props:
+            text: "Preview renders here. Select a page and click Refresh."
+            muted: true
+
+shortcuts:
+  - key: "r"
+    action:
+      type: http
+      url: /api/sigil/preview/refresh
+      method: POST
+    description: Refresh preview
+  - key: Escape
+    action:
+      type: navigate
+      page: sigil-pages

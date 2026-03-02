@@ -1,0 +1,73 @@
+sigil: "1.0"
+kind: page
+id: sigil-pages
+title: Pages
+overlay: page
+module: sigil
+
+datasources:
+  - alias: SigilPage
+    capabilities: [search, filter, list]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - id: page-title
+          type: heading
+          props:
+            level: 1
+            text: Pages
+        - id: new-page-btn
+          type: button
+          props:
+            label: New Page
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: navigate
+              page: sigil-page-editor
+    - id: search
+      type: search-bar
+      props:
+        placeholder: Search pages...
+        datasource: SigilPage
+        debounce: 300
+    - id: page-table
+      type: data-table
+      props:
+        datasource: SigilPage
+        columns:
+          - label: ID
+            field: id
+            sortable: true
+          - label: Title
+            field: title
+            sortable: true
+          - label: Overlay
+            field: overlay
+          - label: Module
+            field: module
+          - label: Status
+            field: status
+            sortable: true
+
+shortcuts:
+  - key: "n"
+    action:
+      type: navigate
+      page: sigil-page-editor
+    description: Create new page
+  - key: Escape
+    action:
+      type: close
