@@ -1,6 +1,6 @@
 ---
 type: bootstrap
-iteration: 8
+iteration: 9
 status: ready
 updated_at: 2026-03-02
 branch: main
@@ -10,8 +10,8 @@ branch: main
 
 ## Current State
 
-**Iteration 8** — Sprints 0–7 complete. React/shadcn renderer generates TSX pages,
-shadcn imports, Tailwind config, datasource hooks, and TypeScript types.
+**Iteration 9** — All 9 sprints (0–8) complete. Phase 2 done. Full system: two renderers,
+live dev server, config diffing, schema migration, JSON Schema, doctor, Makefile.
 
 ## What exists
 
@@ -21,7 +21,7 @@ shadcn imports, Tailwind config, datasource hooks, and TypeScript types.
 - Core types: Page, Component, Action, ProjectConfig, etc.
 - YAML parser, defaults, writer, templates
 - Config validator with 14 structural checks + deep prop validation (type, required, enum)
-- CLI commands: `init`, `new`, `list`, `validate`, `generate`, `preview`, `export`, `import`, `version`, `mcp serve`
+- CLI commands: `init`, `new`, `list`, `validate`, `generate`, `preview`, `export`, `import`, `serve`, `diff`, `migrate`, `schema export`, `doctor`, `version`, `mcp serve`
 - Component registry: 49 types, 6 categories, YAML schemas with full prop definitions
 - Schema loader: go:embed for built-in, filesystem for custom (.sigil/components/)
 - Renderer engine with Go/Templ + React/shadcn implementations
@@ -35,7 +35,12 @@ shadcn imports, Tailwind config, datasource hooks, and TypeScript types.
 - **Dogfood**: 6 page configs for Sigil's own GUI (pages, editor, components, preview, datasources, themes)
 - **Dev server**: `sigil serve` with live preview, SSE auto-reload, file watcher, styled index page
 - **React/shadcn renderer**: TSX pages with shadcn imports, DataTable, SWR hooks, TypeScript types, Tailwind config
-- 186 tests passing (`go test ./...`)
+- **Config diff**: Semantic comparison of page configs (added/removed/modified components, props, datasources)
+- **Schema migration**: Auto-generate missing component IDs, set defaults, version pipeline
+- **JSON Schema**: `sigil schema export` generates page.schema.json for IDE support
+- **Doctor**: `sigil doctor` checks Go, templ, Node.js, .sigil dir, pages
+- **Makefile**: build, test, vet, install, clean with version embedding
+- 212 tests passing (`go test ./...`)
 
 ## Sprint history
 
@@ -47,12 +52,11 @@ shadcn imports, Tailwind config, datasource hooks, and TypeScript types.
 - Sprint 5: Preview command, export/import, CLI UX polish, dogfood configs
 - Sprint 6: Live dev server, file watcher, SSE auto-reload, styled index page
 - Sprint 7: React/shadcn renderer, TSX page generation, shadcn imports, datasource hooks, Tailwind config
+- Sprint 8: Config diff, schema migration, JSON Schema export, doctor, Makefile
 
 ## Next action
 
-**Start Sprint 8** — "Config Diffing + Migration + Polish"
-
-Read `artifacts/plan/sprints/sprint-8.md` for the full sprint guide.
+All planned sprints complete. System is ready for use and extension.
 
 ## Sprint roadmap
 
@@ -66,7 +70,7 @@ Read `artifacts/plan/sprints/sprint-8.md` for the full sprint guide.
 | 5 | Preview + Polish + Dogfood | **done** | 3 |
 | 6 | Live Dev Server + Watch Mode | **done** | 3 |
 | 7 | React/shadcn Renderer | **done** | 4 |
-| 8 | Config Diffing + Migration + Polish | **next** | 3 |
+| 8 | Config Diffing + Migration + Polish | **done** | 3 |
 
 ## Decision log
 
@@ -83,3 +87,4 @@ Read `artifacts/plan/sprints/sprint-8.md` for the full sprint guide.
 - 2026-03-02: Phase 2 planned: Sprint 6 (live dev server), Sprint 7 (React renderer), Sprint 8 (diffing + polish).
 - 2026-03-02: Sprint 6 complete. `sigil serve` with HTTP server, SSE auto-reload, poll-based file watcher, styled index page with validation status.
 - 2026-03-02: Sprint 7 complete. React/shadcn renderer: TSX pages, shadcn component imports, DataTable, SWR datasource hooks, TypeScript types, Tailwind config generation.
+- 2026-03-02: Sprint 8 complete. Config diff, schema migration, JSON Schema export, doctor command, Makefile. All sprints done.

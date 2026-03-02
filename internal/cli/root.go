@@ -14,7 +14,13 @@ Examples:
   sigil new page dashboard          Create a new page config
   sigil validate                    Validate all page configs
   sigil generate                    Generate Go/Templ code from configs
+  sigil generate --target react-shadcn  Generate React/shadcn code
   sigil preview dashboard           Preview a page in the browser
+  sigil serve                       Start live dev server
+  sigil diff old.yaml new.yaml      Compare configs semantically
+  sigil migrate                     Migrate configs to latest schema
+  sigil schema export               Export JSON Schema for IDE support
+  sigil doctor                      Check environment health
   sigil list components             List all registered component types
   sigil export --format json        Export pages as JSON
   sigil import --from json -i dir/  Import pages from JSON
@@ -42,5 +48,9 @@ Examples:
 	cmd.AddCommand(NewServeCmd())
 	cmd.AddCommand(NewVersionCmd())
 	cmd.AddCommand(NewMCPCmd())
+	cmd.AddCommand(NewDiffCmd())
+	cmd.AddCommand(NewMigrateCmd())
+	cmd.AddCommand(NewSchemaCmd())
+	cmd.AddCommand(NewDoctorCmd())
 	return cmd
 }
