@@ -4,40 +4,40 @@ import "sort"
 
 // Schema defines a component type's props, actions, and slots.
 type Schema struct {
-	Type        string
-	Category    string // primitives, layouts, data, forms, navigation, composites
-	Description string
-	Props       map[string]PropDef
-	Actions     map[string]ActionDef
-	Slots       map[string]SlotDef
-	Shortcuts   []ShortcutDef
+	Type        string                `yaml:"type"`
+	Category    string                `yaml:"category"`
+	Description string                `yaml:"description"`
+	Props       map[string]PropDef    `yaml:"props,omitempty"`
+	Actions     map[string]ActionDef  `yaml:"actions,omitempty"`
+	Slots       map[string]SlotDef    `yaml:"slots,omitempty"`
+	Shortcuts   []ShortcutDef         `yaml:"shortcuts,omitempty"`
 }
 
 // PropDef defines a single component prop.
 type PropDef struct {
-	Type        string      // string, integer, boolean, array, object, enum
-	Required    bool
-	Default     interface{}
-	Description string
-	Enum        []string
+	Type        string      `yaml:"type"`
+	Required    bool        `yaml:"required,omitempty"`
+	Default     interface{} `yaml:"default,omitempty"`
+	Description string      `yaml:"description,omitempty"`
+	Enum        []string    `yaml:"enum,omitempty"`
 }
 
 // ActionDef defines a component action/event.
 type ActionDef struct {
-	Description string
+	Description string `yaml:"description"`
 }
 
 // SlotDef defines a named slot that accepts child components.
 type SlotDef struct {
-	Description string
-	Accepts     []string
+	Description string   `yaml:"description"`
+	Accepts     []string `yaml:"accepts,omitempty"`
 }
 
 // ShortcutDef defines a built-in keyboard shortcut for a component.
 type ShortcutDef struct {
-	Key         string
-	Description string
-	When        string
+	Key         string `yaml:"key"`
+	Description string `yaml:"description"`
+	When        string `yaml:"when,omitempty"`
 }
 
 // Registry holds all known component schemas.

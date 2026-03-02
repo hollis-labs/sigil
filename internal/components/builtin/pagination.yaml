@@ -1,0 +1,19 @@
+type: pagination
+category: navigation
+description: "Page navigation"
+props:
+  total:
+    type: integer
+    required: true
+    description: "Total number of items"
+  pageSize:
+    type: integer
+    default: 25
+    description: "Items per page"
+  page:
+    type: integer
+    default: 1
+    description: "Current page number"
+actions:
+  change:
+    description: "Fired when page changes"

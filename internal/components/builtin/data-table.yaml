@@ -1,0 +1,86 @@
+type: data-table
+category: data
+description: "Sortable, filterable, paginated data table"
+props:
+  datasource:
+    type: string
+    required: true
+    description: "DataSource alias to query"
+  columns:
+    type: array
+    required: true
+    description: "Column definitions"
+  pagination:
+    type: object
+    description: "Pagination settings"
+  selection:
+    type: string
+    default: "none"
+    description: "Row selection mode"
+    enum: [none, single, multi]
+  striped:
+    type: boolean
+    default: false
+    description: "Striped row backgrounds"
+  dense:
+    type: boolean
+    default: false
+    description: "Compact row height"
+  bordered:
+    type: boolean
+    default: true
+    description: "Show table borders"
+  hoverable:
+    type: boolean
+    default: true
+    description: "Highlight rows on hover"
+  emptyMessage:
+    type: string
+    default: "No data found"
+    description: "Text shown when no data"
+  loading:
+    type: boolean
+    default: false
+    description: "Show loading state"
+  toolbar:
+    type: array
+    description: "Toolbar components above table"
+actions:
+  rowClick:
+    description: "Fired when a row is clicked"
+  selectionChange:
+    description: "Fired when row selection changes"
+  sort:
+    description: "Fired when sort changes"
+  filter:
+    description: "Fired when a filter changes"
+slots:
+  toolbar:
+    description: "Toolbar area above the table"
+    accepts: [button, icon-button, search-bar, select, dropdown-menu]
+  empty:
+    description: "Content shown when no data"
+    accepts: [text, icon, button]
+  footer:
+    description: "Footer area below the table"
+    accepts: [pagination, text, button]
+shortcuts:
+  - key: Enter
+    description: "Open selected row"
+    when: has-selection
+  - key: Delete
+    description: "Delete selected (with confirm)"
+    when: has-selection
+  - key: ArrowUp
+    description: "Select previous row"
+  - key: ArrowDown
+    description: "Select next row"
+  - key: Space
+    description: "Toggle row selection"
+    when: "selection != none"
+  - key: Ctrl+A
+    description: "Select all rows"
+    when: "selection == multi"
+  - key: Escape
+    description: "Clear selection"
+    when: has-selection

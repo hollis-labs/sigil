@@ -1,0 +1,15 @@
+type: tab
+category: layouts
+description: "Single tab content"
+props:
+  label:
+    type: string
+    required: true
+    description: "Tab label text"
+  icon:
+    type: string
+    description: "Tab icon name"
+  value:
+    type: string
+    required: true
+    description: "Tab identifier value"

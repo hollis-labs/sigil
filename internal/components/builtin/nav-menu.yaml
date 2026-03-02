@@ -1,0 +1,8 @@
+type: nav-menu
+category: navigation
+description: "Navigation menu"
+props:
+  items:
+    type: array
+    required: true
+    description: "Array of {label, page, icon} menu items"

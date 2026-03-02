@@ -1,0 +1,12 @@
+type: scroll-area
+category: layouts
+description: "Scrollable region"
+props:
+  height:
+    type: string
+    description: "Fixed height (e.g. 400px, 50vh)"
+  direction:
+    type: string
+    default: "vertical"
+    description: "Scroll direction"
+    enum: [vertical, horizontal, both]

@@ -1,0 +1,16 @@
+type: chart
+category: data
+description: "Data chart"
+props:
+  type:
+    type: string
+    required: true
+    description: "Chart type"
+    enum: [bar, line, pie, area, donut]
+  datasource:
+    type: string
+    required: true
+    description: "DataSource alias"
+  config:
+    type: object
+    description: "Chart-specific configuration"

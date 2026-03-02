@@ -1,0 +1,17 @@
+type: detail-view
+category: data
+description: "Single record display"
+props:
+  datasource:
+    type: string
+    required: true
+    description: "DataSource alias to query"
+  fields:
+    type: array
+    required: true
+    description: "Field definitions to display"
+  layout:
+    type: string
+    default: "stacked"
+    description: "Field layout"
+    enum: [stacked, inline, grid]

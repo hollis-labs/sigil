@@ -1,0 +1,19 @@
+type: stat-card
+category: data
+description: "Metric display card"
+props:
+  label:
+    type: string
+    required: true
+    description: "Metric label"
+  value:
+    type: string
+    required: true
+    description: "Metric value (supports template variables)"
+  trend:
+    type: string
+    description: "Trend direction"
+    enum: [up, down, neutral]
+  icon:
+    type: string
+    description: "Icon name"

@@ -1,0 +1,8 @@
+type: spacer
+category: layouts
+description: "Empty space"
+props:
+  size:
+    type: integer
+    default: 4
+    description: "Space size (spacing scale)"

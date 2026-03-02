@@ -1,0 +1,21 @@
+type: textarea
+category: primitives
+description: "Multi-line text input"
+props:
+  rows:
+    type: integer
+    default: 3
+    description: "Number of visible rows"
+  placeholder:
+    type: string
+    description: "Placeholder text"
+  maxLength:
+    type: integer
+    description: "Maximum character count"
+  disabled:
+    type: boolean
+    default: false
+    description: "Whether textarea is disabled"
+actions:
+  change:
+    description: "Fired when value changes"

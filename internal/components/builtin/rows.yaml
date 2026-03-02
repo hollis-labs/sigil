@@ -1,0 +1,25 @@
+type: rows
+category: layouts
+description: "Vertical stack"
+props:
+  gap:
+    type: integer
+    default: 4
+    description: "Gap between children (spacing scale)"
+  padding:
+    type: integer
+    default: 0
+    description: "Container padding"
+  align:
+    type: string
+    default: "stretch"
+    description: "Cross-axis alignment"
+    enum: [start, center, end, stretch]
+  justify:
+    type: string
+    default: "start"
+    description: "Main-axis justification"
+    enum: [start, center, end, between, around]
+  className:
+    type: string
+    description: "Custom CSS class"

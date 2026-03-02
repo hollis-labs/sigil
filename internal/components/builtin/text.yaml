@@ -1,0 +1,17 @@
+type: text
+category: primitives
+description: "Text paragraph"
+props:
+  text:
+    type: string
+    required: true
+    description: "Text content"
+  muted:
+    type: boolean
+    default: false
+    description: "Use muted/secondary text color"
+  size:
+    type: string
+    default: "base"
+    description: "Text size"
+    enum: [xs, sm, base, lg, xl, "2xl"]

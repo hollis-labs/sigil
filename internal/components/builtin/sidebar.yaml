@@ -1,0 +1,16 @@
+type: sidebar
+category: layouts
+description: "Sidebar + content"
+props:
+  width:
+    type: string
+    default: "256px"
+    description: "Sidebar width"
+  collapsible:
+    type: boolean
+    default: false
+    description: "Whether sidebar can be collapsed"
+  defaultCollapsed:
+    type: boolean
+    default: false
+    description: "Start collapsed"

@@ -1,6 +1,10 @@
 package components
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestNewRegistry(t *testing.T) {
 	r := NewRegistry()
@@ -113,6 +117,82 @@ func TestDefaultRegistryCategories(t *testing.T) {
 		if len(got) != expectedCount {
 			t.Errorf("category %q: expected %d types, got %d", cat, expectedCount, len(got))
 		}
+	}
+}
+
+func TestBuiltinSchemasHaveProps(t *testing.T) {
+	r := NewDefaultRegistry()
+
+	// Button should have prop definitions now
+	s, ok := r.Get("button")
+	if !ok {
+		t.Fatal("expected button schema")
+	}
+	if len(s.Props) == 0 {
+		t.Error("expected button to have props defined")
+	}
+	labelProp, ok := s.Props["label"]
+	if !ok {
+		t.Error("expected button to have 'label' prop")
+	}
+	if !labelProp.Required {
+		t.Error("expected button.label to be required")
+	}
+
+	// data-table should have slots and shortcuts
+	dt, ok := r.Get("data-table")
+	if !ok {
+		t.Fatal("expected data-table schema")
+	}
+	if len(dt.Slots) == 0 {
+		t.Error("expected data-table to have slots")
+	}
+	if len(dt.Shortcuts) == 0 {
+		t.Error("expected data-table to have shortcuts")
+	}
+	if _, ok := dt.Props["datasource"]; !ok {
+		t.Error("expected data-table to have 'datasource' prop")
+	}
+}
+
+func TestCustomSchemaOverride(t *testing.T) {
+	r := NewDefaultRegistry()
+
+	// Verify button exists with default description
+	s, _ := r.Get("button")
+	if s.Description != "Clickable button" {
+		t.Errorf("expected default description, got %q", s.Description)
+	}
+
+	// Create a custom schema that overrides button
+	dir := t.TempDir()
+	customYAML := `type: button
+category: primitives
+description: "Custom button override"
+props:
+  label:
+    type: string
+    required: true
+`
+	if err := os.WriteFile(filepath.Join(dir, "button.yaml"), []byte(customYAML), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := LoadCustomSchemas(r, dir); err != nil {
+		t.Fatalf("failed to load custom schemas: %v", err)
+	}
+
+	s, _ = r.Get("button")
+	if s.Description != "Custom button override" {
+		t.Errorf("expected custom description, got %q", s.Description)
+	}
+}
+
+func TestLoadCustomSchemasMissingDir(t *testing.T) {
+	r := NewRegistry()
+	err := LoadCustomSchemas(r, "/nonexistent/dir")
+	if err != nil {
+		t.Error("expected no error for missing dir, got:", err)
 	}
 }
 

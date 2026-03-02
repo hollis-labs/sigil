@@ -1,0 +1,15 @@
+type: accordion-item
+category: layouts
+description: "Accordion section"
+props:
+  title:
+    type: string
+    required: true
+    description: "Section title"
+  icon:
+    type: string
+    description: "Section icon"
+  value:
+    type: string
+    required: true
+    description: "Section identifier value"

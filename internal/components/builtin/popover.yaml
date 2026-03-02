@@ -1,0 +1,17 @@
+type: popover
+category: composites
+description: "Click popover"
+props:
+  content:
+    type: string
+    description: "Popover content"
+  side:
+    type: string
+    default: "bottom"
+    description: "Popover position"
+    enum: [top, bottom, left, right]
+  align:
+    type: string
+    default: "center"
+    description: "Alignment along the side"
+    enum: [start, center, end]

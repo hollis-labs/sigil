@@ -1,0 +1,21 @@
+type: sheet
+category: composites
+description: "Side panel"
+props:
+  title:
+    type: string
+    required: true
+    description: "Sheet title"
+  side:
+    type: string
+    default: "right"
+    description: "Slide-in direction"
+    enum: [left, right]
+  size:
+    type: string
+    default: "md"
+    description: "Sheet width"
+    enum: [sm, md, lg, xl]
+shortcuts:
+  - key: Escape
+    description: "Close sheet"

@@ -1,0 +1,26 @@
+type: confirm-dialog
+category: composites
+description: "Confirmation modal"
+props:
+  title:
+    type: string
+    required: true
+    description: "Dialog title"
+  message:
+    type: string
+    required: true
+    description: "Confirmation message"
+  confirmLabel:
+    type: string
+    default: "Confirm"
+    description: "Confirm button label"
+  variant:
+    type: string
+    default: "destructive"
+    description: "Confirm button variant"
+    enum: [primary, destructive]
+actions:
+  confirm:
+    description: "Fired when confirmed"
+  cancel:
+    description: "Fired when cancelled"

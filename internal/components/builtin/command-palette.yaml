@@ -1,0 +1,13 @@
+type: command-palette
+category: navigation
+description: "Searchable command list"
+props:
+  commands:
+    type: array
+    required: true
+    description: "Array of command definitions"
+shortcuts:
+  - key: Ctrl+K
+    description: "Open command palette"
+  - key: Escape
+    description: "Close command palette"

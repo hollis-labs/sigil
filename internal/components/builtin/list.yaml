@@ -1,0 +1,18 @@
+type: list
+category: data
+description: "Simple data list"
+props:
+  datasource:
+    type: string
+    required: true
+    description: "DataSource alias to query"
+  itemTemplate:
+    type: string
+    description: "Template for each list item"
+  emptyMessage:
+    type: string
+    default: "No items"
+    description: "Text shown when list is empty"
+actions:
+  itemClick:
+    description: "Fired when a list item is clicked"

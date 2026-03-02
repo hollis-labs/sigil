@@ -1,0 +1,11 @@
+type: field-group
+category: forms
+description: "Grouped form fields"
+props:
+  label:
+    type: string
+    required: true
+    description: "Group label"
+  fields:
+    type: array
+    description: "Fields in this group"

@@ -1,0 +1,16 @@
+type: alert
+category: primitives
+description: "Alert message"
+props:
+  title:
+    type: string
+    description: "Alert title"
+  message:
+    type: string
+    required: true
+    description: "Alert message text"
+  variant:
+    type: string
+    default: "default"
+    description: "Visual style"
+    enum: [default, success, warning, danger, info]

@@ -1,0 +1,19 @@
+type: switch
+category: primitives
+description: "Toggle switch"
+props:
+  label:
+    type: string
+    required: true
+    description: "Switch label text"
+  default:
+    type: boolean
+    default: false
+    description: "Default toggled state"
+  disabled:
+    type: boolean
+    default: false
+    description: "Whether switch is disabled"
+actions:
+  change:
+    description: "Fired when toggle state changes"

@@ -1,0 +1,13 @@
+type: badge
+category: primitives
+description: "Status badge"
+props:
+  text:
+    type: string
+    required: true
+    description: "Badge text"
+  variant:
+    type: string
+    default: "default"
+    description: "Visual style"
+    enum: [default, success, warning, danger, info]

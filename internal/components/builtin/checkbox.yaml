@@ -1,0 +1,19 @@
+type: checkbox
+category: primitives
+description: "Checkbox input"
+props:
+  label:
+    type: string
+    required: true
+    description: "Checkbox label text"
+  default:
+    type: boolean
+    default: false
+    description: "Default checked state"
+  disabled:
+    type: boolean
+    default: false
+    description: "Whether checkbox is disabled"
+actions:
+  change:
+    description: "Fired when checked state changes"

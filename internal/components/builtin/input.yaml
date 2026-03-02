@@ -1,0 +1,27 @@
+type: input
+category: primitives
+description: "Text input"
+props:
+  placeholder:
+    type: string
+    description: "Placeholder text"
+  type:
+    type: string
+    default: "text"
+    description: "Input type"
+    enum: [text, email, password, number, url, tel]
+  required:
+    type: boolean
+    default: false
+    description: "Whether input is required"
+  disabled:
+    type: boolean
+    default: false
+    description: "Whether input is disabled"
+actions:
+  change:
+    description: "Fired when value changes"
+  focus:
+    description: "Fired when input gains focus"
+  blur:
+    description: "Fired when input loses focus"

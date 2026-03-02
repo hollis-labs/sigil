@@ -1,0 +1,11 @@
+type: timeline
+category: data
+description: "Event timeline"
+props:
+  datasource:
+    type: string
+    required: true
+    description: "DataSource alias"
+  fields:
+    type: object
+    description: "Field mapping for timeline entries"

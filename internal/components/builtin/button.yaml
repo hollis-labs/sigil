@@ -1,0 +1,28 @@
+type: button
+category: primitives
+description: "Clickable button"
+props:
+  label:
+    type: string
+    required: true
+    description: "Button text"
+  variant:
+    type: string
+    default: "secondary"
+    description: "Visual style"
+    enum: [primary, secondary, destructive, outline, ghost, link]
+  icon:
+    type: string
+    description: "Icon name displayed before label"
+  size:
+    type: string
+    default: "md"
+    description: "Button size"
+    enum: [sm, md, lg]
+  disabled:
+    type: boolean
+    default: false
+    description: "Whether button is disabled"
+actions:
+  click:
+    description: "Fired when button is clicked"

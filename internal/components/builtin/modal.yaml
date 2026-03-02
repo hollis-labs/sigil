@@ -1,0 +1,20 @@
+type: modal
+category: composites
+description: "Dialog overlay"
+props:
+  title:
+    type: string
+    required: true
+    description: "Modal title"
+  size:
+    type: string
+    default: "md"
+    description: "Modal size"
+    enum: [sm, md, lg, xl, full]
+  closeable:
+    type: boolean
+    default: true
+    description: "Show close button"
+shortcuts:
+  - key: Escape
+    description: "Close modal"

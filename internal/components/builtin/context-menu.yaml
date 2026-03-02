@@ -1,0 +1,8 @@
+type: context-menu
+category: composites
+description: "Right-click menu"
+props:
+  items:
+    type: array
+    required: true
+    description: "Menu items"

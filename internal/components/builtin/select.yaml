@@ -1,0 +1,21 @@
+type: select
+category: primitives
+description: "Dropdown select"
+props:
+  options:
+    type: array
+    required: true
+    description: "Array of {value, label} options"
+  placeholder:
+    type: string
+    description: "Placeholder text when no selection"
+  default:
+    type: string
+    description: "Default selected value"
+  disabled:
+    type: boolean
+    default: false
+    description: "Whether select is disabled"
+actions:
+  change:
+    description: "Fired when selection changes"

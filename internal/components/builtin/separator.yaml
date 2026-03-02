@@ -1,0 +1,9 @@
+type: separator
+category: primitives
+description: "Visual divider"
+props:
+  orientation:
+    type: string
+    default: "horizontal"
+    description: "Divider direction"
+    enum: [horizontal, vertical]

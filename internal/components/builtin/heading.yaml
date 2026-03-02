@@ -1,0 +1,14 @@
+type: heading
+category: primitives
+description: "Section heading"
+props:
+  level:
+    type: integer
+    required: true
+    default: 2
+    description: "Heading level (1-6)"
+    enum: ["1", "2", "3", "4", "5", "6"]
+  text:
+    type: string
+    required: true
+    description: "Heading text content"

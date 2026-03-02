@@ -1,0 +1,17 @@
+type: tooltip
+category: composites
+description: "Hover tooltip"
+props:
+  content:
+    type: string
+    required: true
+    description: "Tooltip text"
+  side:
+    type: string
+    default: "top"
+    description: "Tooltip position"
+    enum: [top, bottom, left, right]
+  delay:
+    type: integer
+    default: 200
+    description: "Show delay in milliseconds"

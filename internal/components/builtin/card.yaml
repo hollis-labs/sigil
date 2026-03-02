@@ -1,0 +1,26 @@
+type: card
+category: layouts
+description: "Container with border"
+props:
+  title:
+    type: string
+    description: "Card header title"
+  description:
+    type: string
+    description: "Card header description"
+  padding:
+    type: integer
+    default: 4
+    description: "Content padding"
+  collapsible:
+    type: boolean
+    default: false
+    description: "Whether card can be collapsed"
+  className:
+    type: string
+    description: "Custom CSS class"
+slots:
+  header:
+    description: "Card header area"
+  footer:
+    description: "Card footer area"

@@ -1,0 +1,16 @@
+type: icon
+category: primitives
+description: "Icon display"
+props:
+  name:
+    type: string
+    required: true
+    description: "Icon name from icon set"
+  size:
+    type: string
+    default: "md"
+    description: "Icon size"
+    enum: [sm, md, lg]
+  color:
+    type: string
+    description: "Icon color token"

@@ -1,0 +1,24 @@
+type: icon-button
+category: primitives
+description: "Icon-only button"
+props:
+  icon:
+    type: string
+    required: true
+    description: "Icon name"
+  variant:
+    type: string
+    default: "ghost"
+    description: "Visual style"
+    enum: [primary, secondary, destructive, outline, ghost]
+  size:
+    type: string
+    default: "md"
+    description: "Button size"
+    enum: [sm, md, lg]
+  tooltip:
+    type: string
+    description: "Tooltip text on hover"
+actions:
+  click:
+    description: "Fired when button is clicked"

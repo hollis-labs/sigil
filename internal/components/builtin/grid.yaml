@@ -1,0 +1,25 @@
+type: grid
+category: layouts
+description: "CSS grid"
+props:
+  columns:
+    type: integer
+    default: 3
+    description: "Number of columns"
+  columns_md:
+    type: integer
+    description: "Columns on medium screens"
+  columns_sm:
+    type: integer
+    description: "Columns on small screens"
+  gap:
+    type: integer
+    default: 4
+    description: "Gap between cells"
+  padding:
+    type: integer
+    default: 0
+    description: "Container padding"
+  className:
+    type: string
+    description: "Custom CSS class"

@@ -1,0 +1,11 @@
+type: label
+category: primitives
+description: "Form label"
+props:
+  text:
+    type: string
+    required: true
+    description: "Label text"
+  for:
+    type: string
+    description: "Target component ID"

@@ -1,0 +1,11 @@
+type: dropdown-menu
+category: composites
+description: "Dropdown with items"
+props:
+  trigger:
+    type: string
+    description: "Trigger element type or label"
+  items:
+    type: array
+    required: true
+    description: "Menu items"

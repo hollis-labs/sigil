@@ -1,0 +1,17 @@
+type: split
+category: layouts
+description: "Resizable split panes"
+props:
+  direction:
+    type: string
+    default: "horizontal"
+    description: "Split direction"
+    enum: [horizontal, vertical]
+  defaultSize:
+    type: integer
+    default: 50
+    description: "Default size of first pane (percent)"
+  minSize:
+    type: integer
+    default: 20
+    description: "Minimum pane size (percent)"

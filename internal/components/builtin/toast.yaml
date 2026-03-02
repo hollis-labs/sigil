@@ -1,0 +1,20 @@
+type: toast
+category: composites
+description: "Notification toast"
+props:
+  title:
+    type: string
+    description: "Toast title"
+  message:
+    type: string
+    required: true
+    description: "Toast message"
+  variant:
+    type: string
+    default: "default"
+    description: "Visual style"
+    enum: [default, success, warning, danger, info]
+  duration:
+    type: integer
+    default: 5000
+    description: "Auto-dismiss delay in milliseconds"

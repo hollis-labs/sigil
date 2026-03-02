@@ -1,0 +1,12 @@
+type: accordion
+category: layouts
+description: "Collapsible sections"
+props:
+  type:
+    type: string
+    default: "single"
+    description: "Allow single or multiple open sections"
+    enum: [single, multiple]
+  defaultOpen:
+    type: string
+    description: "Default open section value"

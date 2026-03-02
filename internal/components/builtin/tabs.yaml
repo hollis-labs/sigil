@@ -1,0 +1,15 @@
+type: tabs
+category: layouts
+description: "Tabbed panels"
+props:
+  defaultTab:
+    type: string
+    description: "Default active tab value"
+  variant:
+    type: string
+    default: "default"
+    description: "Tab style variant"
+    enum: [default, underline, pills]
+  className:
+    type: string
+    description: "Custom CSS class"

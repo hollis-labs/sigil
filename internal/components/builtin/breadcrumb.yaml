@@ -1,0 +1,8 @@
+type: breadcrumb
+category: navigation
+description: "Navigation breadcrumbs"
+props:
+  items:
+    type: array
+    required: true
+    description: "Array of {label, page} breadcrumb items"

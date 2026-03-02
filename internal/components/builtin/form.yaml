@@ -1,0 +1,20 @@
+type: form
+category: forms
+description: "Form container"
+props:
+  fields:
+    type: array
+    description: "Form field definitions"
+  submit:
+    type: object
+    description: "Submit configuration"
+  validation:
+    type: object
+    description: "Form-level validation rules"
+actions:
+  submit:
+    description: "Fired when form is submitted"
+  reset:
+    description: "Fired when form is reset"
+  change:
+    description: "Fired when any field changes"

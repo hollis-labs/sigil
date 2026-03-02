@@ -1,0 +1,17 @@
+type: progress
+category: primitives
+description: "Progress bar"
+props:
+  value:
+    type: integer
+    required: true
+    description: "Current progress value"
+  max:
+    type: integer
+    default: 100
+    description: "Maximum value"
+  variant:
+    type: string
+    default: "default"
+    description: "Visual style"
+    enum: [default, success, warning, danger]

@@ -1,0 +1,21 @@
+type: search-bar
+category: data
+description: "Search input with targeting"
+props:
+  placeholder:
+    type: string
+    default: "Search..."
+    description: "Placeholder text"
+  target:
+    type: string
+    description: "Target component ID to filter"
+  datasource:
+    type: string
+    description: "DataSource alias for search"
+  debounce:
+    type: integer
+    default: 300
+    description: "Debounce delay in milliseconds"
+actions:
+  search:
+    description: "Fired when search value changes"

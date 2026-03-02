@@ -1,0 +1,15 @@
+type: avatar
+category: primitives
+description: "User avatar"
+props:
+  src:
+    type: string
+    description: "Image URL"
+  fallback:
+    type: string
+    description: "Fallback text (e.g. initials)"
+  size:
+    type: string
+    default: "md"
+    description: "Avatar size"
+    enum: [sm, md, lg]
