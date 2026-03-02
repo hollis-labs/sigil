@@ -1,0 +1,16 @@
+.DS_Store
+**/.DS_Store
+.volon/logs/
+.volon/state/
+*.env
+*.pem
+*.key
+credentials.*
+.worktrees/
+*.db
+*.db-shm
+*.db-wal
+dist/
+bin/
+*.exe
+coverage.out

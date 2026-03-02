@@ -1,0 +1,65 @@
+sigil: "1.0"
+kind: page
+id: login
+title: Login
+overlay: modal
+module: auth
+
+layout:
+  type: rows
+  props:
+    gap: 6
+    padding: 8
+    align: center
+  children:
+    - id: login-heading
+      type: heading
+      props:
+        level: 2
+        text: Sign In
+
+    - id: login-form
+      type: form
+      props:
+        fields:
+          - name: email
+            label: Email
+            type: email
+            required: true
+            placeholder: "you@example.com"
+          - name: password
+            label: Password
+            type: password
+            required: true
+          - name: remember
+            label: "Remember me"
+            type: checkbox
+        submit:
+          datasource: Auth
+          method: POST
+          label: Sign In
+      actions:
+        submit:
+          type: http
+          url: "/api/auth/login"
+          method: POST
+          onSuccess:
+            type: navigate
+            page: dashboard
+
+    - id: forgot-link
+      type: button
+      props:
+        label: Forgot password?
+        variant: link
+      actions:
+        click:
+          type: navigate
+          page: forgot-password
+
+shortcuts:
+  - key: Escape
+    action: { type: close }
+  - key: Enter
+    action: { type: emit, event: submit-form }
+    when: "!input-focused"

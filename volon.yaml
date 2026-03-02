@@ -1,0 +1,84 @@
+version: 1
+
+project:
+  id: auto
+  name: sigil
+
+storage:
+  backend: nanite
+  files:
+    root: ".volon/tasks"
+  nanite:
+    vault: sigil
+    tag_prefix: "volon/"
+    default_priority: "B"
+
+tasks:
+  tasks_dir: ".volon/tasks"
+  state_dir: ".volon/state"
+  db_file: "volon.db"
+
+backlog:
+  dir: ".volon/backlog"
+
+observability:
+  verbosity: verbose
+  write_run_log: true
+  write_decision_log: true
+  redact_secrets: true
+  log_dir: ".volon/logs"
+
+git:
+  use_worktrees: true
+  worktree_root: ".worktrees"
+  branch_prefix: "volon/"
+  pr_mode: optional
+  pr:
+    base_branch: auto
+    title_prefix: "volon:"
+    body_template: ".volon/templates/pr-body.md"
+
+pcc:
+  enabled: true
+  location: ".volon/pcc"
+  global_dir: "global"
+  tasks_dir: "tasks"
+  commit_to_git: true
+  refresh:
+    on_workflow_start: true
+    on_git_change: true
+    scheduled: false
+  limits:
+    max_files: 25
+    max_section_words: 400
+
+workflows:
+  new_feature:
+    enabled: true
+    defaults:
+      track_tasks: true
+      require_spec: true
+  update_docs:
+    enabled: true
+  quality_loop:
+    enabled: true
+    cadence_days: 14
+
+bootstrap:
+  enabled: true
+  path: .volon/bootstrap.md
+  history_path: .volon/bootstrap/history
+  max_tasks_per_run: 6
+  completion_token: DONE
+
+quality:
+  modes: [dead_code, security, correctness, perf_smells]
+  on_issue:
+    default_action: create_task
+
+prompt_generator:
+  default_role: orchestrator
+  commit_policy: iteration
+  pr_mode: optional
+  subagents_enabled: false
+  verbosity: standard

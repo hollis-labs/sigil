@@ -1,0 +1,151 @@
+sigil: "1.0"
+kind: page
+id: sprint-dashboard
+title: Sprint Dashboard
+description: View and manage sprints with search, filtering, and inline actions
+overlay: page
+module: project.sprints
+
+datasources:
+  - alias: Sprint
+    capabilities: [search, filter, sort, paginate, create]
+  - alias: SprintStatus
+    capabilities: [list]
+
+layout:
+  type: rows
+  props:
+    gap: 4
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - id: page-title
+          type: heading
+          props:
+            level: 2
+            text: Sprint Dashboard
+        - id: btn-new-sprint
+          type: button
+          props:
+            label: New Sprint
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: modal
+              title: Create Sprint
+              size: md
+              fields:
+                - name: name
+                  label: Sprint Name
+                  type: text
+                  required: true
+                  placeholder: "Sprint 42"
+                - name: goal
+                  label: Sprint Goal
+                  type: textarea
+                  rows: 3
+                  placeholder: "What will this sprint accomplish?"
+                - name: start_date
+                  label: Start Date
+                  type: date
+                  required: true
+                - name: end_date
+                  label: End Date
+                  type: date
+                  required: true
+                - name: status
+                  label: Status
+                  type: select
+                  options:
+                    - { value: planning, label: Planning }
+                    - { value: active, label: Active }
+                    - { value: review, label: In Review }
+                    - { value: done, label: Done }
+                  default: planning
+              submit:
+                datasource: Sprint
+                method: POST
+              onSuccess:
+                type: emit
+                event: refresh-table
+
+    - id: search
+      type: search-bar
+      props:
+        placeholder: "Search sprints..."
+        datasource: Sprint
+        debounce: 300
+
+    - id: table-sprints
+      type: data-table
+      props:
+        datasource: Sprint
+        columns:
+          - { field: name, label: Name, sortable: true }
+          - field: status
+            label: Status
+            sortable: true
+            render:
+              type: badge
+              props:
+                value: "{{row.status}}"
+                variants:
+                  active: success
+                  planning: warning
+                  done: muted
+                  review: info
+          - { field: start_date, label: Start, sortable: true }
+          - { field: end_date, label: End, sortable: true }
+          - field: progress
+            label: Progress
+            render:
+              type: progress
+              props:
+                value: "{{row.progress}}"
+                max: 100
+        selection: multi
+        pagination:
+          enabled: true
+          pageSize: 25
+          showTotal: true
+        toolbar:
+          - id: btn-delete-selected
+            type: button
+            props:
+              label: Delete Selected
+              variant: destructive
+              icon: trash
+            actions:
+              click:
+                type: confirm
+                message: "Delete {{selection.count}} sprint(s)?"
+                onConfirm:
+                  type: http
+                  url: "/api/sprints/batch-delete"
+                  method: DELETE
+      actions:
+        row-click:
+          type: sheet
+          page: sprint-detail
+          params:
+            id: "{{row.id}}"
+          size: lg
+
+shortcuts:
+  - key: Escape
+    action: { type: close }
+    description: Close page
+  - key: Ctrl+K
+    action: { type: emit, event: focus-search }
+    description: Focus search bar
+    global: true
+  - key: Ctrl+N
+    action: { type: emit, event: trigger-create }
+    description: New sprint
+    global: true

@@ -1,0 +1,49 @@
+sigil: "1.0"
+kind: page
+# Missing: id, title
+overlay: invalid-type
+
+layout:
+  type: unknown-layout
+  children:
+    - type: data-table
+      # Missing: id, props.datasource, props.columns
+    - id: duplicate-id
+      type: button
+      props:
+        label: First button
+    - id: duplicate-id
+      type: button
+      props:
+        label: Second button (duplicate ID)
+    - id: bad-action
+      type: button
+      props:
+        label: Bad action
+      actions:
+        click:
+          type: invalid-action-type
+    - id: bad-modal
+      type: button
+      actions:
+        click:
+          type: modal
+          # Missing: title, fields
+    - id: bad-navigate
+      type: button
+      actions:
+        click:
+          type: navigate
+          # Missing: page or url
+    - id: bad-http
+      type: button
+      actions:
+        click:
+          type: http
+          # Missing: url, method
+
+shortcuts:
+  - key: ""
+    action: { type: close }
+  - action: { type: navigate, page: home }
+    # Missing: key
