@@ -1,6 +1,6 @@
 ---
 type: bootstrap
-iteration: 7
+iteration: 8
 status: ready
 updated_at: 2026-03-02
 branch: main
@@ -10,8 +10,8 @@ branch: main
 
 ## Current State
 
-**Iteration 7** — Sprints 0–6 complete. Live dev server with file watching, SSE
-auto-reload, styled index page, and on-the-fly page rendering.
+**Iteration 8** — Sprints 0–7 complete. React/shadcn renderer generates TSX pages,
+shadcn imports, Tailwind config, datasource hooks, and TypeScript types.
 
 ## What exists
 
@@ -24,7 +24,7 @@ auto-reload, styled index page, and on-the-fly page rendering.
 - CLI commands: `init`, `new`, `list`, `validate`, `generate`, `preview`, `export`, `import`, `version`, `mcp serve`
 - Component registry: 49 types, 6 categories, YAML schemas with full prop definitions
 - Schema loader: go:embed for built-in, filesystem for custom (.sigil/components/)
-- Renderer engine with Go/Templ implementation (page templates, shared components, theme CSS, handler stubs)
+- Renderer engine with Go/Templ + React/shadcn implementations
 - **Preview**: Standalone HTML with Tailwind CDN, mock data, inline theme CSS, browser open
 - **Export/Import**: JSON round-trip for page configs with validation
 - **CLI UX**: Color output, --no-color, error suggestions (did you mean?), help examples, version command
@@ -34,7 +34,8 @@ auto-reload, styled index page, and on-the-fly page rendering.
 - **MCP prompts**: sigil_design_page, sigil_review_config
 - **Dogfood**: 6 page configs for Sigil's own GUI (pages, editor, components, preview, datasources, themes)
 - **Dev server**: `sigil serve` with live preview, SSE auto-reload, file watcher, styled index page
-- 154 tests passing (`go test ./...`)
+- **React/shadcn renderer**: TSX pages with shadcn imports, DataTable, SWR hooks, TypeScript types, Tailwind config
+- 186 tests passing (`go test ./...`)
 
 ## Sprint history
 
@@ -45,12 +46,13 @@ auto-reload, styled index page, and on-the-fly page rendering.
 - Sprint 4: MCP server, 9 tools, 7 resources, 2 prompts, integration tests
 - Sprint 5: Preview command, export/import, CLI UX polish, dogfood configs
 - Sprint 6: Live dev server, file watcher, SSE auto-reload, styled index page
+- Sprint 7: React/shadcn renderer, TSX page generation, shadcn imports, datasource hooks, Tailwind config
 
 ## Next action
 
-**Start Sprint 7** — "React/shadcn Renderer"
+**Start Sprint 8** — "Config Diffing + Migration + Polish"
 
-Read `artifacts/plan/sprints/sprint-7.md` for the full sprint guide.
+Read `artifacts/plan/sprints/sprint-8.md` for the full sprint guide.
 
 ## Sprint roadmap
 
@@ -63,8 +65,8 @@ Read `artifacts/plan/sprints/sprint-7.md` for the full sprint guide.
 | 4 | MCP Server + Agent Integration | **done** | 3 |
 | 5 | Preview + Polish + Dogfood | **done** | 3 |
 | 6 | Live Dev Server + Watch Mode | **done** | 3 |
-| 7 | React/shadcn Renderer | **next** | 4 |
-| 8 | Config Diffing + Migration + Polish | todo | 3 |
+| 7 | React/shadcn Renderer | **done** | 4 |
+| 8 | Config Diffing + Migration + Polish | **next** | 3 |
 
 ## Decision log
 
@@ -80,3 +82,4 @@ Read `artifacts/plan/sprints/sprint-7.md` for the full sprint guide.
 - 2026-03-02: Sprint 5 complete. Preview, export/import, CLI polish, 6 dogfood page configs. MVP done.
 - 2026-03-02: Phase 2 planned: Sprint 6 (live dev server), Sprint 7 (React renderer), Sprint 8 (diffing + polish).
 - 2026-03-02: Sprint 6 complete. `sigil serve` with HTTP server, SSE auto-reload, poll-based file watcher, styled index page with validation status.
+- 2026-03-02: Sprint 7 complete. React/shadcn renderer: TSX pages, shadcn component imports, DataTable, SWR datasource hooks, TypeScript types, Tailwind config generation.

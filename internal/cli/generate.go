@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	"github.com/chrispian/sigil/internal/renderer"
-	_ "github.com/chrispian/sigil/internal/renderer/gotempl" // register go-templ renderer
+	_ "github.com/chrispian/sigil/internal/renderer/gotempl"       // register go-templ renderer
+	_ "github.com/chrispian/sigil/internal/renderer/reactshadcn"   // register react-shadcn renderer
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +26,7 @@ Examples:
   sigil generate --clean                   Clean output dir first`,
 		RunE: runGenerate,
 	}
-	cmd.Flags().StringP("target", "t", "go-templ", "Renderer target (go-templ)")
+	cmd.Flags().StringP("target", "t", "go-templ", "Renderer target (go-templ, react-shadcn)")
 	cmd.Flags().StringP("output", "o", "", "Output directory (default: from sigil.yaml)")
 	cmd.Flags().StringSlice("pages", nil, "Specific page IDs to generate (default: all)")
 	cmd.Flags().String("theme", "", "Theme name override (default: from sigil.yaml)")
