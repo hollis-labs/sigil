@@ -1,0 +1,57 @@
+alias: task
+description: Task items for the board
+capabilities:
+  - list
+  - search
+  - filter
+  - sort
+  - create
+  - read
+  - update
+  - delete
+fields:
+  - name: id
+    type: integer
+    primary: true
+  - name: title
+    type: string
+    label: Title
+    required: true
+    searchable: true
+  - name: description
+    type: text
+    label: Description
+  - name: status
+    type: enum
+    label: Status
+    required: true
+    filterable: true
+    values:
+      - todo
+      - in-progress
+      - review
+      - done
+  - name: assignee
+    type: string
+    label: Assignee
+    searchable: true
+    filterable: true
+  - name: priority
+    type: enum
+    label: Priority
+    values:
+      - low
+      - medium
+      - high
+      - critical
+  - name: created_at
+    type: datetime
+    label: Created
+    readonly: true
+    sortable: true
+endpoints:
+  list: "GET /api/tasks"
+  create: "POST /api/tasks"
+  read: "GET /api/tasks/{id}"
+  update: "PUT /api/tasks/{id}"
+  delete: "DELETE /api/tasks/{id}"

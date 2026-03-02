@@ -112,7 +112,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		fmt.Fprintf(buf, "%s<%s className=%q>%s</%s>\n", indent, tag, classes, text, tag)
 
 	case "text":
-		content := getPropString(c.Props, "content", "")
+		content := getPropString(c.Props, "text", "")
 		muted := getPropBool(c.Props, "muted")
 		classes := "text-base"
 		if muted {
@@ -147,10 +147,10 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 
 	case "badge":
 		imports.addShadcn("Badge", "@/components/ui/badge")
-		value := getPropString(c.Props, "value", "")
+		text := getPropString(c.Props, "text", "")
 		variant := getPropString(c.Props, "variant", "default")
 		shadcnVariant := mapBadgeVariant(variant)
-		fmt.Fprintf(buf, "%s<Badge variant=%q>%s</Badge>\n", indent, shadcnVariant, value)
+		fmt.Fprintf(buf, "%s<Badge variant=%q>%s</Badge>\n", indent, shadcnVariant, text)
 
 	case "input":
 		imports.addShadcn("Input", "@/components/ui/input")

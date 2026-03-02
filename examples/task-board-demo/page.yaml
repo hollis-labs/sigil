@@ -1,0 +1,169 @@
+sigil: "1.0"
+kind: page
+id: task-board
+title: Task Board
+overlay: page
+datasources:
+  - alias: task
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - id: title-section
+          type: rows
+          props:
+            gap: 1
+          children:
+            - id: page-title
+              type: heading
+              props:
+                level: 1
+                text: Task Board
+            - id: subtitle
+              type: text
+              props:
+                text: Manage your team's tasks and track progress
+                muted: true
+        - id: actions
+          type: columns
+          props:
+            gap: 2
+          children:
+            - id: export-btn
+              type: button
+              props:
+                label: Export
+                variant: outline
+            - id: add-btn
+              type: button
+              props:
+                label: New Task
+                variant: primary
+                icon: plus
+              actions:
+                click:
+                  type: modal
+                  title: Create Task
+                  fields:
+                    - name: title
+                      label: Title
+                      type: text
+                      required: true
+                    - name: description
+                      label: Description
+                      type: textarea
+                    - name: status
+                      label: Status
+                      type: select
+                      options:
+                        - value: todo
+                          label: To Do
+                        - value: in-progress
+                          label: In Progress
+                    - name: assignee
+                      label: Assignee
+                      type: text
+                    - name: priority
+                      label: Priority
+                      type: select
+                      options:
+                        - value: low
+                          label: Low
+                        - value: medium
+                          label: Medium
+                        - value: high
+                          label: High
+                        - value: critical
+                          label: Critical
+                  submit:
+                    datasource: task
+                    method: POST
+    - id: filters
+      type: columns
+      props:
+        gap: 4
+        align: center
+      children:
+        - id: search
+          type: search-bar
+          props:
+            placeholder: Search tasks...
+            datasource: task
+        - id: status-filter
+          type: select
+          props:
+            placeholder: Filter by status
+            options:
+              - value: all
+                label: All Statuses
+              - value: todo
+                label: To Do
+              - value: in-progress
+                label: In Progress
+              - value: review
+                label: In Review
+              - value: done
+                label: Done
+        - id: priority-filter
+          type: select
+          props:
+            placeholder: Filter by priority
+            options:
+              - value: all
+                label: All Priorities
+              - value: critical
+                label: Critical
+              - value: high
+                label: High
+              - value: medium
+                label: Medium
+              - value: low
+                label: Low
+    - id: stats
+      type: columns
+      props:
+        gap: 4
+      children:
+        - id: stat-total
+          type: badge
+          props:
+            text: "24 tasks"
+            variant: default
+        - id: stat-progress
+          type: badge
+          props:
+            text: "8 in progress"
+            variant: info
+        - id: stat-done
+          type: badge
+          props:
+            text: "12 done"
+            variant: success
+    - id: task-table
+      type: data-table
+      props:
+        datasource: task
+        columns:
+          - field: title
+            label: Task
+          - field: status
+            label: Status
+          - field: assignee
+            label: Assignee
+          - field: priority
+            label: Priority
+            sortable: true
+          - field: created_at
+            label: Created
+            sortable: true
+    - id: footer
+      type: separator

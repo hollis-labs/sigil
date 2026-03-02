@@ -1,7 +1,7 @@
 ---
 type: specification
-version: 1
-updated_at: 2026-03-01
+version: 2
+updated_at: 2026-03-02
 ---
 
 # Sigil CLI Reference
@@ -145,8 +145,7 @@ sigil generate --target html-static --output dist/
 
 **Available targets:**
 - `go-templ` — Go Templ components + HTMX + Tailwind + handler stubs
-- `react-shadcn` — React/TypeScript + shadcn/ui (future)
-- `html-static` — Standalone HTML + Tailwind CDN (future)
+- `react-shadcn` — React/TypeScript + shadcn/ui + SWR hooks + Tailwind config
 
 **Generated structure (go-templ):**
 ```
@@ -163,6 +162,24 @@ internal/ui/
 ├── layouts/
 │   └── page_layout.templ
 └── theme.css
+```
+
+**Generated structure (react-shadcn):**
+```
+src/generated/
+├── pages/
+│   └── sprint-dashboard.tsx
+├── components/
+│   ├── data-table.tsx
+│   └── index.ts
+├── hooks/
+│   └── use-sprint.ts
+├── types/
+│   └── sprint.ts
+├── lib/
+│   └── utils.ts
+├── globals.css
+└── tailwind.config.ts
 ```
 
 ### `sigil list <type>`
@@ -192,37 +209,165 @@ COMPONENTS (45 registered)
 
 ### `sigil preview <page>`
 
-Generate a temporary preview of a page. Opens in browser.
+Generate a standalone HTML preview. Opens in browser.
 
 ```
-sigil preview sprint-dashboard
-sigil preview sprint-dashboard --port 3456
+sigil preview dashboard
+sigil preview dashboard --output preview/
+sigil preview dashboard --no-open
 ```
 
-Generates static HTML with mock data and opens in browser. Useful for
-reviewing layout and styling without a backend.
+Generates static HTML with Tailwind CDN, mock data from datasource field definitions,
+and inline theme CSS. No backend needed.
 
 **Flags:**
-- `--port <int>` — Preview server port (default: 3210)
-- `--mock` — Use auto-generated mock data (default: true)
+- `--sigil-dir <string>` — Path to .sigil directory (default: ".sigil")
+- `--theme <string>` — Theme to use
+- `--output <dir>` — Output directory (default: temp dir)
+- `--no-open` — Don't open in browser
+
+### `sigil serve`
+
+Start a live development server with auto-reload.
+
+```
+sigil serve
+sigil serve --port 8080
+sigil serve --sigil-dir path/to/.sigil
+```
+
+Starts an HTTP server that renders pages on-the-fly. Watches `.sigil/` for
+file changes and reloads the browser via SSE (Server-Sent Events).
+
+**Features:**
+- Index page listing all pages with validation status
+- On-the-fly page rendering with theme CSS
+- Auto-reload on file changes (pages, themes, datasources)
+- Navigation bar injected into page previews
+
+**Flags:**
+- `--port <int>` — HTTP server port (default: 3210)
+- `--sigil-dir <string>` — Path to .sigil directory (default: ".sigil")
 
 ### `sigil export`
 
-Export configs for external use.
+Export page configs as JSON.
 
 ```
-sigil export --format nanite            # Export as Nanite items
-sigil export --format json --output configs/  # Export as JSON files
+sigil export --format json
+sigil export --format json --output configs/ --pages dashboard,users
 ```
+
+**Flags:**
+- `--format <string>` — Export format (default: "json")
+- `--output <dir>` — Output directory
+- `--pages <list>` — Specific page IDs to export (default: all)
 
 ### `sigil import`
 
-Import configs from external sources.
+Import page configs from JSON.
 
 ```
-sigil import --from nanite --tag "sigil/page/*"
 sigil import --from json --input configs/dashboard.json
+sigil import --from json --input configs/ --dry-run
 ```
+
+**Flags:**
+- `--from <string>` — Import format (default: "json")
+- `--input <path>` — Input file or directory
+- `--dry-run` — Preview changes without writing
+
+### `sigil diff <file-a> <file-b>`
+
+Compare two page configs semantically.
+
+```
+sigil diff old.yaml new.yaml
+sigil diff .sigil/pages/v1.yaml .sigil/pages/v2.yaml
+```
+
+Shows added/removed/modified components, prop changes, and datasource
+differences at the config level (not a text diff).
+
+### `sigil migrate`
+
+Migrate page configs to the latest schema version.
+
+```
+sigil migrate
+sigil migrate --dry-run
+sigil migrate --pages dashboard
+```
+
+**Current migrations:**
+- Auto-generate missing component IDs
+- Set default `sigil` version, `kind`, and `overlay`
+
+**Flags:**
+- `--dry-run` — Preview changes without writing
+- `--sigil-dir <string>` — Path to .sigil directory
+- `--pages <list>` — Specific page IDs to migrate
+
+### `sigil schema export`
+
+Generate JSON Schema for page configs.
+
+```
+sigil schema export
+sigil schema export --output my-schemas/
+```
+
+Generates `page.schema.json` from the component registry. Use with the
+VS Code YAML extension for autocomplete and inline validation.
+
+**Flags:**
+- `--output <dir>` — Output directory (default: "schemas")
+
+### `sigil doctor`
+
+Check environment and project health.
+
+```
+sigil doctor
+sigil doctor --sigil-dir path/to/.sigil
+```
+
+**Checks:**
+- Go version
+- Platform (OS/arch)
+- `templ` binary (for go-templ renderer)
+- Node.js (for react-shadcn renderer)
+- `.sigil/` directory structure
+- `sigil.yaml` config
+- Page count
+
+### `sigil version`
+
+Show the Sigil version.
+
+```
+sigil version
+```
+
+Version is embedded at build time via `-ldflags`.
+
+### `sigil mcp serve`
+
+Start the MCP server for AI/agent integration.
+
+```
+sigil mcp serve
+```
+
+Provides JSON-RPC 2.0 over stdio with 9 tools, 7 resource types, and
+2 prompts. See `docs/08_mcp-integration.md` for details.
+
+## Global Flags
+
+These flags are available on all commands:
+
+- `--no-color` — Disable colored output (also respects `NO_COLOR` env var)
+- `--verbose` — Enable verbose/debug output
 
 ## Project Config (.sigil/sigil.yaml)
 

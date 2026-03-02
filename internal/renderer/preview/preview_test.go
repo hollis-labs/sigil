@@ -35,7 +35,7 @@ func TestGenerateHTML_BasicPage(t *testing.T) {
 					ID:   "desc",
 					Type: "text",
 					Props: map[string]interface{}{
-						"content": "A test page",
+						"text": "A test page",
 						"variant": "muted",
 					},
 				},
@@ -256,9 +256,9 @@ func TestGenerateHTML_AllComponents(t *testing.T) {
 			Type: "rows",
 			Children: []config.Component{
 				{Type: "heading", Props: map[string]interface{}{"text": "Title", "level": "1"}},
-				{Type: "text", Props: map[string]interface{}{"content": "Body text"}},
+				{Type: "text", Props: map[string]interface{}{"text": "Body text"}},
 				{Type: "button", Props: map[string]interface{}{"label": "Click Me", "variant": "primary"}},
-				{Type: "badge", Props: map[string]interface{}{"value": "New", "variant": "success"}},
+				{Type: "badge", Props: map[string]interface{}{"text": "New", "variant": "success"}},
 				{Type: "search-bar", Props: map[string]interface{}{"placeholder": "Search..."}},
 				{Type: "separator"},
 				{Type: "progress", Props: map[string]interface{}{"value": "75", "max": "100"}},
@@ -307,9 +307,9 @@ func TestGenerateHTML_Grid(t *testing.T) {
 				"gap":     "6",
 			},
 			Children: []config.Component{
-				{Type: "text", Props: map[string]interface{}{"content": "Cell 1"}},
-				{Type: "text", Props: map[string]interface{}{"content": "Cell 2"}},
-				{Type: "text", Props: map[string]interface{}{"content": "Cell 3"}},
+				{Type: "text", Props: map[string]interface{}{"text": "Cell 1"}},
+				{Type: "text", Props: map[string]interface{}{"text": "Cell 2"}},
+				{Type: "text", Props: map[string]interface{}{"text": "Cell 3"}},
 			},
 		},
 	}
@@ -340,8 +340,8 @@ func TestGenerateHTML_Columns(t *testing.T) {
 				"align":   "center",
 			},
 			Children: []config.Component{
-				{Type: "text", Props: map[string]interface{}{"content": "Left"}},
-				{Type: "text", Props: map[string]interface{}{"content": "Right"}},
+				{Type: "text", Props: map[string]interface{}{"text": "Left"}},
+				{Type: "text", Props: map[string]interface{}{"text": "Right"}},
 			},
 		},
 	}
@@ -363,7 +363,7 @@ func TestGenerateHTML_DefaultTokens(t *testing.T) {
 		Overlay: "page",
 		Layout: config.Component{
 			Type:     "rows",
-			Children: []config.Component{{Type: "text", Props: map[string]interface{}{"content": "Test"}}},
+			Children: []config.Component{{Type: "text", Props: map[string]interface{}{"text": "Test"}}},
 		},
 	}
 

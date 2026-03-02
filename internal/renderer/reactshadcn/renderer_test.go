@@ -169,7 +169,7 @@ func TestRenderBadge(t *testing.T) {
 			{
 				Type: "badge",
 				Props: map[string]interface{}{
-					"value":   "Active",
+					"text":    "Active",
 					"variant": "success",
 				},
 			},
@@ -326,7 +326,7 @@ func TestRenderModal(t *testing.T) {
 					"title": "Create Item",
 				},
 				Children: []config.Component{
-					{Type: "text", Props: map[string]interface{}{"content": "Modal body"}},
+					{Type: "text", Props: map[string]interface{}{"text": "Modal body"}},
 				},
 			},
 		},
@@ -398,7 +398,7 @@ func TestRenderTabs(t *testing.T) {
 						ID:    "tab1",
 						Props: map[string]interface{}{"label": "First"},
 						Children: []config.Component{
-							{Type: "text", Props: map[string]interface{}{"content": "Tab 1 content"}},
+							{Type: "text", Props: map[string]interface{}{"text": "Tab 1 content"}},
 						},
 					},
 					{
@@ -438,8 +438,8 @@ func TestRenderGrid(t *testing.T) {
 		Type: "grid",
 		Props: map[string]interface{}{"columns": 3, "gap": 4},
 		Children: []config.Component{
-			{Type: "text", Props: map[string]interface{}{"content": "A"}},
-			{Type: "text", Props: map[string]interface{}{"content": "B"}},
+			{Type: "text", Props: map[string]interface{}{"text": "A"}},
+			{Type: "text", Props: map[string]interface{}{"text": "B"}},
 		},
 	})
 	ctx := testCtx(page)
@@ -460,8 +460,8 @@ func TestRenderColumns(t *testing.T) {
 		Type: "columns",
 		Props: map[string]interface{}{"gap": 6, "justify": "between"},
 		Children: []config.Component{
-			{Type: "text", Props: map[string]interface{}{"content": "Left"}},
-			{Type: "text", Props: map[string]interface{}{"content": "Right"}},
+			{Type: "text", Props: map[string]interface{}{"text": "Left"}},
+			{Type: "text", Props: map[string]interface{}{"text": "Right"}},
 		},
 	})
 	ctx := testCtx(page)
@@ -893,7 +893,7 @@ func TestE2EGeneration(t *testing.T) {
 					Props: map[string]interface{}{"gap": 4},
 					Children: []config.Component{
 						{Type: "button", Props: map[string]interface{}{"label": "New", "variant": "primary"}},
-						{Type: "badge", Props: map[string]interface{}{"value": "3", "variant": "default"}},
+						{Type: "badge", Props: map[string]interface{}{"text": "3", "variant": "default"}},
 					},
 				},
 				{

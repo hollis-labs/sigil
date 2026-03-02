@@ -227,7 +227,7 @@ func renderPreviewComponent(buf *bytes.Buffer, c *config.Component, depth int, c
 		fmt.Fprintf(buf, "%s<%s class=%q>%s</%s>\n", prefix, tag, classes, text, tag)
 
 	case "text":
-		content := getPropString(c.Props, "content", "")
+		content := getPropString(c.Props, "text", "")
 		variant := getPropString(c.Props, "variant", "body")
 		classes := textClasses(variant)
 		fmt.Fprintf(buf, "%s<p class=%q>%s</p>\n", prefix, classes, content)
@@ -254,10 +254,10 @@ func renderPreviewComponent(buf *bytes.Buffer, c *config.Component, depth int, c
 		renderPreviewForm(buf, c, prefix, depth, cfg)
 
 	case "badge":
-		value := getPropString(c.Props, "value", "")
+		text := getPropString(c.Props, "text", "")
 		variant := getPropString(c.Props, "variant", "default")
 		classes := fmt.Sprintf("sigil-badge sigil-badge-%s", variant)
-		fmt.Fprintf(buf, "%s<span class=%q>%s</span>\n", prefix, classes, value)
+		fmt.Fprintf(buf, "%s<span class=%q>%s</span>\n", prefix, classes, text)
 
 	case "input":
 		name := getPropString(c.Props, "name", "")
