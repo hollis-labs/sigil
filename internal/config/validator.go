@@ -110,6 +110,15 @@ func validateComponent(c *Component, path string, seen map[string]bool, registry
 		})
 	}
 
+	// Deep prop validation if schema provider is available
+	if c.Type != "" && registry != nil {
+		if provider, ok := registry.(ComponentSchemaProvider); ok {
+			if schema, found := provider.GetSchema(c.Type); found {
+				validateProps(c.Props, schema, path, result)
+			}
+		}
+	}
+
 	if c.ID != "" {
 		if seen[c.ID] {
 			result.Errors = append(result.Errors, ValidationError{
@@ -208,5 +217,93 @@ func validateShortcut(s Shortcut, path string, result *ValidationResult) {
 func validateDataSourceRef(ds DataSourceRef, path string, result *ValidationResult) {
 	if ds.Alias == "" {
 		result.Errors = append(result.Errors, ValidationError{Path: path, Message: "datasource requires 'alias'"})
+	}
+}
+
+func validateProps(props map[string]interface{}, schema *ComponentSchemaInfo, path string, result *ValidationResult) {
+	// Check required props are present
+	for name, propDef := range schema.Props {
+		if propDef.Required {
+			if _, ok := props[name]; !ok {
+				result.Errors = append(result.Errors, ValidationError{
+					Path:    path + ".props",
+					Message: fmt.Sprintf("required prop %q is missing", name),
+				})
+			}
+		}
+	}
+
+	// Check provided props
+	for name, value := range props {
+		propDef, known := schema.Props[name]
+		if !known {
+			result.Warnings = append(result.Warnings, ValidationWarning{
+				Path:    path + ".props." + name,
+				Message: fmt.Sprintf("unknown prop %q", name),
+			})
+			continue
+		}
+
+		// Type checking
+		if !checkPropType(value, propDef.Type) {
+			result.Errors = append(result.Errors, ValidationError{
+				Path:    path + ".props." + name,
+				Message: fmt.Sprintf("expected type %s, got %T", propDef.Type, value),
+			})
+			continue
+		}
+
+		// Enum checking
+		if len(propDef.Enum) > 0 {
+			strVal := fmt.Sprintf("%v", value)
+			valid := false
+			for _, e := range propDef.Enum {
+				if strVal == e {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				result.Errors = append(result.Errors, ValidationError{
+					Path:    path + ".props." + name,
+					Message: fmt.Sprintf("invalid value %q (valid: %v)", strVal, propDef.Enum),
+				})
+			}
+		}
+	}
+}
+
+func checkPropType(value interface{}, expectedType string) bool {
+	switch expectedType {
+	case "string":
+		_, ok := value.(string)
+		return ok
+	case "integer":
+		switch value.(type) {
+		case int, int64, float64:
+			return true
+		}
+		return false
+	case "boolean":
+		_, ok := value.(bool)
+		return ok
+	case "array":
+		switch value.(type) {
+		case []interface{}, []map[string]interface{}:
+			return true
+		}
+		return false
+	case "object":
+		switch value.(type) {
+		case map[string]interface{}, map[interface{}]interface{}:
+			return true
+		}
+		return false
+	case "enum":
+		// Enum values are strings
+		_, ok := value.(string)
+		return ok
+	default:
+		return true // Unknown type, don't block
 	}
 }

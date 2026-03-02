@@ -123,6 +123,24 @@ type ComponentRegistry interface {
 	Has(componentType string) bool
 }
 
+// PropInfo describes a component prop for deep validation.
+type PropInfo struct {
+	Type     string
+	Required bool
+	Enum     []string
+}
+
+// ComponentSchemaInfo provides detailed schema info for deep validation.
+type ComponentSchemaInfo struct {
+	Props map[string]PropInfo
+}
+
+// ComponentSchemaProvider extends ComponentRegistry with schema lookup.
+type ComponentSchemaProvider interface {
+	ComponentRegistry
+	GetSchema(componentType string) (*ComponentSchemaInfo, bool)
+}
+
 // ProjectConfig represents the .sigil/sigil.yaml project configuration.
 type ProjectConfig struct {
 	Version  string `yaml:"version" json:"version"`

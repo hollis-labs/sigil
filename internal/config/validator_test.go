@@ -4,15 +4,24 @@ import "testing"
 
 // mockRegistry implements ComponentRegistry for testing.
 type mockRegistry struct {
-	types map[string]bool
+	types   map[string]bool
+	schemas map[string]*ComponentSchemaInfo
 }
 
 func (r *mockRegistry) Has(t string) bool {
 	return r.types[t]
 }
 
+func (r *mockRegistry) GetSchema(t string) (*ComponentSchemaInfo, bool) {
+	if r.schemas == nil {
+		return nil, false
+	}
+	s, ok := r.schemas[t]
+	return s, ok
+}
+
 func newMockRegistry(types ...string) *mockRegistry {
-	m := &mockRegistry{types: make(map[string]bool)}
+	m := &mockRegistry{types: make(map[string]bool), schemas: make(map[string]*ComponentSchemaInfo)}
 	for _, t := range types {
 		m.types[t] = true
 	}
@@ -429,5 +438,157 @@ func TestValidateNilRegistry(t *testing.T) {
 	result := Validate(page, nil)
 	if !result.Valid {
 		t.Errorf("expected valid with nil registry (type check skipped), got: %v", result.Errors)
+	}
+}
+
+// --- Deep prop validation tests ---
+
+func schemaWithProps(t string, props map[string]PropInfo) *mockRegistry {
+	reg := newMockRegistry(t, "rows")
+	reg.schemas[t] = &ComponentSchemaInfo{Props: props}
+	reg.schemas["rows"] = &ComponentSchemaInfo{Props: map[string]PropInfo{}}
+	return reg
+}
+
+func TestDeepValidateMissingRequiredProp(t *testing.T) {
+	reg := schemaWithProps("button", map[string]PropInfo{
+		"label": {Type: "string", Required: true},
+	})
+	page := &Page{
+		Sigil:   "1.0",
+		ID:      "test",
+		Title:   "Test",
+		Overlay: "page",
+		Layout: Component{
+			ID:   "root",
+			Type: "rows",
+			Children: []Component{
+				{ID: "btn", Type: "button"}, // missing label prop
+			},
+		},
+	}
+	result := Validate(page, reg)
+	if result.Valid {
+		t.Error("expected invalid for missing required prop")
+	}
+	found := false
+	for _, e := range result.Errors {
+		if e.Message == `required prop "label" is missing` {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected missing required prop error, got: %v", result.Errors)
+	}
+}
+
+func TestDeepValidateWrongPropType(t *testing.T) {
+	reg := schemaWithProps("heading", map[string]PropInfo{
+		"level": {Type: "integer"},
+		"text":  {Type: "string", Required: true},
+	})
+	page := &Page{
+		Sigil:   "1.0",
+		ID:      "test",
+		Title:   "Test",
+		Overlay: "page",
+		Layout: Component{
+			ID:   "root",
+			Type: "rows",
+			Children: []Component{
+				{ID: "h", Type: "heading", Props: map[string]interface{}{
+					"text":  "Hello",
+					"level": "not-a-number", // wrong type
+				}},
+			},
+		},
+	}
+	result := Validate(page, reg)
+	if result.Valid {
+		t.Error("expected invalid for wrong prop type")
+	}
+}
+
+func TestDeepValidateInvalidEnum(t *testing.T) {
+	reg := schemaWithProps("button", map[string]PropInfo{
+		"label":   {Type: "string", Required: true},
+		"variant": {Type: "string", Enum: []string{"primary", "secondary", "destructive"}},
+	})
+	page := &Page{
+		Sigil:   "1.0",
+		ID:      "test",
+		Title:   "Test",
+		Overlay: "page",
+		Layout: Component{
+			ID:   "root",
+			Type: "rows",
+			Children: []Component{
+				{ID: "btn", Type: "button", Props: map[string]interface{}{
+					"label":   "Click",
+					"variant": "rainbow", // not a valid enum
+				}},
+			},
+		},
+	}
+	result := Validate(page, reg)
+	if result.Valid {
+		t.Error("expected invalid for bad enum value")
+	}
+}
+
+func TestDeepValidateUnknownPropWarning(t *testing.T) {
+	reg := schemaWithProps("button", map[string]PropInfo{
+		"label": {Type: "string", Required: true},
+	})
+	page := &Page{
+		Sigil:   "1.0",
+		ID:      "test",
+		Title:   "Test",
+		Overlay: "page",
+		Layout: Component{
+			ID:   "root",
+			Type: "rows",
+			Children: []Component{
+				{ID: "btn", Type: "button", Props: map[string]interface{}{
+					"label":     "Click",
+					"sparkle":   true, // unknown prop
+				}},
+			},
+		},
+	}
+	result := Validate(page, reg)
+	// Should be valid (warnings don't fail)
+	if !result.Valid {
+		t.Errorf("expected valid with unknown prop warning, got errors: %v", result.Errors)
+	}
+	if len(result.Warnings) == 0 {
+		t.Error("expected warning for unknown prop")
+	}
+}
+
+func TestDeepValidateValidProps(t *testing.T) {
+	reg := schemaWithProps("button", map[string]PropInfo{
+		"label":   {Type: "string", Required: true},
+		"variant": {Type: "string", Enum: []string{"primary", "secondary"}},
+	})
+	page := &Page{
+		Sigil:   "1.0",
+		ID:      "test",
+		Title:   "Test",
+		Overlay: "page",
+		Layout: Component{
+			ID:   "root",
+			Type: "rows",
+			Children: []Component{
+				{ID: "btn", Type: "button", Props: map[string]interface{}{
+					"label":   "Click",
+					"variant": "primary",
+				}},
+			},
+		},
+	}
+	result := Validate(page, reg)
+	if !result.Valid {
+		t.Errorf("expected valid, got: %v", result.Errors)
 	}
 }

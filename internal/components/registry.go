@@ -1,6 +1,10 @@
 package components
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/chrispian/sigil/internal/config"
+)
 
 // Schema defines a component type's props, actions, and slots.
 type Schema struct {
@@ -75,6 +79,26 @@ func (r *Registry) Types() []string {
 	}
 	sort.Strings(types)
 	return types
+}
+
+// GetSchema returns a ComponentSchemaInfo for deep validation.
+// Implements config.ComponentSchemaProvider.
+func (r *Registry) GetSchema(componentType string) (*config.ComponentSchemaInfo, bool) {
+	s, ok := r.schemas[componentType]
+	if !ok {
+		return nil, false
+	}
+	info := &config.ComponentSchemaInfo{
+		Props: make(map[string]config.PropInfo, len(s.Props)),
+	}
+	for name, p := range s.Props {
+		info.Props[name] = config.PropInfo{
+			Type:     p.Type,
+			Required: p.Required,
+			Enum:     p.Enum,
+		}
+	}
+	return info, true
 }
 
 // ByCategory returns all schemas in the given category.
