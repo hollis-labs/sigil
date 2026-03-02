@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/chrispian/sigil/internal/components"
 	"github.com/chrispian/sigil/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -41,6 +42,8 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		paths = matches
 	}
 
+	registry := components.NewDefaultRegistry()
+
 	hasErrors := false
 	for _, path := range paths {
 		page, err := config.ParseFile(path)
@@ -50,7 +53,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		result := config.Validate(page, nil)
+		result := config.Validate(page, registry)
 
 		if result.Valid && len(result.Warnings) == 0 {
 			fmt.Fprintf(cmd.OutOrStdout(), "\u2713 %s \u2014 valid\n", path)
