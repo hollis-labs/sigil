@@ -1,0 +1,212 @@
+package config
+
+import "fmt"
+
+// ValidationResult contains all validation findings.
+type ValidationResult struct {
+	Valid    bool
+	Errors   []ValidationError
+	Warnings []ValidationWarning
+}
+
+// ValidationError describes a structural error in the config.
+type ValidationError struct {
+	Path    string
+	Message string
+}
+
+// ValidationWarning describes a non-fatal issue in the config.
+type ValidationWarning struct {
+	Path    string
+	Message string
+}
+
+func (e ValidationError) String() string {
+	return fmt.Sprintf("ERROR [%s]: %s", e.Path, e.Message)
+}
+
+func (w ValidationWarning) String() string {
+	return fmt.Sprintf("WARN  [%s]: %s", w.Path, w.Message)
+}
+
+// Valid overlay types.
+var validOverlays = map[string]bool{
+	"page":       true,
+	"modal":      true,
+	"sheet":      true,
+	"drawer":     true,
+	"fullscreen": true,
+}
+
+// Valid action types.
+var validActionTypes = map[string]bool{
+	"navigate": true,
+	"modal":    true,
+	"sheet":    true,
+	"http":     true,
+	"emit":     true,
+	"confirm":  true,
+	"close":    true,
+	"focus":    true,
+}
+
+// Validate checks a Page config for structural correctness.
+// If registry is nil, component type checks are skipped.
+func Validate(page *Page, registry ComponentRegistry) *ValidationResult {
+	result := &ValidationResult{Valid: true}
+
+	validateRequired(page, result)
+	validateOverlay(page.Overlay, result)
+
+	seen := make(map[string]bool)
+	validateComponent(&page.Layout, "layout", seen, registry, result)
+
+	for i, s := range page.Shortcuts {
+		validateShortcut(s, fmt.Sprintf("shortcuts[%d]", i), result)
+	}
+
+	for i, ds := range page.DataSources {
+		validateDataSourceRef(ds, fmt.Sprintf("datasources[%d]", i), result)
+	}
+
+	result.Valid = len(result.Errors) == 0
+	return result
+}
+
+func validateRequired(page *Page, result *ValidationResult) {
+	if page.Sigil == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: "sigil", Message: "required field 'sigil' is missing"})
+	}
+	if page.ID == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: "id", Message: "required field 'id' is missing"})
+	}
+	if page.Title == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: "title", Message: "required field 'title' is missing"})
+	}
+	if page.Overlay == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: "overlay", Message: "required field 'overlay' is missing"})
+	}
+	if page.Layout.Type == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: "layout.type", Message: "required field 'layout.type' is missing"})
+	}
+}
+
+func validateOverlay(overlay string, result *ValidationResult) {
+	if overlay != "" && !validOverlays[overlay] {
+		result.Errors = append(result.Errors, ValidationError{
+			Path:    "overlay",
+			Message: fmt.Sprintf("invalid overlay type %q (valid: page, modal, sheet, drawer, fullscreen)", overlay),
+		})
+	}
+}
+
+func validateComponent(c *Component, path string, seen map[string]bool, registry ComponentRegistry, result *ValidationResult) {
+	if c.Type == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: path + ".type", Message: "component type is required"})
+	} else if registry != nil && !registry.Has(c.Type) {
+		result.Errors = append(result.Errors, ValidationError{
+			Path:    path,
+			Message: fmt.Sprintf("unknown component type %q", c.Type),
+		})
+	}
+
+	if c.ID != "" {
+		if seen[c.ID] {
+			result.Errors = append(result.Errors, ValidationError{
+				Path:    path,
+				Message: fmt.Sprintf("duplicate component id %q", c.ID),
+			})
+		}
+		seen[c.ID] = true
+	} else if c.Type != "" {
+		result.Warnings = append(result.Warnings, ValidationWarning{
+			Path:    path,
+			Message: "component has no id",
+		})
+	}
+
+	for name, action := range c.Actions {
+		validateAction(action, fmt.Sprintf("%s.actions.%s", path, name), result)
+	}
+
+	for i, s := range c.Shortcuts {
+		validateShortcut(s, fmt.Sprintf("%s.shortcuts[%d]", path, i), result)
+	}
+
+	for i, child := range c.Children {
+		validateComponent(&child, fmt.Sprintf("%s.children[%d]", path, i), seen, registry, result)
+	}
+}
+
+func validateAction(action Action, path string, result *ValidationResult) {
+	if action.Type == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: path + ".type", Message: "action type is required"})
+		return
+	}
+	if !validActionTypes[action.Type] {
+		result.Errors = append(result.Errors, ValidationError{
+			Path:    path,
+			Message: fmt.Sprintf("invalid action type %q", action.Type),
+		})
+		return
+	}
+
+	switch action.Type {
+	case "modal":
+		if action.Title == "" {
+			result.Errors = append(result.Errors, ValidationError{Path: path, Message: "modal action requires 'title'"})
+		}
+		if len(action.Fields) == 0 {
+			result.Errors = append(result.Errors, ValidationError{Path: path, Message: "modal action requires 'fields'"})
+		}
+		for i, f := range action.Fields {
+			validateFormField(f, fmt.Sprintf("%s.fields[%d]", path, i), result)
+		}
+	case "navigate":
+		if action.Page == "" && action.URL == "" {
+			result.Errors = append(result.Errors, ValidationError{Path: path, Message: "navigate action requires 'page' or 'url'"})
+		}
+	case "http":
+		if action.URL == "" {
+			result.Errors = append(result.Errors, ValidationError{Path: path, Message: "http action requires 'url'"})
+		}
+		if action.Method == "" {
+			result.Errors = append(result.Errors, ValidationError{Path: path, Message: "http action requires 'method'"})
+		}
+	}
+
+	if action.OnConfirm != nil {
+		validateAction(*action.OnConfirm, path+".onConfirm", result)
+	}
+	if action.OnSuccess != nil {
+		validateAction(*action.OnSuccess, path+".onSuccess", result)
+	}
+}
+
+func validateFormField(f FormField, path string, result *ValidationResult) {
+	if f.Name == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: path, Message: "form field requires 'name'"})
+	}
+	if f.Label == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: path, Message: "form field requires 'label'"})
+	}
+	if f.Type == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: path, Message: "form field requires 'type'"})
+	}
+	if (f.Type == "select" || f.Type == "multiselect") && len(f.Options) == 0 {
+		result.Warnings = append(result.Warnings, ValidationWarning{Path: path, Message: "select field has no options"})
+	}
+}
+
+func validateShortcut(s Shortcut, path string, result *ValidationResult) {
+	if s.Key == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: path, Message: "shortcut requires 'key'"})
+	}
+	validateAction(s.Action, path+".action", result)
+}
+
+func validateDataSourceRef(ds DataSourceRef, path string, result *ValidationResult) {
+	if ds.Alias == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: path, Message: "datasource requires 'alias'"})
+	}
+}
