@@ -51,11 +51,13 @@ func newListThemesCmd() *cobra.Command {
 }
 
 func newListComponentsCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "components",
 		Short: "List registered component types",
 		RunE:  runListComponents,
 	}
+	cmd.Flags().String("type", "", "Show detailed schema for a specific component type")
+	return cmd
 }
 
 func runListPages(cmd *cobra.Command, args []string) error {
@@ -130,8 +132,13 @@ func runListThemes(cmd *cobra.Command, args []string) error {
 
 func runListComponents(cmd *cobra.Command, args []string) error {
 	registry := components.NewDefaultRegistry()
-	types := registry.Types()
 
+	typeName, _ := cmd.Flags().GetString("type")
+	if typeName != "" {
+		return showComponentDetail(cmd, registry, typeName)
+	}
+
+	types := registry.Types()
 	fmt.Fprintf(cmd.OutOrStdout(), "COMPONENTS (%d registered)\n", len(types))
 
 	// Group by category
@@ -151,6 +158,85 @@ func runListComponents(cmd *cobra.Command, args []string) error {
 		sort.Strings(names)
 		label := strings.ToUpper(cat[:1]) + cat[1:]
 		fmt.Fprintf(cmd.OutOrStdout(), "  %-12s %s\n", label+":", strings.Join(names, ", "))
+	}
+
+	return nil
+}
+
+func showComponentDetail(cmd *cobra.Command, registry *components.Registry, typeName string) error {
+	schema, ok := registry.Get(typeName)
+	if !ok {
+		return fmt.Errorf("unknown component type %q", typeName)
+	}
+
+	out := cmd.OutOrStdout()
+	fmt.Fprintf(out, "%s (%s)\n", schema.Type, schema.Category)
+	fmt.Fprintf(out, "  %s\n\n", schema.Description)
+
+	if len(schema.Props) > 0 {
+		fmt.Fprintln(out, "PROPS:")
+		w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
+
+		// Sort prop names for stable output
+		propNames := make([]string, 0, len(schema.Props))
+		for name := range schema.Props {
+			propNames = append(propNames, name)
+		}
+		sort.Strings(propNames)
+
+		for _, name := range propNames {
+			p := schema.Props[name]
+			req := ""
+			if p.Required {
+				req = " (required)"
+			}
+			def := ""
+			if p.Default != nil {
+				def = fmt.Sprintf("  default: %v", p.Default)
+			}
+			enumStr := ""
+			if len(p.Enum) > 0 {
+				enumStr = fmt.Sprintf("  enum: [%s]", strings.Join(p.Enum, ", "))
+			}
+			desc := ""
+			if p.Description != "" {
+				desc = " \u2014 " + p.Description
+			}
+			fmt.Fprintf(w, "  %s\t%s%s%s%s%s\n", name, p.Type, req, def, enumStr, desc)
+		}
+		w.Flush()
+		fmt.Fprintln(out)
+	}
+
+	if len(schema.Actions) > 0 {
+		fmt.Fprintln(out, "ACTIONS:")
+		for name, a := range schema.Actions {
+			fmt.Fprintf(out, "  %s \u2014 %s\n", name, a.Description)
+		}
+		fmt.Fprintln(out)
+	}
+
+	if len(schema.Slots) > 0 {
+		fmt.Fprintln(out, "SLOTS:")
+		for name, s := range schema.Slots {
+			accepts := ""
+			if len(s.Accepts) > 0 {
+				accepts = fmt.Sprintf(" accepts: [%s]", strings.Join(s.Accepts, ", "))
+			}
+			fmt.Fprintf(out, "  %s \u2014 %s%s\n", name, s.Description, accepts)
+		}
+		fmt.Fprintln(out)
+	}
+
+	if len(schema.Shortcuts) > 0 {
+		fmt.Fprintln(out, "SHORTCUTS:")
+		for _, s := range schema.Shortcuts {
+			when := ""
+			if s.When != "" {
+				when = fmt.Sprintf(" (when: %s)", s.When)
+			}
+			fmt.Fprintf(out, "  %-12s %s%s\n", s.Key, s.Description, when)
+		}
 	}
 
 	return nil
