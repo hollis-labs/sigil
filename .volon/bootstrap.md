@@ -1,6 +1,6 @@
 ---
 type: bootstrap
-iteration: 6
+iteration: 7
 status: ready
 updated_at: 2026-03-02
 branch: main
@@ -10,8 +10,8 @@ branch: main
 
 ## Current State
 
-**Iteration 6** — Sprints 0–5 complete. **MVP is complete.** Full CLI + MCP + code
-generation + preview + export/import. Dogfood configs created for Sigil's own GUI.
+**Iteration 7** — Sprints 0–6 complete. Live dev server with file watching, SSE
+auto-reload, styled index page, and on-the-fly page rendering.
 
 ## What exists
 
@@ -33,7 +33,8 @@ generation + preview + export/import. Dogfood configs created for Sigil's own GU
 - **MCP resources**: 7 URI types (pages, components, datasources, themes, project)
 - **MCP prompts**: sigil_design_page, sigil_review_config
 - **Dogfood**: 6 page configs for Sigil's own GUI (pages, editor, components, preview, datasources, themes)
-- 160 tests passing (`go test ./...`)
+- **Dev server**: `sigil serve` with live preview, SSE auto-reload, file watcher, styled index page
+- 154 tests passing (`go test ./...`)
 
 ## Sprint history
 
@@ -43,12 +44,13 @@ generation + preview + export/import. Dogfood configs created for Sigil's own GU
 - Sprint 3: Go/Templ renderer, shared components, theme CSS, handler stubs, generate CLI, E2E tests
 - Sprint 4: MCP server, 9 tools, 7 resources, 2 prompts, integration tests
 - Sprint 5: Preview command, export/import, CLI UX polish, dogfood configs
+- Sprint 6: Live dev server, file watcher, SSE auto-reload, styled index page
 
 ## Next action
 
-**Start Sprint 6** — "Live Dev Server + Watch Mode"
+**Start Sprint 7** — "React/shadcn Renderer"
 
-Read `artifacts/plan/sprints/sprint-6.md` for the full sprint guide.
+Read `artifacts/plan/sprints/sprint-7.md` for the full sprint guide.
 
 ## Sprint roadmap
 
@@ -60,8 +62,8 @@ Read `artifacts/plan/sprints/sprint-6.md` for the full sprint guide.
 | 3 | Go/Templ Renderer | **done** | 4 |
 | 4 | MCP Server + Agent Integration | **done** | 3 |
 | 5 | Preview + Polish + Dogfood | **done** | 3 |
-| 6 | Live Dev Server + Watch Mode | **next** | 3 |
-| 7 | React/shadcn Renderer | todo | 4 |
+| 6 | Live Dev Server + Watch Mode | **done** | 3 |
+| 7 | React/shadcn Renderer | **next** | 4 |
 | 8 | Config Diffing + Migration + Polish | todo | 3 |
 
 ## Decision log
@@ -77,3 +79,4 @@ Read `artifacts/plan/sprints/sprint-6.md` for the full sprint guide.
 - 2026-03-02: Sprint 4 complete. MCP server with JSON-RPC 2.0. 9 tools, 7 resources, 2 prompts. Full agent workflow tested.
 - 2026-03-02: Sprint 5 complete. Preview, export/import, CLI polish, 6 dogfood page configs. MVP done.
 - 2026-03-02: Phase 2 planned: Sprint 6 (live dev server), Sprint 7 (React renderer), Sprint 8 (diffing + polish).
+- 2026-03-02: Sprint 6 complete. `sigil serve` with HTTP server, SSE auto-reload, poll-based file watcher, styled index page with validation status.

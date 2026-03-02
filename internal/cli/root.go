@@ -39,6 +39,7 @@ Examples:
 	cmd.AddCommand(NewPreviewCmd())
 	cmd.AddCommand(NewExportCmd())
 	cmd.AddCommand(NewImportCmd())
+	cmd.AddCommand(NewServeCmd())
 	cmd.AddCommand(NewVersionCmd())
 	cmd.AddCommand(NewMCPCmd())
 	return cmd
