@@ -1,40 +1,49 @@
-# Volon — Agent Boot Instructions
+# Sigil — agent boot
 
-This repo runs under **Volon**, an agentic development system for Claude Code.
+## Agent Auto-Boot Override
 
-Volon filepath: ~/Projects-apps/volon
+This repo boots as `worker`. **Skip profile selection** — go directly to:
 
-Store all your Volon related output in the current project folder/* for this session.
+4. Read `.agentrc/agent-boot.md`
+5. Read `.agentrc/boot/worker.md`
+6. Read `.agentrc/bootstrap.md`
+7. Follow the worker profile instructions — emit boot confirmation and begin work
 
-## Boot Sequence
+## Project Overview
 
-Before any other work:
+Sigil is a system-agnostic UI configuration and code generation tool. It defines UIs declaratively in YAML, validates them against component schemas, and generates framework-specific code (Go/Templ+HTMX, React/shadcn, static HTML).
 
-1. List the available profiles in `.volon/boot/` (e.g. `orchestrator`, `architect`, `worker`, `reviewer`)
-2. Ask the user which profile to use — present the options clearly, plus "Other: Specify"
-3. Wait for the user's selection before proceeding
-4. Read `.volon/agent-boot.md` (core rules and ground truth sources)
-5. Read `.volon/boot/<selected-profile>.md`
-6. Read `.volon/bootstrap.md` (current iteration state)
-7. Follow the selected profile's instructions, emit the boot confirmation block, and begin work
+## Build & Test
 
-## Key files
+```bash
+go build ./cmd/sigil/
+go test ./...
+```
+
+## Architecture
+
+- `cmd/sigil/` — Entry point, Cobra CLI
+- `internal/cli/` — CLI command implementations
+- `internal/components/` — Component type system and schemas
+- `internal/config/` — Configuration loading and validation
+- `internal/datasource/` — DataSource abstraction
+- `internal/mcp/` — MCP server for AI/agent integration
+- `internal/renderer/` — Code generation renderers
+- `internal/server/` — Live dev server
+- `internal/theme/` — Theme tokens and CSS generation
+
+## Key docs
 
 | File | Purpose |
 |---|---|
-| `volon.yaml` | System configuration |
-| `.volon/bootstrap.md` | Current iteration state — start here |
-| `.volon/agent-boot.md` | Full boot reference (rules, reference map) |
-| `.volon/boot/` | Role-specific boot profiles |
-| `.volon/pcc/` | Project context cache |
+| `agentrc.yaml` | System configuration |
+| `.agentrc/bootstrap.md` | Current iteration state — start here |
+| `.agentrc/agent-boot.md` | Full boot reference (rules, reference map) |
+| `.agentrc/boot/` | Role-specific boot profiles |
 | `docs/01_architecture.md` | System architecture |
 | `docs/02_config-spec.md` | Sigil config YAML specification |
 | `docs/03_component-model.md` | Component type system |
 | `docs/04_cli-reference.md` | CLI commands reference |
-| `docs/05_renderer-contract.md` | Renderer plugin contract |
-| `docs/06_datasource-model.md` | DataSource abstraction |
-| `docs/07_theme-system.md` | Theme tokens and CSS generation |
-| `docs/08_mcp-integration.md` | MCP server for AI/agent integration |
 
 ## Profiles
 
