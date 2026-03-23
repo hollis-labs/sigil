@@ -1,0 +1,16 @@
+# Project agentrc config — sigil
+agentrc_version: 2.2.0
+
+agents:
+  sigil-backend:
+    name: Sigil Backend Engineer
+    description: Go service development for the Sigil UI generation engine
+    roles: [backend, go]
+    skills: [go-build, go-lint, go-test]
+    context: agents/backend.md
+
+  sigil-reviewer:
+    name: Sigil Code Reviewer
+    description: Code review for Sigil PRs
+    roles: [code-review, go]
+    skills: [go-lint, go-test]

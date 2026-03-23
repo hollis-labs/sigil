@@ -1,13 +1,13 @@
-# Sigil — agent boot
+# Sigil
 
-## Agent Auto-Boot Override
-
-This repo boots as `worker`. **Skip profile selection** — go directly to:
-
-4. Read `.agentrc/agent-boot.md`
-5. Read `.agentrc/boot/worker.md`
-6. Read `.agentrc/bootstrap.md`
-7. Follow the worker profile instructions — emit boot confirmation and begin work
+## agentrc
+- If `.agentrc/boot-prompt.md` exists, read it first for session context.
+- If the user says "Boot <agent>", look up the agent in `.agentrc/config.yaml` under `agents:`. Load each role file from `~/.agentrc/roles/` (using the `file:` path from `~/.agentrc/config.yaml` role definitions), load the listed skills, and read the project context file from `.agentrc/` if specified.
+- If the user says "Boot <role>" and no agent matches, fall back to loading that single role from `~/.agentrc/roles/` by type directory (domain/, stack/, meta/).
+- After context compaction, re-read the active role and project context files.
+- Do not guess when uncertain. Stop and ask.
+- Prefer focused, minimal output. No trailing summaries.
+- Sub-agent output stays in the sub-agent. Main context gets one-line confirmations.
 
 ## Project Overview
 
@@ -36,20 +36,8 @@ go test ./...
 
 | File | Purpose |
 |---|---|
-| `agentrc.yaml` | System configuration |
-| `.agentrc/bootstrap.md` | Current iteration state — start here |
-| `.agentrc/agent-boot.md` | Full boot reference (rules, reference map) |
-| `.agentrc/boot/` | Role-specific boot profiles |
+| `.agentrc/config.yaml` | Agent definitions for this project |
 | `docs/01_architecture.md` | System architecture |
 | `docs/02_config-spec.md` | Sigil config YAML specification |
 | `docs/03_component-model.md` | Component type system |
 | `docs/04_cli-reference.md` | CLI commands reference |
-
-## Profiles
-
-| Profile | Use when |
-|---|---|
-| `orchestrator` | Driving implementation, managing tasks, writing to the repo |
-| `architect` | Planning, ADRs, doc-only work — limited write scope |
-| `worker` | Bounded read-only analysis (scans, audits, reports) |
-| `reviewer` | Structured reviews, verification, targeted investigation |
