@@ -45,7 +45,7 @@ tokens:
     md: "0.375rem"
 `), 0644)
 
-	theme, err := loadTheme(dir, "default")
+	theme, err := LoadTheme(dir, "default")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -75,7 +75,7 @@ tokens:
     accent: "99 102 241"
 `), 0644)
 
-	theme, err := loadTheme(dir, "child")
+	theme, err := LoadTheme(dir, "child")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

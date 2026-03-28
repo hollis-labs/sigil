@@ -1,7 +1,7 @@
 version: "1.0"
 name: sigil-gui
 defaults:
-  theme: default
+  theme: light
   renderer: go-templ
   output: internal/ui/
 components:

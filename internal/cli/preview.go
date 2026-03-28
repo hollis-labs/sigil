@@ -109,16 +109,12 @@ func loadPreviewTheme(sigilDir, themeName string) *renderer.ThemeConfig {
 		themeName = "default"
 	}
 
-	path := filepath.Join(sigilDir, "themes", themeName+".yaml")
-	data, err := os.ReadFile(path)
+	themesDir := filepath.Join(sigilDir, "themes")
+	theme, err := renderer.LoadTheme(themesDir, themeName)
 	if err != nil {
 		return nil
 	}
-	var theme renderer.ThemeConfig
-	if yaml.Unmarshal(data, &theme) != nil {
-		return nil
-	}
-	return &theme
+	return theme
 }
 
 func loadPreviewDataSources(sigilDir string) map[string]*renderer.DataSourceManifest {

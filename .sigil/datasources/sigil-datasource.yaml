@@ -1,0 +1,19 @@
+alias: SigilDataSource
+description: Sigil datasource manifests
+capabilities: [list, create, read, update, delete]
+fields:
+  - name: alias
+    type: string
+    primary: true
+  - name: description
+    type: string
+  - name: fieldCount
+    type: integer
+  - name: capabilities
+    type: string
+endpoints:
+  list: "GET /api/datasources"
+  create: "POST /api/datasources"
+  read: "GET /api/datasources/{id}"
+  update: "PUT /api/datasources/{id}"
+  delete: "DELETE /api/datasources/{id}"

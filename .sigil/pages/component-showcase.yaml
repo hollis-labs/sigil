@@ -1,0 +1,295 @@
+sigil: "1.0"
+kind: page
+id: component-showcase
+title: Component Showcase
+overlay: page
+module: sigil
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 8
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Component Showcase
+        - type: badge
+          props:
+            text: "New Components"
+            variant: default
+
+    - type: text
+      props:
+        text: "Demonstrating card, switch, dropdown-menu, accordion, combobox, and tooltip components."
+        muted: true
+
+    # ── Cards ──────────────────────────────────
+    - type: heading
+      props:
+        level: 2
+        text: Cards
+
+    - type: grid
+      props:
+        columns: 3
+        gap: 4
+      children:
+        - type: card
+          props:
+            title: Team Members
+            description: Manage your team and permissions.
+          children:
+            - type: rows
+              props:
+                gap: 3
+              children:
+                - type: columns
+                  props:
+                    gap: 3
+                    align: center
+                  children:
+                    - type: avatar
+                      props:
+                        alt: Alice
+                        size: sm
+                    - type: text
+                      props:
+                        text: "Alice Johnson — Admin"
+                - type: columns
+                  props:
+                    gap: 3
+                    align: center
+                  children:
+                    - type: avatar
+                      props:
+                        alt: Bob
+                        size: sm
+                    - type: text
+                      props:
+                        text: "Bob Smith — Editor"
+
+        - type: card
+          props:
+            title: Notifications
+            description: Configure how you receive alerts.
+          children:
+            - type: rows
+              props:
+                gap: 3
+              children:
+                - type: switch
+                  props:
+                    label: Email notifications
+                    default: true
+                - type: switch
+                  props:
+                    label: Push notifications
+                - type: switch
+                  props:
+                    label: Weekly digest
+                    default: true
+
+        - type: card
+          props:
+            title: Quick Stats
+            description: Overview for this month.
+          children:
+            - type: rows
+              props:
+                gap: 3
+              children:
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "Total users"
+                    - type: text
+                      props:
+                        text: "2,847"
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "Active projects"
+                    - type: text
+                      props:
+                        text: "142"
+                - type: progress
+                  props:
+                    value: 72
+
+    # ── Dropdown Menus ─────────────────────────
+    - type: heading
+      props:
+        level: 2
+        text: Dropdown Menus
+
+    - type: columns
+      props:
+        gap: 4
+      children:
+        - type: dropdown-menu
+          props:
+            trigger: Actions
+            items:
+              - label: Edit
+              - label: Duplicate
+              - label: Archive
+              - label: Delete
+
+        - type: dropdown-menu
+          props:
+            trigger: Sort By
+            items:
+              - label: Name (A-Z)
+              - label: Name (Z-A)
+              - label: Date Created
+              - label: Last Modified
+
+        - type: dropdown-menu
+          props:
+            trigger: Export
+            items:
+              - label: Export as CSV
+              - label: Export as JSON
+              - label: Export as PDF
+
+    # ── Combobox ───────────────────────────────
+    - type: heading
+      props:
+        level: 2
+        text: Combobox
+
+    - type: columns
+      props:
+        gap: 4
+        align: center
+      children:
+        - type: combobox
+          props:
+            placeholder: "Select framework..."
+            searchPlaceholder: "Search frameworks..."
+            options:
+              - value: next
+                label: Next.js
+              - value: remix
+                label: Remix
+              - value: astro
+                label: Astro
+              - value: nuxt
+                label: Nuxt
+              - value: svelte
+                label: SvelteKit
+              - value: solid
+                label: SolidStart
+
+        - type: combobox
+          props:
+            placeholder: "Assign to..."
+            searchPlaceholder: "Search people..."
+            emptyMessage: "No team members found."
+            options:
+              - value: alice
+                label: Alice Johnson
+              - value: bob
+                label: Bob Smith
+              - value: carol
+                label: Carol Williams
+              - value: dave
+                label: Dave Brown
+              - value: eve
+                label: Eve Davis
+
+    # ── Accordion ──────────────────────────────
+    - type: heading
+      props:
+        level: 2
+        text: Accordion
+
+    - type: accordion
+      props:
+        type: single
+      children:
+        - type: accordion-item
+          props:
+            title: "Is Sigil free to use?"
+            value: faq-1
+          children:
+            - type: text
+              props:
+                text: "Yes. Sigil is open source and free for any project."
+        - type: accordion-item
+          props:
+            title: "Which frameworks are supported?"
+            value: faq-2
+          children:
+            - type: text
+              props:
+                text: "Sigil generates code for React/shadcn, Go/Templ+HTMX, and standalone HTML preview."
+        - type: accordion-item
+          props:
+            title: "Can I add custom components?"
+            value: faq-3
+          children:
+            - type: text
+              props:
+                text: "Yes. Place custom YAML schemas in .sigil/components/ and they will be auto-discovered."
+        - type: accordion-item
+          props:
+            title: "How does theming work?"
+            value: faq-4
+          children:
+            - type: text
+              props:
+                text: "Themes are defined as YAML token files. They support inheritance, so you can create a base theme and extend it for dark mode or brand variants."
+
+    # ── Tooltips ───────────────────────────────
+    - type: heading
+      props:
+        level: 2
+        text: Tooltips
+
+    - type: columns
+      props:
+        gap: 4
+      children:
+        - type: tooltip
+          props:
+            content: "Create a new page"
+            side: bottom
+          children:
+            - type: button
+              props:
+                label: Hover me
+                variant: outline
+        - type: tooltip
+          props:
+            content: "This action cannot be undone"
+            side: bottom
+          children:
+            - type: button
+              props:
+                label: Delete
+                variant: destructive
+        - type: tooltip
+          props:
+            content: "View keyboard shortcuts"
+            side: right
+          children:
+            - type: button
+              props:
+                label: "?"
+                variant: ghost

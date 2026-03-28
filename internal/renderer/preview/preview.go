@@ -74,16 +74,27 @@ func writeThemeCSS(buf *bytes.Buffer, theme *renderer.ThemeConfig) {
 		return
 	}
 
-	categories := []string{"colors", "typography", "spacing", "radius", "shadows"}
+	// Categories with optional prefix to avoid key collisions (e.g. radius.lg vs shadows.lg)
+	type catEntry struct {
+		name   string
+		prefix string
+	}
+	categories := []catEntry{
+		{"colors", ""},
+		{"typography", ""},
+		{"spacing", ""},
+		{"radius", ""},
+		{"shadows", "shadow-"},
+	}
 	for _, cat := range categories {
-		tokens, ok := theme.Tokens[cat]
+		tokens, ok := theme.Tokens[cat.name]
 		if !ok || len(tokens) == 0 {
 			continue
 		}
 		keys := sortedKeys(tokens)
 		for _, key := range keys {
 			val := fmt.Sprintf("%v", tokens[key])
-			buf.WriteString(fmt.Sprintf("      --sigil-%s: %s;\n", key, val))
+			fmt.Fprintf(buf, "      --sigil-%s%s: %s;\n", cat.prefix, key, val)
 		}
 	}
 
@@ -117,53 +128,229 @@ func writeDefaultTokens(buf *bytes.Buffer) {
 
 func writeComponentCSS(buf *bytes.Buffer) {
 	buf.WriteString(`
+    /* ── Buttons (shadcn-style) ─────────────────────────── */
     .sigil-btn {
-      font-size: 0.875rem; padding: 0.5rem 1rem; cursor: pointer;
-      transition: opacity 150ms; border: none; border-radius: var(--sigil-radius-md);
-      display: inline-flex; align-items: center; gap: 0.5rem;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      white-space: nowrap; font-size: 0.875rem; font-weight: 500; line-height: 1.25rem;
+      padding: 0.5rem 1rem; border: none; cursor: pointer;
+      border-radius: calc(var(--sigil-md, 0.375rem));
+      transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), color 150ms, box-shadow 150ms;
+      outline: none;
     }
-    .sigil-btn-primary { background: rgb(var(--sigil-accent)); color: white; }
-    .sigil-btn-primary:hover { opacity: 0.9; }
-    .sigil-btn-secondary { background: rgb(var(--sigil-surface)); color: rgb(var(--sigil-text)); border: 1px solid rgb(var(--sigil-border)); }
-    .sigil-btn-destructive { background: #ef4444; color: white; }
-    .sigil-btn-ghost { background: transparent; color: rgb(var(--sigil-text)); }
-    .sigil-btn-ghost:hover { background: rgb(var(--sigil-surface)); }
-    .sigil-badge { padding: 0.125rem 0.5rem; border-radius: var(--sigil-radius-full, 9999px); font-size: 0.75rem; font-weight: 500; }
-    .sigil-badge-default { background: rgb(var(--sigil-surface)); color: rgb(var(--sigil-text)); }
-    .sigil-badge-success { background: #dcfce7; color: #166534; }
-    .sigil-badge-warning { background: #fef9c3; color: #854d0e; }
-    .sigil-badge-error { background: #fee2e2; color: #991b1b; }
-    .sigil-badge-info { background: #dbeafe; color: #1e40af; }
+    .sigil-btn:focus-visible {
+      box-shadow: 0 0 0 2px rgb(var(--sigil-background)), 0 0 0 4px rgb(var(--sigil-ring, var(--sigil-primary)));
+    }
+    .sigil-btn:disabled { pointer-events: none; opacity: 0.5; }
+    .sigil-btn-primary {
+      background: rgb(var(--sigil-primary)); color: rgb(var(--sigil-primary-foreground, 255 255 255));
+    }
+    .sigil-btn-primary:hover { background: rgb(var(--sigil-primary) / 0.9); }
+    .sigil-btn-secondary {
+      background: rgb(var(--sigil-secondary)); color: rgb(var(--sigil-secondary-foreground));
+    }
+    .sigil-btn-secondary:hover { background: rgb(var(--sigil-secondary) / 0.8); }
+    .sigil-btn-destructive {
+      background: rgb(var(--sigil-danger)); color: rgb(var(--sigil-danger-foreground, 255 255 255));
+    }
+    .sigil-btn-destructive:hover { background: rgb(var(--sigil-danger) / 0.9); }
+    .sigil-btn-outline {
+      background: transparent; color: rgb(var(--sigil-foreground, var(--sigil-text)));
+      border: 1px solid rgb(var(--sigil-input, var(--sigil-border)));
+    }
+    .sigil-btn-outline:hover { background: rgb(var(--sigil-accent)); color: rgb(var(--sigil-accent-foreground, var(--sigil-text))); }
+    .sigil-btn-ghost {
+      background: transparent; color: rgb(var(--sigil-foreground, var(--sigil-text)));
+    }
+    .sigil-btn-ghost:hover { background: rgb(var(--sigil-accent)); color: rgb(var(--sigil-accent-foreground, var(--sigil-text))); }
+    .sigil-btn-link {
+      background: transparent; color: rgb(var(--sigil-primary));
+      padding: 0; text-decoration: underline; text-underline-offset: 4px;
+    }
+    .sigil-btn-link:hover { text-decoration-thickness: 2px; }
+    .sigil-btn-sm { height: 2rem; padding: 0.25rem 0.75rem; font-size: 0.75rem; border-radius: calc(var(--sigil-sm, 0.125rem)); }
+    .sigil-btn-lg { height: 2.75rem; padding: 0.5rem 2rem; font-size: 1rem; border-radius: calc(var(--sigil-md, 0.375rem)); }
+    .sigil-btn-icon { height: 2.25rem; width: 2.25rem; padding: 0; }
+
+    /* ── Badge (shadcn-style) ───────────────────────────── */
+    .sigil-badge {
+      display: inline-flex; align-items: center;
+      padding: 0.125rem 0.625rem; border-radius: 9999px;
+      font-size: 0.75rem; font-weight: 600; line-height: 1rem;
+      border: 1px solid transparent;
+      transition: background-color 150ms, color 150ms;
+    }
+    .sigil-badge-default {
+      background: rgb(var(--sigil-primary)); color: rgb(var(--sigil-primary-foreground, 255 255 255));
+    }
+    .sigil-badge-secondary {
+      background: rgb(var(--sigil-secondary)); color: rgb(var(--sigil-secondary-foreground));
+    }
+    .sigil-badge-success { background: rgb(var(--sigil-success) / 0.12); color: rgb(var(--sigil-success)); border-color: rgb(var(--sigil-success) / 0.2); }
+    .sigil-badge-warning { background: rgb(var(--sigil-warning) / 0.12); color: rgb(var(--sigil-warning)); border-color: rgb(var(--sigil-warning) / 0.2); }
+    .sigil-badge-danger { background: rgb(var(--sigil-danger) / 0.12); color: rgb(var(--sigil-danger)); border-color: rgb(var(--sigil-danger) / 0.2); }
+    .sigil-badge-error { background: rgb(var(--sigil-danger) / 0.12); color: rgb(var(--sigil-danger)); border-color: rgb(var(--sigil-danger) / 0.2); }
+    .sigil-badge-info { background: rgb(var(--sigil-info) / 0.12); color: rgb(var(--sigil-info)); border-color: rgb(var(--sigil-info) / 0.2); }
+    .sigil-badge-outline {
+      background: transparent; color: rgb(var(--sigil-foreground, var(--sigil-text)));
+      border-color: rgb(var(--sigil-border));
+    }
+    .sigil-badge-destructive {
+      background: rgb(var(--sigil-danger)); color: rgb(var(--sigil-danger-foreground, 255 255 255));
+    }
+
+    /* ── Input (shadcn-style) ───────────────────────────── */
     .sigil-input {
-      padding: 0.5rem 0.75rem; border-radius: var(--sigil-radius-md);
-      border: 1px solid rgb(var(--sigil-border)); background: rgb(var(--sigil-surface));
-      color: rgb(var(--sigil-text)); font-size: 0.875rem; outline: none;
+      display: flex; width: 100%; height: 2.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: calc(var(--sigil-md, 0.375rem));
+      border: 1px solid rgb(var(--sigil-input, var(--sigil-border)));
+      background: transparent;
+      color: rgb(var(--sigil-foreground, var(--sigil-text)));
+      font-size: 0.875rem; line-height: 1.25rem;
+      outline: none;
+      transition: border-color 150ms, box-shadow 150ms;
     }
-    .sigil-input:focus { border-color: rgb(var(--sigil-accent)); box-shadow: 0 0 0 2px rgba(var(--sigil-accent), 0.2); }
-    .sigil-label { font-size: 0.875rem; font-weight: 500; color: rgb(var(--sigil-text)); }
-    .sigil-separator { border: none; border-top: 1px solid rgb(var(--sigil-border)); margin: 0.5rem 0; }
+    .sigil-input::placeholder { color: rgb(var(--sigil-muted-foreground, var(--sigil-text-muted))); }
+    .sigil-input:focus {
+      border-color: rgb(var(--sigil-ring, var(--sigil-primary)));
+      box-shadow: 0 0 0 2px rgb(var(--sigil-background)), 0 0 0 4px rgb(var(--sigil-ring, var(--sigil-primary)));
+    }
+    .sigil-input:disabled { opacity: 0.5; cursor: not-allowed; }
+    select.sigil-input { appearance: none; padding-right: 2rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 5l3 3 3-3'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; }
+    textarea.sigil-input { height: auto; min-height: 5rem; resize: vertical; }
+
+    /* ── Label ───────────────────────────────────────────── */
+    .sigil-label {
+      font-size: 0.875rem; font-weight: 500; line-height: 1;
+      color: rgb(var(--sigil-foreground, var(--sigil-text)));
+    }
+
+    /* ── Separator ──────────────────────────────────────── */
+    .sigil-separator {
+      border: none; border-top: 1px solid rgb(var(--sigil-border));
+      margin: 0; flex-shrink: 0;
+    }
+
+    /* ── Card ────────────────────────────────────────────── */
+    .sigil-card {
+      background: rgb(var(--sigil-card, var(--sigil-surface)));
+      color: rgb(var(--sigil-card-foreground, var(--sigil-text)));
+      border: 1px solid rgb(var(--sigil-border));
+      border-radius: calc(var(--sigil-lg, 0.5rem));
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      overflow: hidden;
+    }
+    .sigil-card-header { padding: 1.5rem 1.5rem 0; display: flex; flex-direction: column; gap: 0.375rem; }
+    .sigil-card-title { font-size: 1.5rem; font-weight: 600; line-height: 1; letter-spacing: -0.025em; }
+    .sigil-card-description { font-size: 0.875rem; color: rgb(var(--sigil-muted-foreground, var(--sigil-text-muted))); }
+    .sigil-card-content { padding: 1.5rem; }
+    .sigil-card-footer { padding: 0 1.5rem 1.5rem; display: flex; align-items: center; }
+
+    /* ── Form ────────────────────────────────────────────── */
     .sigil-form { max-width: 32rem; }
-    .sigil-data-table { width: 100%; }
-    .sigil-data-table table { width: 100%; border-collapse: collapse; }
-    .sigil-data-table th, .sigil-data-table td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid rgb(var(--sigil-border)); }
-    .sigil-data-table th { font-weight: 600; color: rgb(var(--sigil-text-muted)); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    .sigil-data-table tbody tr:hover { background: rgb(var(--sigil-surface)); }
-    .sigil-alert { padding: 0.75rem 1rem; border-radius: var(--sigil-radius-md); font-size: 0.875rem; }
-    .sigil-alert-info { background: #dbeafe; color: #1e40af; }
-    .sigil-alert-warning { background: #fef9c3; color: #854d0e; }
-    .sigil-alert-error { background: #fee2e2; color: #991b1b; }
-    .sigil-alert-success { background: #dcfce7; color: #166534; }
-    .sigil-progress { width: 100%; accent-color: rgb(var(--sigil-accent)); }
-    .sigil-avatar { border-radius: var(--sigil-radius-full, 9999px); object-fit: cover; }
+
+    /* ── Data Table (shadcn-style) ──────────────────────── */
+    .sigil-data-table { width: 100%; overflow: auto; border: 1px solid rgb(var(--sigil-border)); border-radius: calc(var(--sigil-lg, 0.5rem)); }
+    .sigil-data-table table { width: 100%; border-collapse: collapse; caption-side: bottom; font-size: 0.875rem; }
+    .sigil-data-table th {
+      padding: 0.75rem 1rem; text-align: left;
+      font-weight: 500; color: rgb(var(--sigil-muted-foreground, var(--sigil-text-muted)));
+      border-bottom: 1px solid rgb(var(--sigil-border));
+      height: 2.5rem; white-space: nowrap;
+    }
+    .sigil-data-table td {
+      padding: 0.75rem 1rem; text-align: left;
+      border-bottom: 1px solid rgb(var(--sigil-border));
+      vertical-align: middle;
+    }
+    .sigil-data-table tbody tr { transition: background-color 150ms; }
+    .sigil-data-table tbody tr:hover { background: rgb(var(--sigil-muted) / 0.5); }
+    .sigil-data-table tbody tr:last-child td { border-bottom: none; }
+
+    /* ── Alert (shadcn-style) ───────────────────────────── */
+    .sigil-alert {
+      position: relative; width: 100%;
+      padding: 1rem 1rem 1rem 1rem;
+      border-radius: calc(var(--sigil-lg, 0.5rem));
+      border: 1px solid rgb(var(--sigil-border));
+      font-size: 0.875rem; line-height: 1.5;
+    }
+    .sigil-alert-info { border-color: rgb(var(--sigil-info) / 0.3); color: rgb(var(--sigil-info)); }
+    .sigil-alert-warning { border-color: rgb(var(--sigil-warning) / 0.3); color: rgb(var(--sigil-warning)); }
+    .sigil-alert-error { border-color: rgb(var(--sigil-danger)); color: rgb(var(--sigil-danger)); }
+    .sigil-alert-success { border-color: rgb(var(--sigil-success) / 0.3); color: rgb(var(--sigil-success)); }
+
+    /* ── Progress ────────────────────────────────────────── */
+    .sigil-progress-wrap {
+      position: relative; width: 100%; height: 0.75rem; overflow: hidden;
+      border-radius: 9999px; background: rgb(var(--sigil-secondary, var(--sigil-surface-2)));
+    }
+    .sigil-progress-bar {
+      height: 100%; border-radius: 9999px;
+      background: rgb(var(--sigil-primary));
+      transition: width 300ms ease;
+    }
+
+    /* ── Avatar ──────────────────────────────────────────── */
+    .sigil-avatar {
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 9999px; overflow: hidden; flex-shrink: 0;
+      background: rgb(var(--sigil-muted, var(--sigil-surface-2)));
+      color: rgb(var(--sigil-foreground, var(--sigil-text)));
+      font-weight: 600; font-size: 0.75rem;
+    }
     .sigil-avatar-sm { width: 2rem; height: 2rem; }
     .sigil-avatar-md { width: 2.5rem; height: 2.5rem; }
     .sigil-avatar-lg { width: 3rem; height: 3rem; }
-    .sigil-modal { background: rgb(var(--sigil-surface)); border-radius: var(--sigil-radius-lg); box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); overflow: hidden; }
-    .sigil-modal-header { padding: 1rem 1.5rem; border-bottom: 1px solid rgb(var(--sigil-border)); }
+
+    /* ── Modal / Dialog (shadcn-style) ──────────────────── */
+    .sigil-modal {
+      background: rgb(var(--sigil-background));
+      border: 1px solid rgb(var(--sigil-border));
+      border-radius: calc(var(--sigil-lg, 0.5rem));
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+      overflow: hidden;
+    }
+    .sigil-modal-header {
+      display: flex; flex-direction: column; gap: 0.375rem;
+      padding: 1.5rem 1.5rem 0;
+    }
     .sigil-modal-content { padding: 1.5rem; }
-    .sigil-sheet { background: rgb(var(--sigil-surface)); box-shadow: -4px 0 15px rgb(0 0 0 / 0.1); }
-    .sigil-sheet-header { padding: 1rem 1.5rem; border-bottom: 1px solid rgb(var(--sigil-border)); }
+
+    /* ── Sheet / Drawer ─────────────────────────────────── */
+    .sigil-sheet {
+      background: rgb(var(--sigil-background));
+      border-left: 1px solid rgb(var(--sigil-border));
+      box-shadow: -10px 0 30px -5px rgb(0 0 0 / 0.1);
+    }
+    .sigil-sheet-header {
+      display: flex; flex-direction: column; gap: 0.375rem;
+      padding: 1.5rem 1.5rem 0;
+    }
     .sigil-sheet-content { padding: 1.5rem; }
+
+    /* ── Tabs (shadcn-style) ─────────────────────────────── */
+    .sigil-tabs-list {
+      display: inline-flex; align-items: center;
+      padding: 0.25rem; gap: 0.125rem;
+      background: rgb(var(--sigil-muted, var(--sigil-surface-2)));
+      border-radius: calc(var(--sigil-md, 0.375rem));
+    }
+    .sigil-tab-trigger {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0.375rem 0.75rem; border: none; cursor: pointer;
+      font-size: 0.875rem; font-weight: 500; line-height: 1.25rem;
+      background: transparent; color: rgb(var(--sigil-muted-foreground, var(--sigil-text-muted)));
+      border-radius: calc(var(--sigil-sm, 0.125rem));
+      white-space: nowrap;
+      transition: background-color 150ms, color 150ms, box-shadow 150ms;
+    }
+    .sigil-tab-trigger:hover { color: rgb(var(--sigil-foreground, var(--sigil-text))); }
+    .sigil-tab-trigger-active {
+      background: rgb(var(--sigil-background));
+      color: rgb(var(--sigil-foreground, var(--sigil-text)));
+      box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    }
 `)
 }
 
@@ -280,16 +467,15 @@ func renderPreviewComponent(buf *bytes.Buffer, c *config.Component, depth int, c
 
 	case "progress":
 		value := getPropString(c.Props, "value", "0")
-		max := getPropString(c.Props, "max", "100")
-		fmt.Fprintf(buf, "%s<progress class=\"sigil-progress\" value=%q max=%q></progress>\n", prefix, value, max)
+		fmt.Fprintf(buf, "%s<div class=\"sigil-progress-wrap\">\n", prefix)
+		fmt.Fprintf(buf, "%s  <div class=\"sigil-progress-bar\" style=\"width: %s%%\"></div>\n", prefix, value)
+		fmt.Fprintf(buf, "%s</div>\n", prefix)
 
 	case "avatar":
 		alt := getPropString(c.Props, "alt", "User")
 		size := getPropString(c.Props, "size", "md")
 		classes := fmt.Sprintf("sigil-avatar sigil-avatar-%s", size)
-		// Use a placeholder for preview
-		fmt.Fprintf(buf, "%s<div class=%q style=\"background:rgb(var(--sigil-accent));display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:0.75rem\">%s</div>\n",
-			prefix, classes, string(alt[0:1]))
+		fmt.Fprintf(buf, "%s<div class=%q>%s</div>\n", prefix, classes, alt[:1])
 
 	case "alert":
 		message := getPropString(c.Props, "message", "")
@@ -480,22 +666,21 @@ func renderPreviewOverlay(buf *bytes.Buffer, c *config.Component, prefix string,
 }
 
 func renderPreviewTabs(buf *bytes.Buffer, c *config.Component, prefix string, depth int, cfg *PreviewConfig) {
-	// Render a tab bar and show first tab's content
-	fmt.Fprintf(buf, "%s<div class=\"sigil-tabs\">\n", prefix)
-	fmt.Fprintf(buf, "%s  <div class=\"flex border-b border-[rgb(var(--sigil-border))] gap-4\">\n", prefix)
+	fmt.Fprintf(buf, "%s<div>\n", prefix)
+	fmt.Fprintf(buf, "%s  <div class=\"sigil-tabs-list\">\n", prefix)
 	for i, child := range c.Children {
 		label := getPropString(child.Props, "label", child.ID)
-		activeClass := ""
+		activeClass := "sigil-tab-trigger"
 		if i == 0 {
-			activeClass = " border-b-2 border-[rgb(var(--sigil-accent))] text-[rgb(var(--sigil-accent))]"
+			activeClass += " sigil-tab-trigger-active"
 		}
-		fmt.Fprintf(buf, "%s    <button class=\"px-3 py-2 text-sm font-medium%s\">%s</button>\n", prefix, activeClass, label)
+		fmt.Fprintf(buf, "%s    <button class=%q>%s</button>\n", prefix, activeClass, label)
 	}
 	fmt.Fprintf(buf, "%s  </div>\n", prefix)
 
 	// Only render the first tab's children
 	if len(c.Children) > 0 {
-		fmt.Fprintf(buf, "%s  <div class=\"pt-4\">\n", prefix)
+		fmt.Fprintf(buf, "%s  <div class=\"mt-4\">\n", prefix)
 		for i := range c.Children[0].Children {
 			renderPreviewComponent(buf, &c.Children[0].Children[i], depth+2, cfg)
 		}
@@ -661,4 +846,3 @@ func sortedKeys(m map[string]interface{}) []string {
 	sort.Strings(keys)
 	return keys
 }
-

@@ -32,6 +32,17 @@ go test ./...
 - `internal/server/` — Live dev server
 - `internal/theme/` — Theme tokens and CSS generation
 
+## Demo App
+
+Next.js 16 + Tailwind v4 + shadcn/ui v4 demo at `demo/`. Renders real shadcn components from Sigil-generated output.
+
+```bash
+make demo-generate   # build sigil, generate react output, sync to demo
+make demo            # generate + start dev server on port 3333
+```
+
+**Important:** Demo hooks in `demo/src/hooks/` use mock data (SWR incompatible with React 19). The `make demo-generate` target uses `--ignore-existing` to avoid overwriting them. If hooks get overwritten, restore mock versions manually.
+
 ## Key docs
 
 | File | Purpose |

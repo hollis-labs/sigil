@@ -34,6 +34,30 @@ func renderTheme(theme *renderer.ThemeConfig) ([]renderer.OutputFile, error) {
 	return files, nil
 }
 
+// shadcnColorVars maps Sigil color token names to shadcn CSS variable names.
+// Only tokens that have a shadcn equivalent are listed here.
+var shadcnColorVars = map[string]string{
+	"background":           "background",
+	"foreground":           "foreground",
+	"card":                 "card",
+	"card-foreground":      "card-foreground",
+	"popover":              "popover",
+	"popover-foreground":   "popover-foreground",
+	"primary":              "primary",
+	"primary-foreground":   "primary-foreground",
+	"secondary":            "secondary",
+	"secondary-foreground": "secondary-foreground",
+	"muted":                "muted",
+	"muted-foreground":     "muted-foreground",
+	"accent":               "accent",
+	"accent-foreground":    "accent-foreground",
+	"danger":               "destructive",
+	"danger-foreground":    "destructive-foreground",
+	"border":               "border",
+	"input":                "input",
+	"ring":                 "ring",
+}
+
 func generateGlobalsCSS(theme *renderer.ThemeConfig) ([]byte, error) {
 	var buf bytes.Buffer
 
@@ -45,22 +69,56 @@ func generateGlobalsCSS(theme *renderer.ThemeConfig) ([]byte, error) {
 	buf.WriteString("@layer base {\n")
 	buf.WriteString("  :root {\n")
 
-	// Write token categories in stable order
-	categories := []string{"colors", "typography", "spacing", "radius", "shadows"}
-	for _, cat := range categories {
-		tokens, ok := theme.Tokens[cat]
-		if !ok || len(tokens) == 0 {
-			continue
+	// Colors: emit both --sigil-* and shadcn-compatible --* variables
+	if colors, ok := theme.Tokens["colors"]; ok && len(colors) > 0 {
+		buf.WriteString("\n    /* Colors */\n")
+		keys := sortedKeys(colors)
+		for _, key := range keys {
+			val := fmt.Sprintf("%v", colors[key])
+			fmt.Fprintf(&buf, "    --sigil-%s: %s;\n", key, val)
 		}
 
-		label := strings.ToUpper(cat[:1]) + cat[1:]
-		buf.WriteString(fmt.Sprintf("\n    /* %s */\n", label))
+		// shadcn aliases
+		buf.WriteString("\n    /* shadcn/ui compatibility */\n")
+		shadcnKeys := sortedKeys(colors)
+		for _, key := range shadcnKeys {
+			if shadcnVar, ok := shadcnColorVars[key]; ok {
+				fmt.Fprintf(&buf, "    --%s: var(--sigil-%s);\n", shadcnVar, key)
+			}
+		}
+	}
 
-		keys := sortedKeys(tokens)
+	// Typography
+	if typo, ok := theme.Tokens["typography"]; ok && len(typo) > 0 {
+		buf.WriteString("\n    /* Typography */\n")
+		keys := sortedKeys(typo)
 		for _, key := range keys {
-			val := fmt.Sprintf("%v", tokens[key])
-			cssVar := fmt.Sprintf("--sigil-%s", key)
-			buf.WriteString(fmt.Sprintf("    %s: %s;\n", cssVar, val))
+			val := fmt.Sprintf("%v", typo[key])
+			fmt.Fprintf(&buf, "    --sigil-%s: %s;\n", key, val)
+		}
+	}
+
+	// Radius
+	if radius, ok := theme.Tokens["radius"]; ok && len(radius) > 0 {
+		buf.WriteString("\n    /* Radius */\n")
+		keys := sortedKeys(radius)
+		for _, key := range keys {
+			val := fmt.Sprintf("%v", radius[key])
+			fmt.Fprintf(&buf, "    --sigil-%s: %s;\n", key, val)
+		}
+		// shadcn radius alias
+		if _, ok := radius["lg"]; ok {
+			buf.WriteString("    --radius: var(--sigil-lg);\n")
+		}
+	}
+
+	// Shadows
+	if shadows, ok := theme.Tokens["shadows"]; ok && len(shadows) > 0 {
+		buf.WriteString("\n    /* Shadows */\n")
+		keys := sortedKeys(shadows)
+		for _, key := range keys {
+			val := fmt.Sprintf("%v", shadows[key])
+			fmt.Fprintf(&buf, "    --sigil-shadow-%s: %s;\n", key, val)
 		}
 	}
 
@@ -84,9 +142,43 @@ func generateTailwindConfig(theme *renderer.ThemeConfig) ([]byte, error) {
 	buf.WriteString("  theme: {\n")
 	buf.WriteString("    extend: {\n")
 
-	// Colors
+	// Colors — shadcn-compatible semantic colors + sigil namespace
+	buf.WriteString("      colors: {\n")
+
+	// shadcn semantic colors (used by shadcn/ui components)
+	shadcnColors := []struct {
+		name   string
+		cssVar string
+		hasFg  bool
+		fgVar  string
+	}{
+		{"background", "background", false, ""},
+		{"foreground", "foreground", false, ""},
+		{"card", "card", true, "card-foreground"},
+		{"popover", "popover", true, "popover-foreground"},
+		{"primary", "primary", true, "primary-foreground"},
+		{"secondary", "secondary", true, "secondary-foreground"},
+		{"muted", "muted", true, "muted-foreground"},
+		{"accent", "accent", true, "accent-foreground"},
+		{"destructive", "destructive", true, "destructive-foreground"},
+		{"border", "border", false, ""},
+		{"input", "input", false, ""},
+		{"ring", "ring", false, ""},
+	}
+
+	for _, sc := range shadcnColors {
+		if sc.hasFg {
+			fmt.Fprintf(&buf, "        %s: {\n", sc.name)
+			fmt.Fprintf(&buf, "          DEFAULT: \"rgb(var(--%s) / <alpha-value>)\",\n", sc.cssVar)
+			fmt.Fprintf(&buf, "          foreground: \"rgb(var(--%s) / <alpha-value>)\",\n", sc.fgVar)
+			buf.WriteString("        },\n")
+		} else {
+			fmt.Fprintf(&buf, "        %s: \"rgb(var(--%s) / <alpha-value>)\",\n", sc.name, sc.cssVar)
+		}
+	}
+
+	// Sigil-specific colors (for direct use)
 	if colors, ok := theme.Tokens["colors"]; ok && len(colors) > 0 {
-		buf.WriteString("      colors: {\n")
 		buf.WriteString("        sigil: {\n")
 		keys := sortedKeys(colors)
 		for _, key := range keys {
@@ -94,11 +186,12 @@ func generateTailwindConfig(theme *renderer.ThemeConfig) ([]byte, error) {
 			if strings.Contains(key, "-") {
 				jsKey = fmt.Sprintf("\"%s\"", key)
 			}
-			buf.WriteString(fmt.Sprintf("          %s: \"rgb(var(--sigil-%s) / <alpha-value>)\",\n", jsKey, key))
+			fmt.Fprintf(&buf, "          %s: \"rgb(var(--sigil-%s) / <alpha-value>)\",\n", jsKey, key)
 		}
 		buf.WriteString("        },\n")
-		buf.WriteString("      },\n")
 	}
+
+	buf.WriteString("      },\n")
 
 	// Fonts
 	if typo, ok := theme.Tokens["typography"]; ok {
@@ -112,18 +205,21 @@ func generateTailwindConfig(theme *renderer.ThemeConfig) ([]byte, error) {
 		}
 	}
 
-	// Border radius
+	// Border radius — shadcn convention + sigil namespace
+	buf.WriteString("      borderRadius: {\n")
+	buf.WriteString("        lg: \"var(--radius)\",\n")
+	buf.WriteString("        md: \"calc(var(--radius) - 2px)\",\n")
+	buf.WriteString("        sm: \"calc(var(--radius) - 4px)\",\n")
 	if radius, ok := theme.Tokens["radius"]; ok && len(radius) > 0 {
-		buf.WriteString("      borderRadius: {\n")
 		keys := sortedKeys(radius)
 		for _, key := range keys {
 			if key == "none" || key == "full" {
 				continue
 			}
-			buf.WriteString(fmt.Sprintf("        \"sigil-%s\": \"var(--sigil-%s)\",\n", key, key))
+			fmt.Fprintf(&buf, "        \"sigil-%s\": \"var(--sigil-%s)\",\n", key, key)
 		}
-		buf.WriteString("      },\n")
 	}
+	buf.WriteString("      },\n")
 
 	buf.WriteString("    },\n")
 	buf.WriteString("  },\n")

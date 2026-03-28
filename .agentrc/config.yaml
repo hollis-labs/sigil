@@ -9,6 +9,13 @@ agents:
     skills: [go-build, go-lint, go-test]
     context: agents/backend.md
 
+  sigil-renderer:
+    name: Sigil Renderer Engineer
+    description: Component schemas, render targets (React/shadcn, Go/Templ), preview system
+    roles: [backend, go]
+    skills: [go-build, go-lint, go-test]
+    context: agents/renderer.md
+
   sigil-reviewer:
     name: Sigil Code Reviewer
     description: Code review for Sigil PRs

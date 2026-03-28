@@ -35,7 +35,7 @@ func TestGenerateHTML_BasicPage(t *testing.T) {
 					ID:   "desc",
 					Type: "text",
 					Props: map[string]interface{}{
-						"text": "A test page",
+						"text":    "A test page",
 						"variant": "muted",
 					},
 				},
@@ -283,7 +283,7 @@ func TestGenerateHTML_AllComponents(t *testing.T) {
 		"sigil-badge-success", "New",
 		`type="search"`,
 		"<hr",
-		"<progress",
+		"sigil-progress-bar",
 		"sigil-alert-warning", "Warning!",
 		"Field Label",
 		"h-8",

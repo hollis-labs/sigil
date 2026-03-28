@@ -1,0 +1,19 @@
+alias: SigilComponent
+description: Sigil built-in component registry
+capabilities: [list, search, filter]
+fields:
+  - name: type
+    type: string
+    primary: true
+    searchable: true
+  - name: category
+    type: string
+    filterable: true
+  - name: description
+    type: string
+    searchable: true
+  - name: propsCount
+    type: integer
+endpoints:
+  list: "GET /api/components"
+  read: "GET /api/components/{id}"

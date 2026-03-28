@@ -15,3 +15,8 @@ bin/
 *.exe
 coverage.out
 /sigil
+
+# Demo app
+demo/node_modules/
+demo/.next/
+demo/.turbo/

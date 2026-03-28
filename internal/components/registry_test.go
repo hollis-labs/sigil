@@ -87,11 +87,11 @@ func TestDefaultRegistryHasExpectedTypes(t *testing.T) {
 
 	// Spot-check key types from each category
 	expected := []string{
-		"heading", "button", "badge",        // primitives
-		"rows", "columns", "grid", "card",   // layouts
-		"data-table", "search-bar", "form",  // data + forms
-		"breadcrumb", "nav-menu",            // navigation
-		"modal", "sheet", "tooltip",         // composites
+		"heading", "button", "badge", // primitives
+		"rows", "columns", "grid", "card", // layouts
+		"data-table", "search-bar", "form", // data + forms
+		"breadcrumb", "nav-menu", // navigation
+		"modal", "sheet", "tooltip", // composites
 	}
 	for _, typ := range expected {
 		if !r.Has(typ) {
@@ -104,7 +104,7 @@ func TestDefaultRegistryCategories(t *testing.T) {
 	r := NewDefaultRegistry()
 
 	categories := map[string]int{
-		"primitives": 16,
+		"primitives": 17,
 		"layouts":    12,
 		"navigation": 4,
 		"composites": 8,

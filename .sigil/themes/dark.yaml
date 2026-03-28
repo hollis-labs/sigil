@@ -1,0 +1,54 @@
+name: dark
+description: Dark variant — extends the light base theme
+extends: light
+tokens:
+  colors:
+    # Page
+    background: "9 9 11"
+    foreground: "244 244 245"
+
+    # Cards and elevated surfaces
+    card: "24 24 27"
+    card-foreground: "244 244 245"
+
+    # Popover / dropdown surfaces
+    popover: "24 24 27"
+    popover-foreground: "244 244 245"
+
+    # Subtle backgrounds and muted text
+    muted: "39 39 42"
+    muted-foreground: "161 161 170"
+
+    # Surfaces
+    surface: "24 24 27"
+    surface-2: "39 39 42"
+
+    # Primary action color
+    primary: "244 244 245"
+    primary-foreground: "24 24 27"
+
+    # Secondary action color
+    secondary: "39 39 42"
+    secondary-foreground: "244 244 245"
+
+    # Accent / highlight
+    accent: "39 39 42"
+    accent-foreground: "244 244 245"
+
+    # Semantic
+    danger: "239 68 68"
+    danger-foreground: "255 255 255"
+    warning: "245 158 11"
+    info: "96 165 250"
+    success: "52 211 153"
+
+    # Borders and dividers
+    border: "63 63 70"
+    input: "63 63 70"
+    ring: "99 102 241"
+
+    # Legacy aliases
+    text: "244 244 245"
+    text-muted: "161 161 170"
+    accent-hover: "79 70 229"
+    danger-hover: "220 38 38"

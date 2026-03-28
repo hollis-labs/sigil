@@ -25,7 +25,7 @@ type GenerateConfig struct {
 
 // GenerateResult contains the results of a generation run.
 type GenerateResult struct {
-	Files    []OutputFile
+	Files     []OutputFile
 	PageCount int
 }
 
@@ -81,7 +81,7 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 	if themeName == "" {
 		themeName = "default"
 	}
-	theme, err := loadTheme(filepath.Join(sigilDir, "themes"), themeName)
+	theme, err := LoadTheme(filepath.Join(sigilDir, "themes"), themeName)
 	if err != nil {
 		return nil, fmt.Errorf("loading theme %q: %w", themeName, err)
 	}
@@ -217,7 +217,8 @@ func loadProjectConfig(path string) (*config.ProjectConfig, error) {
 	return &cfg, nil
 }
 
-func loadTheme(themesDir, name string) (*ThemeConfig, error) {
+// LoadTheme loads a theme by name, resolving inheritance via the extends field.
+func LoadTheme(themesDir, name string) (*ThemeConfig, error) {
 	path := filepath.Join(themesDir, name+".yaml")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -230,7 +231,7 @@ func loadTheme(themesDir, name string) (*ThemeConfig, error) {
 
 	// Resolve inheritance
 	if theme.Extends != "" {
-		base, err := loadTheme(themesDir, theme.Extends)
+		base, err := LoadTheme(themesDir, theme.Extends)
 		if err != nil {
 			return nil, fmt.Errorf("loading base theme %q: %w", theme.Extends, err)
 		}

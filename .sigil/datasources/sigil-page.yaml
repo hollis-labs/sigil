@@ -1,0 +1,23 @@
+alias: SigilPage
+description: Sigil page configurations
+capabilities: [list, read, create, update, delete]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: title
+    type: string
+    required: true
+    searchable: true
+  - name: overlay
+    type: string
+    filterable: true
+    values: [page, modal, sheet, drawer, fullscreen]
+  - name: componentCount
+    type: integer
+endpoints:
+  list: "GET /api/pages"
+  create: "POST /api/pages"
+  read: "GET /api/pages/{id}"
+  update: "PUT /api/pages/{id}"
+  delete: "DELETE /api/pages/{id}"

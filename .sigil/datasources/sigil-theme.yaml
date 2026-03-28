@@ -1,0 +1,17 @@
+alias: SigilTheme
+description: Sigil theme definitions
+capabilities: [list, create, read, update, delete]
+fields:
+  - name: name
+    type: string
+    primary: true
+  - name: description
+    type: string
+  - name: extends
+    type: string
+endpoints:
+  list: "GET /api/themes"
+  create: "POST /api/themes"
+  read: "GET /api/themes/{id}"
+  update: "PUT /api/themes/{id}"
+  delete: "DELETE /api/themes/{id}"

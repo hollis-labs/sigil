@@ -1,0 +1,23 @@
+type: combobox
+category: primitives
+description: "Searchable dropdown select"
+props:
+  placeholder:
+    type: string
+    default: "Select..."
+    description: "Placeholder text"
+  searchPlaceholder:
+    type: string
+    default: "Search..."
+    description: "Search input placeholder"
+  options:
+    type: array
+    required: true
+    description: "Selectable options [{value, label}]"
+  emptyMessage:
+    type: string
+    default: "No results found."
+    description: "Message when search matches nothing"
+actions:
+  change:
+    description: "Fired when selection changes"
