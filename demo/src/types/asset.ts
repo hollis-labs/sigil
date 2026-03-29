@@ -8,7 +8,10 @@ export interface Asset {
   provider?: string;
   status?: string;
   region?: string;
+  ipAddress?: string;
   cost?: string;
+  createdAt?: string;
+  lastSeenAt?: string;
   updatedAt?: string;
 }
 
@@ -18,6 +21,9 @@ export interface AssetInput {
   provider?: string;
   status?: string;
   region?: string;
+  ipAddress?: string;
   cost?: string;
+  createdAt?: string;
+  lastSeenAt?: string;
   updatedAt?: string;
 }

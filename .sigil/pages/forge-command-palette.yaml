@@ -1,0 +1,63 @@
+sigil: "1.0"
+kind: page
+id: forge-command-palette
+title: Command Palette Demo
+overlay: page
+module: forge
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - type: heading
+      props:
+        level: 1
+        text: Command Palette
+
+    - type: text
+      props:
+        text: "Press Cmd+K to open the command palette (rendered inline below for demo)."
+        muted: true
+
+    - type: command-palette
+      props:
+        placeholder: "Type a command or search..."
+        emptyMessage: "No results found."
+      children:
+        - type: command-group
+          props:
+            heading: Navigation
+            items:
+              - label: Overview
+                icon: layout-dashboard
+              - label: Deployments
+                icon: rocket
+              - label: Logs
+                icon: scroll-text
+              - label: Monitoring
+                icon: activity
+
+        - type: command-group
+          props:
+            heading: Actions
+            items:
+              - label: New Deployment
+                icon: plus
+              - label: Create Workspace
+                icon: boxes
+              - label: Invite User
+                icon: user-plus
+
+        - type: command-group
+          props:
+            heading: Settings
+            items:
+              - label: General Settings
+                icon: settings
+              - label: Integrations
+                icon: puzzle
+              - label: API Keys
+                icon: key

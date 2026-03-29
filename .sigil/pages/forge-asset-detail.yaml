@@ -1,0 +1,149 @@
+sigil: "1.0"
+kind: page
+id: forge-asset-detail
+title: Asset Detail
+overlay: page
+module: forge
+
+datasources:
+  - alias: Asset
+    capabilities: [read]
+    params:
+      id: "{{param.id}}"
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - type: breadcrumb
+      props:
+        items:
+          - label: Assets
+            href: /forge-assets
+          - label: "{{data.Asset.name}}"
+
+    - type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: columns
+          props:
+            gap: 3
+            align: center
+          children:
+            - type: heading
+              props:
+                level: 2
+                text: "{{data.Asset.name}}"
+            - type: badge
+              props:
+                text: "{{data.Asset.status}}"
+                variant: success
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: button
+              props:
+                label: Edit
+                variant: ghost
+                icon: pencil
+            - type: button
+              props:
+                label: Delete
+                variant: ghost
+                icon: trash
+
+    - type: separator
+
+    - type: grid
+      props:
+        columns: 3
+        gap: 4
+      children:
+        - type: card
+          props:
+            title: Provider
+          children:
+            - type: columns
+              props:
+                gap: 2
+                align: center
+              children:
+                - type: icon
+                  props:
+                    name: cloud
+                    size: md
+                - type: text
+                  props:
+                    text: "{{data.Asset.provider}}"
+
+        - type: card
+          props:
+            title: Type
+          children:
+            - type: text
+              props:
+                text: "{{data.Asset.type}}"
+
+        - type: card
+          props:
+            title: Region
+          children:
+            - type: text
+              props:
+                text: "{{data.Asset.region}}"
+
+    - type: collapsible
+      props:
+        title: Configuration Details
+      children:
+        - type: rows
+          props:
+            gap: 3
+          children:
+            - type: columns
+              props:
+                justify: between
+              children:
+                - type: text
+                  props:
+                    text: IP Address
+                    muted: true
+                - type: text
+                  props:
+                    text: "{{data.Asset.ipAddress}}"
+            - type: separator
+            - type: columns
+              props:
+                justify: between
+              children:
+                - type: text
+                  props:
+                    text: Created
+                    muted: true
+                - type: text
+                  props:
+                    text: "{{data.Asset.createdAt}}"
+            - type: separator
+            - type: columns
+              props:
+                justify: between
+              children:
+                - type: text
+                  props:
+                    text: Last Seen
+                    muted: true
+                - type: popover
+                  props:
+                    trigger: "{{data.Asset.lastSeenAt}}"
+                    side: left
+                  children:
+                    - type: text
+                      props:
+                        text: "Last health check passed. Next check in 5 minutes."
+                        muted: true

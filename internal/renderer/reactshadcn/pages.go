@@ -644,6 +644,200 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		}
 		fmt.Fprintf(buf, "%s</nav>\n", indent)
 
+	case "command-palette":
+		imports.addShadcn("CommandDialog", "@/components/ui/command")
+		imports.addShadcn("CommandInput", "@/components/ui/command")
+		imports.addShadcn("CommandList", "@/components/ui/command")
+		imports.addShadcn("CommandEmpty", "@/components/ui/command")
+		imports.addShadcn("CommandGroup", "@/components/ui/command")
+		imports.addShadcn("CommandItem", "@/components/ui/command")
+		placeholder := getPropString(c.Props, "placeholder", "Type a command or search...")
+		emptyMessage := getPropString(c.Props, "emptyMessage", "No results found.")
+		fmt.Fprintf(buf, "%s<CommandDialog>\n", indent)
+		fmt.Fprintf(buf, "%s  <CommandInput placeholder=%q />\n", indent, placeholder)
+		fmt.Fprintf(buf, "%s  <CommandList>\n", indent)
+		fmt.Fprintf(buf, "%s    <CommandEmpty>%s</CommandEmpty>\n", indent, emptyMessage)
+		// Render groups from children
+		for i := range c.Children {
+			renderComponent(buf, &c.Children[i], depth+2, imports, ctx)
+		}
+		fmt.Fprintf(buf, "%s  </CommandList>\n", indent)
+		fmt.Fprintf(buf, "%s</CommandDialog>\n", indent)
+
+	case "command-group":
+		imports.addShadcn("CommandGroup", "@/components/ui/command")
+		imports.addShadcn("CommandItem", "@/components/ui/command")
+		heading := getPropString(c.Props, "heading", "")
+		fmt.Fprintf(buf, "%s<CommandGroup heading=%q>\n", indent, heading)
+		if items, ok := c.Props["items"]; ok {
+			if itemSlice, ok := items.([]interface{}); ok {
+				for _, item := range itemSlice {
+					if im, ok := item.(map[string]interface{}); ok {
+						label := fmt.Sprintf("%v", im["label"])
+						icon := ""
+						if iconVal, ok := im["icon"]; ok {
+							icon = fmt.Sprintf("%v", iconVal)
+						}
+						if icon != "" {
+							iconComp := lucideIconName(icon)
+							imports.addLucide(iconComp)
+							fmt.Fprintf(buf, "%s  <CommandItem>\n", indent)
+							fmt.Fprintf(buf, "%s    <%s className=\"mr-2 h-4 w-4\" />\n", indent, iconComp)
+							fmt.Fprintf(buf, "%s    %s\n", indent, label)
+							fmt.Fprintf(buf, "%s  </CommandItem>\n", indent)
+						} else {
+							fmt.Fprintf(buf, "%s  <CommandItem>%s</CommandItem>\n", indent, label)
+						}
+					}
+				}
+			}
+		}
+		fmt.Fprintf(buf, "%s</CommandGroup>\n", indent)
+
+	case "dialog":
+		imports.addShadcn("Dialog", "@/components/ui/dialog")
+		imports.addShadcn("DialogContent", "@/components/ui/dialog")
+		imports.addShadcn("DialogDescription", "@/components/ui/dialog")
+		imports.addShadcn("DialogHeader", "@/components/ui/dialog")
+		imports.addShadcn("DialogTitle", "@/components/ui/dialog")
+		imports.addShadcn("DialogTrigger", "@/components/ui/dialog")
+		title := getPropString(c.Props, "title", "")
+		description := getPropString(c.Props, "description", "")
+		triggerLabel := getPropString(c.Props, "trigger", "Open")
+		triggerVariant := getPropString(c.Props, "triggerVariant", "default")
+		imports.addShadcn("Button", "@/components/ui/button")
+		fmt.Fprintf(buf, "%s<Dialog>\n", indent)
+		fmt.Fprintf(buf, "%s  <DialogTrigger render={<Button variant=%q />}>\n", indent, triggerVariant)
+		fmt.Fprintf(buf, "%s    %s\n", indent, triggerLabel)
+		fmt.Fprintf(buf, "%s  </DialogTrigger>\n", indent)
+		fmt.Fprintf(buf, "%s  <DialogContent>\n", indent)
+		if title != "" || description != "" {
+			fmt.Fprintf(buf, "%s    <DialogHeader>\n", indent)
+			if title != "" {
+				fmt.Fprintf(buf, "%s      <DialogTitle>%s</DialogTitle>\n", indent, title)
+			}
+			if description != "" {
+				fmt.Fprintf(buf, "%s      <DialogDescription>%s</DialogDescription>\n", indent, description)
+			}
+			fmt.Fprintf(buf, "%s    </DialogHeader>\n", indent)
+		}
+		for i := range c.Children {
+			renderComponent(buf, &c.Children[i], depth+3, imports, ctx)
+		}
+		fmt.Fprintf(buf, "%s  </DialogContent>\n", indent)
+		fmt.Fprintf(buf, "%s</Dialog>\n", indent)
+
+	case "radio-group":
+		imports.addShadcn("RadioGroup", "@/components/ui/radio-group")
+		imports.addShadcn("RadioGroupItem", "@/components/ui/radio-group")
+		imports.addShadcn("Label", "@/components/ui/label")
+		defaultValue := getPropString(c.Props, "defaultValue", "")
+		fmt.Fprintf(buf, "%s<RadioGroup defaultValue=%q>\n", indent, defaultValue)
+		if opts, ok := c.Props["options"]; ok {
+			if optSlice, ok := opts.([]interface{}); ok {
+				for _, opt := range optSlice {
+					if om, ok := opt.(map[string]interface{}); ok {
+						val := fmt.Sprintf("%v", om["value"])
+						lab := fmt.Sprintf("%v", om["label"])
+						fmt.Fprintf(buf, "%s  <div className=\"flex items-center gap-2\">\n", indent)
+						fmt.Fprintf(buf, "%s    <RadioGroupItem value=%q id=%q />\n", indent, val, val)
+						fmt.Fprintf(buf, "%s    <Label htmlFor=%q>%s</Label>\n", indent, val, lab)
+						fmt.Fprintf(buf, "%s  </div>\n", indent)
+					}
+				}
+			}
+		}
+		fmt.Fprintf(buf, "%s</RadioGroup>\n", indent)
+
+	case "breadcrumb":
+		imports.addShadcn("Breadcrumb", "@/components/ui/breadcrumb")
+		imports.addShadcn("BreadcrumbItem", "@/components/ui/breadcrumb")
+		imports.addShadcn("BreadcrumbLink", "@/components/ui/breadcrumb")
+		imports.addShadcn("BreadcrumbList", "@/components/ui/breadcrumb")
+		imports.addShadcn("BreadcrumbPage", "@/components/ui/breadcrumb")
+		imports.addShadcn("BreadcrumbSeparator", "@/components/ui/breadcrumb")
+		fmt.Fprintf(buf, "%s<Breadcrumb>\n", indent)
+		fmt.Fprintf(buf, "%s  <BreadcrumbList>\n", indent)
+		if items, ok := c.Props["items"]; ok {
+			if itemSlice, ok := items.([]interface{}); ok {
+				for i, item := range itemSlice {
+					if im, ok := item.(map[string]interface{}); ok {
+						label := interpolateTemplateVars(fmt.Sprintf("%v", im["label"]))
+						href := ""
+						if h, ok := im["href"]; ok {
+							href = fmt.Sprintf("%v", h)
+						}
+						isLast := i == len(itemSlice)-1
+						fmt.Fprintf(buf, "%s    <BreadcrumbItem>\n", indent)
+						if isLast {
+							fmt.Fprintf(buf, "%s      <BreadcrumbPage>%s</BreadcrumbPage>\n", indent, label)
+						} else {
+							fmt.Fprintf(buf, "%s      <BreadcrumbLink href=%q>%s</BreadcrumbLink>\n", indent, href, label)
+						}
+						fmt.Fprintf(buf, "%s    </BreadcrumbItem>\n", indent)
+						if !isLast {
+							fmt.Fprintf(buf, "%s    <BreadcrumbSeparator />\n", indent)
+						}
+					}
+				}
+			}
+		}
+		fmt.Fprintf(buf, "%s  </BreadcrumbList>\n", indent)
+		fmt.Fprintf(buf, "%s</Breadcrumb>\n", indent)
+
+	case "popover":
+		imports.addShadcn("Popover", "@/components/ui/popover")
+		imports.addShadcn("PopoverContent", "@/components/ui/popover")
+		imports.addShadcn("PopoverTrigger", "@/components/ui/popover")
+		triggerLabel := interpolateTemplateVars(getPropString(c.Props, "trigger", "Info"))
+		side := getPropString(c.Props, "side", "bottom")
+		fmt.Fprintf(buf, "%s<Popover>\n", indent)
+		fmt.Fprintf(buf, "%s  <PopoverTrigger>%s</PopoverTrigger>\n", indent, triggerLabel)
+		fmt.Fprintf(buf, "%s  <PopoverContent side=%q>\n", indent, side)
+		for i := range c.Children {
+			renderComponent(buf, &c.Children[i], depth+2, imports, ctx)
+		}
+		fmt.Fprintf(buf, "%s  </PopoverContent>\n", indent)
+		fmt.Fprintf(buf, "%s</Popover>\n", indent)
+
+	case "collapsible":
+		imports.addShadcn("Collapsible", "@/components/ui/collapsible")
+		imports.addShadcn("CollapsibleContent", "@/components/ui/collapsible")
+		imports.addShadcn("CollapsibleTrigger", "@/components/ui/collapsible")
+		imports.addLucide("ChevronsUpDown")
+		title := getPropString(c.Props, "title", "Toggle")
+		fmt.Fprintf(buf, "%s<Collapsible>\n", indent)
+		fmt.Fprintf(buf, "%s  <div className=\"flex items-center justify-between\">\n", indent)
+		fmt.Fprintf(buf, "%s    <h4 className=\"text-sm font-semibold\">%s</h4>\n", indent, title)
+		fmt.Fprintf(buf, "%s    <CollapsibleTrigger>\n", indent)
+		fmt.Fprintf(buf, "%s      <ChevronsUpDown className=\"h-4 w-4\" />\n", indent)
+		fmt.Fprintf(buf, "%s    </CollapsibleTrigger>\n", indent)
+		fmt.Fprintf(buf, "%s  </div>\n", indent)
+		fmt.Fprintf(buf, "%s  <CollapsibleContent>\n", indent)
+		for i := range c.Children {
+			renderComponent(buf, &c.Children[i], depth+2, imports, ctx)
+		}
+		fmt.Fprintf(buf, "%s  </CollapsibleContent>\n", indent)
+		fmt.Fprintf(buf, "%s</Collapsible>\n", indent)
+
+	case "toggle-group":
+		imports.addShadcn("ToggleGroup", "@/components/ui/toggle-group")
+		imports.addShadcn("ToggleGroupItem", "@/components/ui/toggle-group")
+		variant := getPropString(c.Props, "variant", "outline")
+		fmt.Fprintf(buf, "%s<ToggleGroup variant=%q>\n", indent, variant)
+		if opts, ok := c.Props["options"]; ok {
+			if optSlice, ok := opts.([]interface{}); ok {
+				for _, opt := range optSlice {
+					if om, ok := opt.(map[string]interface{}); ok {
+						val := fmt.Sprintf("%v", om["value"])
+						lab := fmt.Sprintf("%v", om["label"])
+						fmt.Fprintf(buf, "%s  <ToggleGroupItem value=%q>%s</ToggleGroupItem>\n", indent, val, lab)
+					}
+				}
+			}
+		}
+		fmt.Fprintf(buf, "%s</ToggleGroup>\n", indent)
+
 	default:
 		idAttr := ""
 		if c.ID != "" {

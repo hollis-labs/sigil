@@ -1,0 +1,19 @@
+type: dialog
+category: composites
+description: "Modal dialog with trigger button"
+props:
+  title:
+    type: string
+    description: "Dialog header title"
+  description:
+    type: string
+    description: "Dialog header description"
+  trigger:
+    type: string
+    default: "Open"
+    description: "Trigger button label"
+  triggerVariant:
+    type: string
+    default: "default"
+    description: "Trigger button variant"
+    enum: [default, primary, secondary, ghost, outline, destructive]

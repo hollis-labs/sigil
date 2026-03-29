@@ -24,8 +24,15 @@ fields:
   - name: region
     type: string
     filterable: true
+  - name: ipAddress
+    type: string
   - name: cost
     type: string
+  - name: createdAt
+    type: datetime
+    sortable: true
+  - name: lastSeenAt
+    type: datetime
   - name: updatedAt
     type: datetime
     sortable: true

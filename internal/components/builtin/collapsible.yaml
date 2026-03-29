@@ -1,0 +1,12 @@
+type: collapsible
+category: composites
+description: "Collapsible section with toggle trigger"
+props:
+  title:
+    type: string
+    description: "Title shown next to the toggle"
+    required: true
+  defaultOpen:
+    type: boolean
+    default: false
+    description: "Whether the section starts expanded"

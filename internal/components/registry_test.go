@@ -107,7 +107,7 @@ func TestDefaultRegistryCategories(t *testing.T) {
 		"primitives": 17,
 		"layouts":    12,
 		"navigation": 4,
-		"composites": 8,
+		"composites": 11,
 		"data":       7,
 		"forms":      2,
 	}

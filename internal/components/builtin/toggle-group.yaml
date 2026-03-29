@@ -1,0 +1,18 @@
+type: toggle-group
+category: inputs
+description: "Group of toggle buttons for selection"
+props:
+  type:
+    type: string
+    default: "single"
+    description: "Selection mode"
+    enum: [single, multiple]
+  variant:
+    type: string
+    default: "outline"
+    description: "Toggle button style"
+    enum: [default, outline]
+  options:
+    type: array
+    description: "Toggle options with value and label"
+    required: true

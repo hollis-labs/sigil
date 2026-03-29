@@ -1,0 +1,11 @@
+type: command-group
+category: composites
+description: "Group of items within a command palette"
+props:
+  heading:
+    type: string
+    description: "Group heading label"
+  items:
+    type: array
+    description: "Command items with label and optional icon"
+    required: true

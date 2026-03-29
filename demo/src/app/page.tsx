@@ -23,6 +23,10 @@ const forgePages = [
   { href: "/forge-users", title: "Users", description: "Data table with search, role filters" },
   { href: "/forge-integrations", title: "Integrations", description: "Data-driven card grid with status badges" },
   { href: "/forge-settings", title: "Settings", description: "Tabs with forms, inputs, switches, danger zone" },
+  { href: "/forge-command-palette", title: "Command Palette", description: "Cmd-K style command dialog with groups" },
+  { href: "/forge-deploy-create", title: "New Deployment", description: "Create form with radio-group, textarea, breadcrumb" },
+  { href: "/forge-asset-detail", title: "Asset Detail", description: "Breadcrumb, collapsible sections, popover" },
+  { href: "/forge-monitoring-detail", title: "Monitoring Detail", description: "Toggle-group, collapsible, alerts, progress" },
 ];
 
 export default function Home() {

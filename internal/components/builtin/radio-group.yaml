@@ -1,0 +1,11 @@
+type: radio-group
+category: inputs
+description: "Radio button group for single selection"
+props:
+  defaultValue:
+    type: string
+    description: "Initially selected value"
+  options:
+    type: array
+    description: "Radio options with value and label"
+    required: true

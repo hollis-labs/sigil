@@ -1,0 +1,125 @@
+sigil: "1.0"
+kind: page
+id: forge-deploy-create
+title: New Deployment
+overlay: page
+module: forge
+
+datasources:
+  - alias: Deployment
+    capabilities: [create]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - type: breadcrumb
+      props:
+        items:
+          - label: Deployments
+            href: /forge-deployments
+          - label: New Deployment
+
+    - type: heading
+      props:
+        level: 1
+        text: New Deployment
+
+    - type: card
+      props:
+        title: Deployment Configuration
+        description: Configure and deploy your application.
+      children:
+        - type: rows
+          props:
+            gap: 4
+          children:
+            - type: input
+              id: deploy-name
+              props:
+                label: Name
+                placeholder: my-app-production
+                required: true
+
+            - type: input
+              id: deploy-branch
+              props:
+                label: Branch
+                placeholder: main
+
+            - type: radio-group
+              props:
+                defaultValue: production
+                options:
+                  - value: production
+                    label: Production
+                  - value: staging
+                    label: Staging
+                  - value: preview
+                    label: Preview
+
+            - type: textarea
+              id: deploy-notes
+              props:
+                label: Deploy Notes
+                placeholder: "Optional notes about this deployment..."
+                rows: 3
+
+    - type: card
+      props:
+        title: Build Settings
+      children:
+        - type: rows
+          props:
+            gap: 4
+          children:
+            - type: input
+              id: build-command
+              props:
+                label: Build Command
+                placeholder: npm run build
+
+            - type: input
+              id: output-dir
+              props:
+                label: Output Directory
+                placeholder: .next
+
+            - type: checkbox
+              id: install-deps
+              props:
+                label: Install dependencies
+                defaultChecked: true
+
+            - type: checkbox
+              id: clean-build
+              props:
+                label: Clean build (no cache)
+                defaultChecked: false
+
+    - type: columns
+      props:
+        justify: end
+        gap: 2
+      children:
+        - type: button
+          props:
+            label: Cancel
+            variant: ghost
+          actions:
+            click:
+              type: navigate
+              page: forge-deployments
+        - type: button
+          props:
+            label: Deploy
+            variant: primary
+            icon: rocket
+          actions:
+            click:
+              type: http
+              url: /api/deployments
+              method: POST

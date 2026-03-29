@@ -1,11 +1,18 @@
 type: command-palette
 category: navigation
-description: "Searchable command list"
+description: "Searchable command palette (cmd-K style)"
 props:
+  placeholder:
+    type: string
+    default: "Type a command or search..."
+    description: "Search input placeholder"
+  emptyMessage:
+    type: string
+    default: "No results found."
+    description: "Message when no results match"
   commands:
     type: array
-    required: true
-    description: "Array of command definitions"
+    description: "Flat array of command definitions (alternative to children)"
 shortcuts:
   - key: Ctrl+K
     description: "Open command palette"

@@ -9,7 +9,10 @@ const mockAssets: Asset[] = [
     provider: "aws",
     status: "healthy",
     region: "us-east-1",
+    ipAddress: "10.0.1.42",
     cost: "$142/mo",
+    createdAt: "2025-11-15T08:00:00Z",
+    lastSeenAt: "2026-03-29T10:15:00Z",
     updatedAt: "2026-03-29T10:15:00Z",
   },
   {
@@ -66,4 +69,9 @@ const mockAssets: Asset[] = [
 
 export function useAsset() {
   return { data: mockAssets, isLoading: false };
+}
+
+export function useAssetById(id: string) {
+  const asset = mockAssets.find((a) => a.id === id) ?? mockAssets[0];
+  return { data: asset, isLoading: false };
 }

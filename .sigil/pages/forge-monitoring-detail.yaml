@@ -1,0 +1,200 @@
+sigil: "1.0"
+kind: page
+id: forge-monitoring-detail
+title: Monitoring Detail
+overlay: page
+module: forge
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - type: breadcrumb
+      props:
+        items:
+          - label: Monitoring
+            href: /forge-monitoring
+          - label: API Latency
+
+    - type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 2
+            text: API Latency
+        - type: toggle-group
+          props:
+            type: single
+            variant: outline
+            options:
+              - value: 1h
+                label: 1H
+              - value: 6h
+                label: 6H
+              - value: 24h
+                label: 24H
+              - value: 7d
+                label: 7D
+              - value: 30d
+                label: 30D
+
+    - type: grid
+      props:
+        columns: 4
+        columns_sm: 2
+        gap: 4
+      children:
+        - type: card
+          props:
+            title: P50
+          children:
+            - type: text
+              props:
+                text: 45ms
+
+        - type: card
+          props:
+            title: P95
+          children:
+            - type: text
+              props:
+                text: 120ms
+
+        - type: card
+          props:
+            title: P99
+          children:
+            - type: text
+              props:
+                text: 340ms
+
+        - type: card
+          props:
+            title: Error Rate
+          children:
+            - type: text
+              props:
+                text: "0.12%"
+
+    - type: card
+      props:
+        title: Latency Over Time
+        description: "Chart placeholder — would render a line chart in production."
+      children:
+        - type: rows
+          props:
+            gap: 2
+          children:
+            - type: progress
+              props:
+                value: 45
+            - type: progress
+              props:
+                value: 62
+            - type: progress
+              props:
+                value: 38
+            - type: progress
+              props:
+                value: 55
+            - type: progress
+              props:
+                value: 71
+
+    - type: collapsible
+      props:
+        title: Recent Alerts
+      children:
+        - type: rows
+          props:
+            gap: 2
+          children:
+            - type: alert
+              props:
+                variant: warning
+                message: "P95 latency exceeded 200ms threshold at 14:32 UTC"
+            - type: alert
+              props:
+                variant: warning
+                message: "P95 latency exceeded 200ms threshold at 09:15 UTC"
+            - type: alert
+              props:
+                variant: default
+                message: "Error rate returned to normal at 08:45 UTC"
+
+    - type: collapsible
+      props:
+        title: Endpoint Breakdown
+      children:
+        - type: rows
+          props:
+            gap: 3
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: text
+                  props:
+                    text: "GET /api/deployments"
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: 32ms
+                        variant: success
+                    - type: progress
+                      props:
+                        value: 32
+            - type: separator
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: text
+                  props:
+                    text: "POST /api/deployments"
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: 156ms
+                        variant: warning
+                    - type: progress
+                      props:
+                        value: 65
+            - type: separator
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: text
+                  props:
+                    text: "GET /api/assets"
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: 45ms
+                        variant: success
+                    - type: progress
+                      props:
+                        value: 38
