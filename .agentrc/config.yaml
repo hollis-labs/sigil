@@ -16,6 +16,13 @@ agents:
     skills: [go-build, go-lint, go-test]
     context: agents/renderer.md
 
+  sigil-frontend:
+    name: Sigil Frontend Engineer
+    description: Next.js demo app, React/shadcn components, Tailwind styling
+    roles: [frontend, react]
+    skills: [shadcn-ui]
+    context: agents/frontend.md
+
   sigil-reviewer:
     name: Sigil Code Reviewer
     description: Code review for Sigil PRs

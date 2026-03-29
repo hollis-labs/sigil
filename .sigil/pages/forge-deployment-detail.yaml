@@ -1,0 +1,183 @@
+sigil: "1.0"
+kind: page
+id: forge-deployment-detail
+title: Deployment Detail
+overlay: sheet
+module: forge
+
+datasources:
+  - alias: Deployment
+    capabilities: [read]
+    params:
+      id: "{{param.id}}"
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: columns
+          props:
+            gap: 3
+            align: center
+          children:
+            - type: heading
+              props:
+                level: 2
+                text: "{{data.Deployment.name}}"
+            - type: badge
+              props:
+                text: "{{data.Deployment.status}}"
+                variant: default
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: button
+              props:
+                label: Redeploy
+                variant: primary
+                icon: refresh-cw
+              actions:
+                click:
+                  type: http
+                  method: POST
+                  url: "/api/deployments/{{param.id}}/redeploy"
+            - type: dropdown-menu
+              props:
+                trigger: "..."
+                items:
+                  - label: Rollback
+                    icon: undo-2
+                  - label: View Logs
+                    icon: scroll-text
+                  - separator: true
+                  - label: Delete
+                    icon: trash-2
+                    destructive: true
+
+    - type: separator
+
+    # ── Tabs ────────────────────────────────────
+    - type: tabs
+      props:
+        defaultTab: overview
+      children:
+        # Overview Tab
+        - type: tab
+          props:
+            label: Overview
+            value: overview
+          children:
+            - type: card
+              children:
+                - type: rows
+                  props:
+                    gap: 3
+                  children:
+                    - type: columns
+                      props:
+                        justify: between
+                      children:
+                        - type: text
+                          props:
+                            text: Environment
+                            muted: true
+                        - type: text
+                          props:
+                            text: "{{data.Deployment.environment}}"
+                    - type: separator
+                    - type: columns
+                      props:
+                        justify: between
+                      children:
+                        - type: text
+                          props:
+                            text: Branch
+                            muted: true
+                        - type: text
+                          props:
+                            text: "{{data.Deployment.branch}}"
+                    - type: separator
+                    - type: columns
+                      props:
+                        justify: between
+                      children:
+                        - type: text
+                          props:
+                            text: Commit
+                            muted: true
+                        - type: text
+                          props:
+                            text: "{{data.Deployment.commit}}"
+                    - type: separator
+                    - type: columns
+                      props:
+                        justify: between
+                      children:
+                        - type: text
+                          props:
+                            text: Author
+                            muted: true
+                        - type: text
+                          props:
+                            text: "{{data.Deployment.author}}"
+                    - type: separator
+                    - type: columns
+                      props:
+                        justify: between
+                      children:
+                        - type: text
+                          props:
+                            text: Duration
+                            muted: true
+                        - type: text
+                          props:
+                            text: "{{data.Deployment.duration}}"
+                    - type: separator
+                    - type: columns
+                      props:
+                        justify: between
+                      children:
+                        - type: text
+                          props:
+                            text: Started
+                            muted: true
+                        - type: text
+                          props:
+                            text: "{{data.Deployment.createdAt}}"
+
+        # Logs Tab
+        - type: tab
+          props:
+            label: Logs
+            value: logs
+          children:
+            - type: card
+              children:
+                - type: text
+                  props:
+                    text: Build and deployment logs will appear here.
+                    muted: true
+
+        # Domains Tab
+        - type: tab
+          props:
+            label: Domains
+            value: domains
+          children:
+            - type: card
+              children:
+                - type: text
+                  props:
+                    text: Custom domains and aliases.
+                    muted: true

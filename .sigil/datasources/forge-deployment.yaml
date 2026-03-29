@@ -1,0 +1,36 @@
+alias: Deployment
+description: Application deployments
+capabilities: [list, read, create, search, filter, sort, paginate]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+  - name: status
+    type: string
+    filterable: true
+    values: [building, deploying, ready, failed, cancelled]
+  - name: environment
+    type: string
+    filterable: true
+    values: [production, staging, preview]
+  - name: branch
+    type: string
+    searchable: true
+  - name: commit
+    type: string
+  - name: author
+    type: string
+    searchable: true
+  - name: duration
+    type: string
+  - name: createdAt
+    type: datetime
+    sortable: true
+endpoints:
+  list: "GET /api/deployments"
+  create: "POST /api/deployments"
+  read: "GET /api/deployments/{id}"

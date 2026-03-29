@@ -1,0 +1,64 @@
+sigil: "1.0"
+kind: page
+id: forge-integrations
+title: Integrations
+overlay: page
+module: forge
+
+datasources:
+  - alias: Integration
+    capabilities: [list]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Integrations
+        - type: button
+          props:
+            label: Add Integration
+            variant: primary
+            icon: plug
+          actions:
+            click:
+              type: navigate
+              page: forge-integrations
+
+    # ── Integration Cards Grid ──────────────────
+    - type: grid
+      props:
+        columns: 3
+        gap: 4
+        datasource: Integration
+      children:
+        - type: card
+          props:
+            title: "{{item.name}}"
+            description: "{{item.provider}}"
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: badge
+                  props:
+                    text: "{{item.status}}"
+                    variant: success
+                - type: text
+                  props:
+                    text: "{{item.connectedAt}}"
+                    muted: true

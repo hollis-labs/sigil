@@ -1,0 +1,28 @@
+alias: Integration
+description: Third-party service integrations
+capabilities: [list, read, create, update, delete]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+  - name: provider
+    type: string
+    filterable: true
+    values: [github, gitlab, slack, discord, datadog, pagerduty, aws, vercel, cloudflare]
+  - name: status
+    type: string
+    filterable: true
+    values: [connected, disconnected, error]
+  - name: connectedAt
+    type: datetime
+    sortable: true
+endpoints:
+  list: "GET /api/integrations"
+  create: "POST /api/integrations"
+  read: "GET /api/integrations/{id}"
+  update: "PUT /api/integrations/{id}"
+  delete: "DELETE /api/integrations/{id}"

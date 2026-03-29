@@ -1,0 +1,541 @@
+sigil: "1.0"
+kind: page
+id: forge-monitoring
+title: Monitoring
+overlay: page
+module: forge
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Monitoring
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: select
+              props:
+                placeholder: Last hour
+                options:
+                  - value: 1h
+                    label: Last hour
+                  - value: 6h
+                    label: Last 6 hours
+                  - value: 24h
+                    label: Last 24 hours
+                  - value: 7d
+                    label: Last 7 days
+                  - value: 30d
+                    label: Last 30 days
+            - type: button
+              props:
+                label: Configure Alerts
+                variant: ghost
+                icon: bell
+              actions:
+                click:
+                  type: navigate
+                  page: forge-alerts
+
+    # ── Status Cards ────────────────────────────
+    - type: grid
+      props:
+        columns: 4
+        gap: 4
+      children:
+        - type: card
+          props:
+            title: CPU Usage
+            padding: 4
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 1
+                  children:
+                    - type: heading
+                      props:
+                        level: 2
+                        text: "73%"
+                    - type: text
+                      props:
+                        text: "avg across 12 servers"
+                        muted: true
+            - type: progress
+              props:
+                value: 73
+
+        - type: card
+          props:
+            title: Memory
+            padding: 4
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 1
+                  children:
+                    - type: heading
+                      props:
+                        level: 2
+                        text: "61%"
+                    - type: text
+                      props:
+                        text: "18.3 GB / 30 GB"
+                        muted: true
+            - type: progress
+              props:
+                value: 61
+
+        - type: card
+          props:
+            title: Disk I/O
+            padding: 4
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 1
+                  children:
+                    - type: heading
+                      props:
+                        level: 2
+                        text: "24%"
+                    - type: text
+                      props:
+                        text: "Read: 1.2 GB/s Write: 340 MB/s"
+                        muted: true
+            - type: progress
+              props:
+                value: 24
+
+        - type: card
+          props:
+            title: Network
+            padding: 4
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 1
+                  children:
+                    - type: heading
+                      props:
+                        level: 2
+                        text: "892 Mbps"
+                    - type: text
+                      props:
+                        text: "In: 540 Mbps Out: 352 Mbps"
+                        muted: true
+                - type: badge
+                  props:
+                    text: Normal
+                    variant: info
+
+    # ── Service Health ──────────────────────────
+    - type: card
+      props:
+        title: Service Health
+      children:
+        - type: rows
+          props:
+            gap: 3
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 0
+                  children:
+                    - type: text
+                      props:
+                        text: "api-gateway"
+                    - type: text
+                      props:
+                        text: "api.forge.dev"
+                        muted: true
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: Healthy
+                        variant: success
+                    - type: text
+                      props:
+                        text: "12ms"
+                        muted: true
+            - type: separator
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 0
+                  children:
+                    - type: text
+                      props:
+                        text: "auth-service"
+                    - type: text
+                      props:
+                        text: "auth.forge.dev"
+                        muted: true
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: Healthy
+                        variant: success
+                    - type: text
+                      props:
+                        text: "8ms"
+                        muted: true
+            - type: separator
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 0
+                  children:
+                    - type: text
+                      props:
+                        text: "worker-pool"
+                    - type: text
+                      props:
+                        text: "workers.forge.dev"
+                        muted: true
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: Degraded
+                        variant: warning
+                    - type: text
+                      props:
+                        text: "340ms"
+                        muted: true
+            - type: separator
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 0
+                  children:
+                    - type: text
+                      props:
+                        text: "cdn-edge"
+                    - type: text
+                      props:
+                        text: "cdn.forge.dev"
+                        muted: true
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: Healthy
+                        variant: success
+                    - type: text
+                      props:
+                        text: "3ms"
+                        muted: true
+            - type: separator
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 0
+                  children:
+                    - type: text
+                      props:
+                        text: "database-primary"
+                    - type: text
+                      props:
+                        text: "db.forge.dev:5432"
+                        muted: true
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: Healthy
+                        variant: success
+                    - type: text
+                      props:
+                        text: "2ms"
+                        muted: true
+            - type: separator
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 0
+                  children:
+                    - type: text
+                      props:
+                        text: "database-replica"
+                    - type: text
+                      props:
+                        text: "db-ro.forge.dev:5432"
+                        muted: true
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: Down
+                        variant: danger
+                    - type: text
+                      props:
+                        text: "timeout"
+                        muted: true
+
+    # ── Bottom Row ──────────────────────────────
+    - type: columns
+      props:
+        gap: 4
+      children:
+        # Recent Alerts
+        - type: card
+          props:
+            title: Recent Alerts
+          children:
+            - type: rows
+              props:
+                gap: 3
+              children:
+                - type: columns
+                  props:
+                    gap: 3
+                    align: center
+                  children:
+                    - type: icon
+                      props:
+                        name: x-circle
+                        size: sm
+                    - type: rows
+                      props:
+                        gap: 0
+                      children:
+                        - type: text
+                          props:
+                            text: "Database replica connection timeout"
+                        - type: text
+                          props:
+                            text: "2 minutes ago"
+                            muted: true
+                    - type: badge
+                      props:
+                        text: Critical
+                        variant: danger
+                - type: separator
+                - type: columns
+                  props:
+                    gap: 3
+                    align: center
+                  children:
+                    - type: icon
+                      props:
+                        name: alert-triangle
+                        size: sm
+                    - type: rows
+                      props:
+                        gap: 0
+                      children:
+                        - type: text
+                          props:
+                            text: "Worker pool response time exceeded 300ms"
+                        - type: text
+                          props:
+                            text: "15 minutes ago"
+                            muted: true
+                    - type: badge
+                      props:
+                        text: Warning
+                        variant: warning
+                - type: separator
+                - type: columns
+                  props:
+                    gap: 3
+                    align: center
+                  children:
+                    - type: icon
+                      props:
+                        name: alert-triangle
+                        size: sm
+                    - type: rows
+                      props:
+                        gap: 0
+                      children:
+                        - type: text
+                          props:
+                            text: "Disk usage above 80% on srv-03"
+                        - type: text
+                          props:
+                            text: "1 hour ago"
+                            muted: true
+                    - type: badge
+                      props:
+                        text: Warning
+                        variant: warning
+                - type: separator
+                - type: columns
+                  props:
+                    gap: 3
+                    align: center
+                  children:
+                    - type: icon
+                      props:
+                        name: alert-triangle
+                        size: sm
+                    - type: rows
+                      props:
+                        gap: 0
+                      children:
+                        - type: text
+                          props:
+                            text: "SSL certificate expires in 7 days"
+                        - type: text
+                          props:
+                            text: "3 hours ago"
+                            muted: true
+                    - type: badge
+                      props:
+                        text: Info
+                        variant: info
+
+        # Uptime (30 days)
+        - type: card
+          props:
+            title: "Uptime (30 days)"
+          children:
+            - type: rows
+              props:
+                gap: 3
+              children:
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "api-gateway"
+                    - type: text
+                      props:
+                        text: "99.99%"
+                - type: progress
+                  props:
+                    value: 99
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "auth-service"
+                    - type: text
+                      props:
+                        text: "99.97%"
+                - type: progress
+                  props:
+                    value: 99
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "worker-pool"
+                    - type: text
+                      props:
+                        text: "98.50%"
+                - type: progress
+                  props:
+                    value: 98
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "cdn-edge"
+                    - type: text
+                      props:
+                        text: "100%"
+                - type: progress
+                  props:
+                    value: 100
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "database-primary"
+                    - type: text
+                      props:
+                        text: "99.95%"
+                - type: progress
+                  props:
+                    value: 99

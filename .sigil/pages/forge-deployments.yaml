@@ -1,0 +1,114 @@
+sigil: "1.0"
+kind: page
+id: forge-deployments
+title: Deployments
+overlay: page
+module: forge
+
+datasources:
+  - alias: Deployment
+    capabilities: [search, filter, sort, paginate]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Deployments
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: select
+              props:
+                placeholder: All Environments
+                options:
+                  - value: all
+                    label: All
+                  - value: production
+                    label: Production
+                  - value: staging
+                    label: Staging
+                  - value: preview
+                    label: Preview
+              actions:
+                change:
+                  type: emit
+                  datasource: Deployment
+                  field: environment
+                  value: "{{value}}"
+            - type: button
+              props:
+                label: Deploy
+                variant: primary
+                icon: rocket
+              actions:
+                click:
+                  type: navigate
+                  page: forge-deployments
+
+    # ── Search ──────────────────────────────────
+    - type: search-bar
+      props:
+        placeholder: Search deployments...
+        debounce: 300
+        datasource: Deployment
+
+    # ── Deployments Table ───────────────────────
+    - type: card
+      props:
+        border: false
+      children:
+        - id: deployments-table
+          type: data-table
+          props:
+            datasource: Deployment
+            columns:
+              - label: Status
+                field: status
+                render: badge
+                variants:
+                  ready: success
+                  deploying: info
+                  building: default
+                  failed: danger
+                  cancelled: warning
+              - label: Name
+                field: name
+                sortable: true
+              - label: Environment
+                field: environment
+                render: badge
+                variants:
+                  production: danger
+                  staging: warning
+                  preview: default
+              - label: Branch
+                field: branch
+              - label: Author
+                field: author
+              - label: Duration
+                field: duration
+              - label: Created
+                field: createdAt
+                sortable: true
+            pagination:
+              pageSize: 20
+          actions:
+            rowClick:
+              type: sheet
+              page: forge-deployment-detail
+              params:
+                id: "{{row.id}}"

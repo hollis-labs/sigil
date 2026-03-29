@@ -1,0 +1,174 @@
+sigil: "1.0"
+kind: page
+id: forge-settings
+title: Settings
+overlay: page
+module: forge
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - type: heading
+      props:
+        level: 1
+        text: Settings
+
+    # ── Tabs ────────────────────────────────────
+    - type: tabs
+      props:
+        defaultTab: general
+      children:
+        # General Tab
+        - type: tab
+          props:
+            label: General
+            value: general
+          children:
+            - type: card
+              props:
+                title: Workspace Settings
+              children:
+                - type: rows
+                  props:
+                    gap: 4
+                  children:
+                    - type: rows
+                      props:
+                        gap: 1
+                      children:
+                        - type: text
+                          props:
+                            text: Workspace Name
+                            muted: true
+                        - type: input
+                          props:
+                            placeholder: My Workspace
+                    - type: rows
+                      props:
+                        gap: 1
+                      children:
+                        - type: text
+                          props:
+                            text: Workspace Slug
+                            muted: true
+                        - type: input
+                          props:
+                            placeholder: my-workspace
+                    - type: rows
+                      props:
+                        gap: 1
+                      children:
+                        - type: text
+                          props:
+                            text: Default Environment
+                            muted: true
+                        - type: select
+                          props:
+                            placeholder: Select environment
+                            options:
+                              - value: production
+                                label: Production
+                              - value: staging
+                                label: Staging
+                              - value: preview
+                                label: Preview
+                    - type: button
+                      props:
+                        label: Save Changes
+                        variant: primary
+
+        # Notifications Tab
+        - type: tab
+          props:
+            label: Notifications
+            value: notifications
+          children:
+            - type: card
+              props:
+                title: Notification Preferences
+              children:
+                - type: rows
+                  props:
+                    gap: 4
+                  children:
+                    - type: switch
+                      props:
+                        label: Email notifications for failed deployments
+                        default: true
+                    - type: switch
+                      props:
+                        label: Slack alerts for infrastructure issues
+                        default: true
+                    - type: switch
+                      props:
+                        label: Weekly usage digest
+                    - type: switch
+                      props:
+                        label: Security alerts
+                        default: true
+                    - type: separator
+                    - type: button
+                      props:
+                        label: Save Preferences
+                        variant: primary
+
+        # Danger Zone Tab
+        - type: tab
+          props:
+            label: Danger Zone
+            value: danger
+          children:
+            - type: card
+              props:
+                title: Danger Zone
+              children:
+                - type: rows
+                  props:
+                    gap: 4
+                  children:
+                    - type: columns
+                      props:
+                        justify: between
+                        align: center
+                      children:
+                        - type: rows
+                          props:
+                            gap: 0
+                          children:
+                            - type: text
+                              props:
+                                text: Delete Workspace
+                            - type: text
+                              props:
+                                text: Permanently delete this workspace and all data
+                                muted: true
+                        - type: button
+                          props:
+                            label: Delete Workspace
+                            variant: destructive
+                    - type: separator
+                    - type: columns
+                      props:
+                        justify: between
+                        align: center
+                      children:
+                        - type: rows
+                          props:
+                            gap: 0
+                          children:
+                            - type: text
+                              props:
+                                text: Transfer Ownership
+                            - type: text
+                              props:
+                                text: Transfer workspace to another user
+                                muted: true
+                        - type: button
+                          props:
+                            label: Transfer
+                            variant: outline

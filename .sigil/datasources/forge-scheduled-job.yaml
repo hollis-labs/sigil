@@ -1,0 +1,36 @@
+alias: ScheduledJob
+description: Scheduled and cron jobs
+capabilities: [list, read, create, update, delete, search, filter, sort, paginate]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+  - name: schedule
+    type: string
+    required: true
+  - name: status
+    type: string
+    filterable: true
+    values: [active, paused, failed, completed]
+  - name: lastRun
+    type: datetime
+    sortable: true
+  - name: nextRun
+    type: datetime
+    sortable: true
+  - name: runtime
+    type: string
+    filterable: true
+    values: [node, python, go, shell]
+  - name: successRate
+    type: string
+endpoints:
+  list: "GET /api/jobs"
+  create: "POST /api/jobs"
+  read: "GET /api/jobs/{id}"
+  update: "PUT /api/jobs/{id}"
+  delete: "DELETE /api/jobs/{id}"

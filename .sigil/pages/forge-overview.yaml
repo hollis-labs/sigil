@@ -1,0 +1,336 @@
+sigil: "1.0"
+kind: page
+id: forge-overview
+title: Overview
+overlay: page
+module: forge
+
+datasources:
+  - alias: Deployment
+    capabilities: [list, filter]
+  - alias: Asset
+    capabilities: [list, filter]
+  - alias: ScheduledJob
+    capabilities: [list, filter]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Overview
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: select
+              props:
+                placeholder: Last 24 hours
+                options:
+                  - value: 1h
+                    label: Last hour
+                  - value: 24h
+                    label: Last 24 hours
+                  - value: 7d
+                    label: Last 7 days
+                  - value: 30d
+                    label: Last 30 days
+            - type: button
+              props:
+                label: Deploy
+                variant: primary
+                icon: rocket
+              actions:
+                click:
+                  type: navigate
+                  page: forge-deployments
+
+    # ── Stat Cards ──────────────────────────────
+    - type: grid
+      props:
+        columns: 4
+        gap: 4
+      children:
+        - type: card
+          props:
+            title: Deployments
+            padding: 4
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 1
+                  children:
+                    - type: heading
+                      props:
+                        level: 2
+                        text: "142"
+                    - type: text
+                      props:
+                        text: "+12% from last week"
+                        muted: true
+                - type: badge
+                  props:
+                    text: "↑ 12%"
+                    variant: default
+
+        - type: card
+          props:
+            title: Uptime
+            padding: 4
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 1
+                  children:
+                    - type: heading
+                      props:
+                        level: 2
+                        text: "99.98%"
+                    - type: text
+                      props:
+                        text: "2m downtime this month"
+                        muted: true
+                - type: badge
+                  props:
+                    text: Healthy
+                    variant: success
+
+        - type: card
+          props:
+            title: Assets
+            padding: 4
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 1
+                  children:
+                    - type: heading
+                      props:
+                        level: 2
+                        text: "37"
+                    - type: text
+                      props:
+                        text: "3 need attention"
+                        muted: true
+                - type: badge
+                  props:
+                    text: "3 alerts"
+                    variant: danger
+
+        - type: card
+          props:
+            title: Jobs
+            padding: 4
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: rows
+                  props:
+                    gap: 1
+                  children:
+                    - type: heading
+                      props:
+                        level: 2
+                        text: "18"
+                    - type: text
+                      props:
+                        text: "2 failed in last 24h"
+                        muted: true
+                - type: badge
+                  props:
+                    text: "2 failed"
+                    variant: warning
+
+    # ── Recent Deployments ──────────────────────
+    - type: card
+      props:
+        title: Recent Deployments
+      children:
+        - id: recent-deploys
+          type: data-table
+          props:
+            datasource: Deployment
+            columns:
+              - label: Status
+                field: status
+              - label: Name
+                field: name
+                sortable: true
+              - label: Environment
+                field: environment
+              - label: Branch
+                field: branch
+              - label: Author
+                field: author
+              - label: Duration
+                field: duration
+              - label: Created
+                field: createdAt
+                sortable: true
+            pagination:
+              pageSize: 5
+          actions:
+            rowClick:
+              type: sheet
+              page: forge-deployment-detail
+              params:
+                id: "{{row.id}}"
+
+    # ── Bottom Row ──────────────────────────────
+    - type: columns
+      props:
+        gap: 4
+      children:
+        # Active Assets
+        - type: card
+          props:
+            title: Asset Health
+          children:
+            - type: rows
+              props:
+                gap: 3
+              children:
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "Servers"
+                    - type: badge
+                      props:
+                        text: "12 healthy"
+                        variant: success
+                - type: progress
+                  props:
+                    value: 100
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "Databases"
+                    - type: badge
+                      props:
+                        text: "1 degraded"
+                        variant: danger
+                - type: progress
+                  props:
+                    value: 85
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "CDN"
+                    - type: badge
+                      props:
+                        text: "4 healthy"
+                        variant: success
+                - type: progress
+                  props:
+                    value: 100
+
+        # Recent Jobs
+        - type: card
+          props:
+            title: Recent Jobs
+          children:
+            - type: rows
+              props:
+                gap: 3
+              children:
+                - type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - type: rows
+                      props:
+                        gap: 0
+                      children:
+                        - type: text
+                          props:
+                            text: "db-backup-prod"
+                        - type: text
+                          props:
+                            text: "Completed 2m ago"
+                            muted: true
+                    - type: badge
+                      props:
+                        text: Success
+                        variant: success
+                - type: separator
+                - type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - type: rows
+                      props:
+                        gap: 0
+                      children:
+                        - type: text
+                          props:
+                            text: "cache-purge"
+                        - type: text
+                          props:
+                            text: "Running now"
+                            muted: true
+                    - type: badge
+                      props:
+                        text: Running
+                        variant: default
+                - type: separator
+                - type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - type: rows
+                      props:
+                        gap: 0
+                      children:
+                        - type: text
+                          props:
+                            text: "ssl-cert-renew"
+                        - type: text
+                          props:
+                            text: "Failed 1h ago"
+                            muted: true
+                    - type: badge
+                      props:
+                        text: Failed
+                        variant: danger

@@ -1,0 +1,91 @@
+sigil: "1.0"
+kind: page
+id: forge-users
+title: Users
+overlay: page
+module: forge
+
+datasources:
+  - alias: User
+    capabilities: [search, filter, sort, paginate]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Users
+        - type: columns
+          props:
+            gap: 2
+            align: center
+          children:
+            - type: select
+              props:
+                placeholder: All Roles
+                options:
+                  - value: all
+                    label: All Roles
+                  - value: owner
+                    label: Owner
+                  - value: admin
+                    label: Admin
+                  - value: member
+                    label: Member
+                  - value: viewer
+                    label: Viewer
+            - type: button
+              props:
+                label: Invite User
+                variant: primary
+                icon: user-plus
+              actions:
+                click:
+                  type: navigate
+                  page: forge-users
+
+    # ── Search ──────────────────────────────────
+    - type: search-bar
+      props:
+        placeholder: "Search users..."
+        datasource: User
+
+    # ── Data Table ──────────────────────────────
+    - type: card
+      props:
+        border: false
+      children:
+        - id: users-table
+          type: data-table
+          props:
+            datasource: User
+            columns:
+              - label: Status
+                field: status
+              - label: Name
+                field: name
+                sortable: true
+              - label: Email
+                field: email
+                sortable: true
+              - label: Role
+                field: role
+              - label: Teams
+                field: teams
+              - label: Last Active
+                field: lastActive
+                sortable: true
+            pagination:
+              pageSize: 10

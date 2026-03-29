@@ -1,0 +1,37 @@
+alias: Asset
+description: Infrastructure assets (servers, databases, buckets, etc)
+capabilities: [list, read, create, update, delete, search, filter, sort, paginate]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+  - name: type
+    type: string
+    filterable: true
+    values: [server, database, bucket, cdn, dns, load-balancer, queue]
+  - name: provider
+    type: string
+    filterable: true
+    values: [aws, azure, gcp, hetzner, digitalocean, cloudflare, custom]
+  - name: status
+    type: string
+    filterable: true
+    values: [healthy, degraded, down, provisioning]
+  - name: region
+    type: string
+    filterable: true
+  - name: cost
+    type: string
+  - name: updatedAt
+    type: datetime
+    sortable: true
+endpoints:
+  list: "GET /api/assets"
+  create: "POST /api/assets"
+  read: "GET /api/assets/{id}"
+  update: "PUT /api/assets/{id}"
+  delete: "DELETE /api/assets/{id}"

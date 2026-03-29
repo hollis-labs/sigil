@@ -1,0 +1,171 @@
+sigil: "1.0"
+kind: page
+id: forge-shell
+title: Forge
+overlay: page
+module: forge
+
+layout:
+  id: root
+  type: sidebar
+  props:
+    width: "240px"
+    collapsible: true
+  children:
+    # ── Sidebar ─────────────────────────────────
+    - id: sidebar-content
+      type: rows
+      props:
+        gap: 2
+        padding: 4
+      children:
+        - id: brand
+          type: columns
+          props:
+            gap: 2
+            align: center
+          children:
+            - type: icon
+              props:
+                name: hexagon
+                size: md
+            - type: heading
+              props:
+                level: 3
+                text: Forge
+
+        - type: separator
+
+        - id: main-nav
+          type: nav-menu
+          props:
+            items:
+              - label: Overview
+                page: forge-overview
+                icon: layout-dashboard
+              - label: Deployments
+                page: forge-deployments
+                icon: rocket
+              - label: Logs
+                page: forge-logs
+                icon: scroll-text
+              - label: Monitoring
+                page: forge-monitoring
+                icon: activity
+              - label: Assets
+                page: forge-assets
+                icon: server
+              - label: Jobs
+                page: forge-jobs
+                icon: clock
+
+        - type: separator
+
+        - id: secondary-nav
+          type: nav-menu
+          props:
+            items:
+              - label: Workspaces
+                page: forge-workspaces
+                icon: boxes
+              - label: Users
+                page: forge-users
+                icon: users
+              - label: Integrations
+                page: forge-integrations
+                icon: puzzle
+              - label: Settings
+                page: forge-settings
+                icon: settings
+
+        - type: spacer
+
+        - id: sidebar-footer
+          type: columns
+          props:
+            gap: 2
+            align: center
+          children:
+            - type: avatar
+              props:
+                alt: User
+                size: sm
+            - type: text
+              props:
+                text: chrispian
+                muted: true
+
+    # ── Main Content Area ───────────────────────
+    - id: main-content
+      type: rows
+      props:
+        gap: 0
+        padding: 0
+      children:
+        # Top bar
+        - id: topbar
+          type: columns
+          props:
+            justify: between
+            align: center
+            padding: 4
+          children:
+            - type: search-bar
+              props:
+                placeholder: "Search..."
+                debounce: 300
+                variant: ghost
+            - type: columns
+              props:
+                gap: 2
+                align: center
+              children:
+                - type: button
+                  props:
+                    label: Feedback
+                    variant: ghost
+                    icon: message-square
+                - type: button
+                  props:
+                    label: Docs
+                    variant: ghost
+                    icon: book-open
+                - type: dropdown-menu
+                  props:
+                    trigger: "+"
+                    items:
+                      - label: New Deployment
+                      - label: New Asset
+                      - label: New Job
+                      - label: New Workspace
+
+        - type: separator
+
+        # Page content slot (placeholder)
+        - id: page-content
+          type: rows
+          props:
+            gap: 6
+            padding: 6
+          children:
+            - type: text
+              props:
+                text: "Select a page from the sidebar to get started."
+                muted: true
+
+shortcuts:
+  - key: "/"
+    action:
+      type: focus
+      target: search
+    description: Focus search
+  - key: "g o"
+    action:
+      type: navigate
+      page: forge-overview
+    description: Go to overview
+  - key: "g d"
+    action:
+      type: navigate
+      page: forge-deployments
+    description: Go to deployments

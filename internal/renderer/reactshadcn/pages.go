@@ -3,6 +3,7 @@ package reactshadcn
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -21,10 +22,21 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 	renderComponent(&bodyBuf, &page.Layout, 2, imports, ctx)
 
 	// Pre-register datasource hook imports (must happen before imports.String())
+	hasParams := false
 	for _, dsRef := range page.DataSources {
-		hookName := "use" + toPascalCase(dsRef.Alias)
 		hookModule := fmt.Sprintf("@/hooks/use-%s", toKebabCase(dsRef.Alias))
-		imports.addLocal(hookName, hookModule)
+		if len(dsRef.Params) > 0 {
+			// Detail page: import the ById variant
+			hookName := "use" + toPascalCase(dsRef.Alias) + "ById"
+			imports.addLocal(hookName, hookModule)
+			hasParams = true
+		} else {
+			hookName := "use" + toPascalCase(dsRef.Alias)
+			imports.addLocal(hookName, hookModule)
+		}
+	}
+	if hasParams {
+		imports.addReact("useParams", "next/navigation")
 	}
 
 	var buf bytes.Buffer
@@ -44,11 +56,28 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 		buf.WriteString("  const router = useRouter();\n")
 	}
 
+	// Params hook (if any datasource uses params)
+	if hasParams {
+		buf.WriteString("  const params = useParams();\n")
+	}
+
 	// DataSource hooks
 	for _, dsRef := range page.DataSources {
-		hookName := "use" + toPascalCase(dsRef.Alias)
 		varName := toCamelCase(dsRef.Alias)
-		buf.WriteString(fmt.Sprintf("  const { data: %s, isLoading: %sLoading } = %s();\n", varName, varName, hookName))
+		if len(dsRef.Params) > 0 {
+			// Detail page: use ById variant with first param
+			hookName := "use" + toPascalCase(dsRef.Alias) + "ById"
+			// Get the first param key (typically "id")
+			var paramKey string
+			for k := range dsRef.Params {
+				paramKey = k
+				break
+			}
+			buf.WriteString(fmt.Sprintf("  const { data: %s, isLoading: %sLoading } = %s(params.%s as string);\n", varName, varName, hookName, paramKey))
+		} else {
+			hookName := "use" + toPascalCase(dsRef.Alias)
+			buf.WriteString(fmt.Sprintf("  const { data: %s, isLoading: %sLoading } = %s();\n", varName, varName, hookName))
+		}
 	}
 	if len(page.DataSources) > 0 || imports.hasReact("useRouter") {
 		buf.WriteString("\n")
@@ -110,11 +139,37 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 
 	case "grid":
 		cols := getPropString(c.Props, "columns", "3")
+		colsMd := getPropString(c.Props, "columns_md", "")
+		colsSm := getPropString(c.Props, "columns_sm", "")
 		gap := getPropString(c.Props, "gap", "4")
 		classes := fmt.Sprintf("grid grid-cols-%s gap-%s", cols, gap)
+		if colsMd != "" {
+			classes = fmt.Sprintf("grid grid-cols-%s md:grid-cols-%s gap-%s", colsMd, cols, gap)
+		}
+		if colsSm != "" {
+			if colsMd != "" {
+				classes = fmt.Sprintf("grid grid-cols-%s sm:grid-cols-%s md:grid-cols-%s gap-%s", colsSm, colsMd, cols, gap)
+			} else {
+				classes = fmt.Sprintf("grid grid-cols-%s md:grid-cols-%s gap-%s", colsSm, cols, gap)
+			}
+		}
 		fmt.Fprintf(buf, "%s<div className=%q>\n", indent, classes)
-		for i := range c.Children {
-			renderComponent(buf, &c.Children[i], depth+1, imports, ctx)
+
+		// If children use {{item.*}} template vars and a datasource is specified,
+		// wrap the first child in a .map() iteration over the datasource array.
+		dsAlias := getPropString(c.Props, "datasource", "")
+		if dsAlias != "" && len(c.Children) > 0 && containsItemVars(&c.Children[0]) {
+			varName := toCamelCase(dsAlias)
+			keyField := getItemKeyField(&c.Children[0])
+			fmt.Fprintf(buf, "%s  {%s.map((item) => (\n", indent, varName)
+			fmt.Fprintf(buf, "%s    <div key={item.%s}>\n", indent, keyField)
+			renderComponent(buf, &c.Children[0], depth+3, imports, ctx)
+			fmt.Fprintf(buf, "%s    </div>\n", indent)
+			fmt.Fprintf(buf, "%s  ))}\n", indent)
+		} else {
+			for i := range c.Children {
+				renderComponent(buf, &c.Children[i], depth+1, imports, ctx)
+			}
 		}
 		fmt.Fprintf(buf, "%s</div>\n", indent)
 
@@ -123,6 +178,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		text := getPropString(c.Props, "text", "")
 		tag := "h" + level
 		classes := headingClasses(level)
+		text = interpolateTemplateVars(text)
 		fmt.Fprintf(buf, "%s<%s className=%q>%s</%s>\n", indent, tag, classes, text, tag)
 
 	case "text":
@@ -132,6 +188,8 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		if muted {
 			classes = "text-sm text-muted-foreground"
 		}
+		content = interpolateTemplateVars(content)
+		content = escapeJSXText(content)
 		fmt.Fprintf(buf, "%s<p className=%q>%s</p>\n", indent, classes, content)
 
 	case "button":
@@ -164,8 +222,13 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addShadcn("Badge", "@/components/ui/badge")
 		text := getPropString(c.Props, "text", "")
 		variant := getPropString(c.Props, "variant", "default")
-		shadcnVariant := mapBadgeVariant(variant)
-		fmt.Fprintf(buf, "%s<Badge variant=%q>%s</Badge>\n", indent, shadcnVariant, text)
+		text = interpolateTemplateVars(text)
+		shadcnVariant, extraClass := mapBadgeVariant(variant)
+		if extraClass != "" {
+			fmt.Fprintf(buf, "%s<Badge variant=%q className=%q>%s</Badge>\n", indent, shadcnVariant, extraClass, text)
+		} else {
+			fmt.Fprintf(buf, "%s<Badge variant=%q>%s</Badge>\n", indent, shadcnVariant, text)
+		}
 
 	case "input":
 		imports.addShadcn("Input", "@/components/ui/input")
@@ -213,8 +276,17 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 
 	case "search-bar":
 		imports.addShadcn("Input", "@/components/ui/input")
+		imports.addLucide("Search")
 		placeholder := getPropString(c.Props, "placeholder", "Search...")
-		fmt.Fprintf(buf, "%s<Input type=\"search\" placeholder=%q className=\"w-full\" />\n", indent, placeholder)
+		variant := getPropString(c.Props, "variant", "default")
+		inputClasses := "w-full pl-9 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+		if variant == "ghost" {
+			inputClasses = "w-full pl-9 border-0 shadow-none focus-visible:ring-0 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+		}
+		fmt.Fprintf(buf, "%s<div className=\"relative\">\n", indent)
+		fmt.Fprintf(buf, "%s  <Search className=\"absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground\" />\n", indent)
+		fmt.Fprintf(buf, "%s  <Input type=\"search\" placeholder=%q className=%q />\n", indent, placeholder, inputClasses)
+		fmt.Fprintf(buf, "%s</div>\n", indent)
 
 	case "data-table":
 		imports.addLocal("DataTable", "@/components/data-table")
@@ -267,20 +339,22 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addShadcn("TabsContent", "@/components/ui/tabs")
 		imports.addShadcn("TabsList", "@/components/ui/tabs")
 		imports.addShadcn("TabsTrigger", "@/components/ui/tabs")
-		defaultTab := ""
-		if len(c.Children) > 0 {
-			defaultTab = c.Children[0].ID
+		defaultTab := getPropString(c.Props, "defaultTab", "")
+		if defaultTab == "" && len(c.Children) > 0 {
+			defaultTab = getPropString(c.Children[0].Props, "value", c.Children[0].ID)
 		}
 		fmt.Fprintf(buf, "%s<Tabs defaultValue=%q>\n", indent, defaultTab)
 		fmt.Fprintf(buf, "%s  <TabsList>\n", indent)
 		for _, child := range c.Children {
+			tabValue := getPropString(child.Props, "value", child.ID)
 			label := getPropString(child.Props, "label", child.ID)
-			fmt.Fprintf(buf, "%s    <TabsTrigger value=%q>%s</TabsTrigger>\n", indent, child.ID, label)
+			fmt.Fprintf(buf, "%s    <TabsTrigger value=%q>%s</TabsTrigger>\n", indent, tabValue, label)
 		}
 		fmt.Fprintf(buf, "%s  </TabsList>\n", indent)
 		for i := range c.Children {
 			child := &c.Children[i]
-			fmt.Fprintf(buf, "%s  <TabsContent value=%q>\n", indent, child.ID)
+			tabValue := getPropString(child.Props, "value", child.ID)
+			fmt.Fprintf(buf, "%s  <TabsContent value=%q>\n", indent, tabValue)
 			for j := range child.Children {
 				renderComponent(buf, &child.Children[j], depth+2, imports, ctx)
 			}
@@ -304,11 +378,18 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		src := getPropString(c.Props, "src", "")
 		alt := getPropString(c.Props, "alt", "")
 		fallback := "?"
-		if alt != "" && len(alt) >= 2 {
+		if alt != "" && !strings.Contains(alt, "{{") && len(alt) >= 2 {
 			fallback = strings.ToUpper(alt[:2])
+		} else if strings.Contains(alt, "{{") {
+			fallback = "?"
 		}
+		altOut := interpolateTemplateVars(alt)
 		fmt.Fprintf(buf, "%s<Avatar>\n", indent)
-		fmt.Fprintf(buf, "%s  <AvatarImage src=%q alt=%q />\n", indent, src, alt)
+		if strings.Contains(alt, "{{") {
+			fmt.Fprintf(buf, "%s  <AvatarImage src=%q alt={%s} />\n", indent, src, strings.Trim(altOut, "{}"))
+		} else {
+			fmt.Fprintf(buf, "%s  <AvatarImage src=%q alt=%q />\n", indent, src, alt)
+		}
 		fmt.Fprintf(buf, "%s  <AvatarFallback>%s</AvatarFallback>\n", indent, fallback)
 		fmt.Fprintf(buf, "%s</Avatar>\n", indent)
 
@@ -329,7 +410,8 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		name := getPropString(c.Props, "name", "circle")
 		iconComp := lucideIconName(name)
 		imports.addLucide(iconComp)
-		fmt.Fprintf(buf, "%s<%s className=\"h-4 w-4\" />\n", indent, iconComp)
+		sizeClass := mapIconSize(getPropString(c.Props, "size", "md"))
+		fmt.Fprintf(buf, "%s<%s className=%q />\n", indent, iconComp, sizeClass)
 
 	case "label":
 		imports.addShadcn("Label", "@/components/ui/label")
@@ -347,9 +429,14 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addShadcn("CardFooter", "@/components/ui/card")
 		imports.addShadcn("CardHeader", "@/components/ui/card")
 		imports.addShadcn("CardTitle", "@/components/ui/card")
-		title := getPropString(c.Props, "title", "")
-		description := getPropString(c.Props, "description", "")
-		fmt.Fprintf(buf, "%s<Card>\n", indent)
+		title := interpolateTemplateVars(getPropString(c.Props, "title", ""))
+		description := interpolateTemplateVars(getPropString(c.Props, "description", ""))
+		border := getPropString(c.Props, "border", "true")
+		if border == "false" {
+			fmt.Fprintf(buf, "%s<Card className=\"border-0 shadow-none ring-0\">\n", indent)
+		} else {
+			fmt.Fprintf(buf, "%s<Card>\n", indent)
+		}
 		if title != "" || description != "" {
 			fmt.Fprintf(buf, "%s  <CardHeader>\n", indent)
 			if title != "" {
@@ -397,14 +484,32 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addShadcn("DropdownMenuTrigger", "@/components/ui/dropdown-menu")
 		trigger := getPropString(c.Props, "trigger", "Open")
 		fmt.Fprintf(buf, "%s<DropdownMenu>\n", indent)
-		fmt.Fprintf(buf, "%s  <DropdownMenuTrigger>%s</DropdownMenuTrigger>\n", indent, trigger)
+		fmt.Fprintf(buf, "%s  <DropdownMenuTrigger className=\"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-9 px-3 hover:bg-accent hover:text-accent-foreground\">%s</DropdownMenuTrigger>\n", indent, trigger)
 		fmt.Fprintf(buf, "%s  <DropdownMenuContent>\n", indent)
 		if items, ok := c.Props["items"]; ok {
 			if itemSlice, ok := items.([]interface{}); ok {
 				for _, item := range itemSlice {
 					if im, ok := item.(map[string]interface{}); ok {
+						if sep, ok := im["separator"]; ok && sep == true {
+							imports.addShadcn("DropdownMenuSeparator", "@/components/ui/dropdown-menu")
+							fmt.Fprintf(buf, "%s    <DropdownMenuSeparator />\n", indent)
+							continue
+						}
 						label := fmt.Sprintf("%v", im["label"])
-						fmt.Fprintf(buf, "%s    <DropdownMenuItem>%s</DropdownMenuItem>\n", indent, label)
+						icon := ""
+						if iconVal, ok := im["icon"]; ok {
+							icon = fmt.Sprintf("%v", iconVal)
+						}
+						if icon != "" {
+							iconComp := lucideIconName(icon)
+							imports.addLucide(iconComp)
+							fmt.Fprintf(buf, "%s    <DropdownMenuItem>\n", indent)
+							fmt.Fprintf(buf, "%s      <%s className=\"mr-2 h-4 w-4\" />\n", indent, iconComp)
+							fmt.Fprintf(buf, "%s      %s\n", indent, label)
+							fmt.Fprintf(buf, "%s    </DropdownMenuItem>\n", indent)
+						} else {
+							fmt.Fprintf(buf, "%s    <DropdownMenuItem>%s</DropdownMenuItem>\n", indent, label)
+						}
 					}
 				}
 			}
@@ -478,6 +583,66 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		fmt.Fprintf(buf, "%s    </TooltipContent>\n", indent)
 		fmt.Fprintf(buf, "%s  </Tooltip>\n", indent)
 		fmt.Fprintf(buf, "%s</TooltipProvider>\n", indent)
+
+	case "sidebar":
+		width := getPropString(c.Props, "width", "256px")
+		idAttr := ""
+		if c.ID != "" {
+			idAttr = fmt.Sprintf(" id=%q", c.ID)
+		}
+		fmt.Fprintf(buf, "%s<div className=\"flex h-screen\"%s>\n", indent, idAttr)
+		fmt.Fprintf(buf, "%s  <aside className=\"w-[%s] shrink-0 border-r border-border overflow-y-auto bg-muted/30\">\n", indent, width)
+		if len(c.Children) > 0 {
+			renderComponent(buf, &c.Children[0], depth+2, imports, ctx)
+		}
+		fmt.Fprintf(buf, "%s  </aside>\n", indent)
+		fmt.Fprintf(buf, "%s  <main className=\"flex-1 overflow-y-auto\">\n", indent)
+		if len(c.Children) > 1 {
+			renderComponent(buf, &c.Children[1], depth+2, imports, ctx)
+		}
+		fmt.Fprintf(buf, "%s  </main>\n", indent)
+		fmt.Fprintf(buf, "%s</div>\n", indent)
+
+	case "nav-menu":
+		idAttr := ""
+		if c.ID != "" {
+			idAttr = fmt.Sprintf(" id=%q", c.ID)
+		}
+		fmt.Fprintf(buf, "%s<nav className=\"flex flex-col gap-1\"%s>\n", indent, idAttr)
+		if items, ok := c.Props["items"]; ok {
+			if itemSlice, ok := items.([]interface{}); ok {
+				for _, item := range itemSlice {
+					if im, ok := item.(map[string]interface{}); ok {
+						label := fmt.Sprintf("%v", im["label"])
+						page := ""
+						if p, ok := im["page"]; ok {
+							page = fmt.Sprintf("%v", p)
+						}
+						icon := ""
+						if ic, ok := im["icon"]; ok {
+							icon = fmt.Sprintf("%v", ic)
+						}
+						href := "#"
+						if page != "" {
+							href = "/pages/" + page
+						}
+						if icon != "" {
+							iconPascal := toPascalCase(icon)
+							imports.addLucide(iconPascal)
+							fmt.Fprintf(buf, "%s  <a href=%q className=\"flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors\">\n", indent, href)
+							fmt.Fprintf(buf, "%s    <%s className=\"h-4 w-4\" />\n", indent, iconPascal)
+							fmt.Fprintf(buf, "%s    %s\n", indent, label)
+							fmt.Fprintf(buf, "%s  </a>\n", indent)
+						} else {
+							fmt.Fprintf(buf, "%s  <a href=%q className=\"flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors\">\n", indent, href)
+							fmt.Fprintf(buf, "%s    %s\n", indent, label)
+							fmt.Fprintf(buf, "%s  </a>\n", indent)
+						}
+					}
+				}
+			}
+		}
+		fmt.Fprintf(buf, "%s</nav>\n", indent)
 
 	default:
 		idAttr := ""
@@ -624,19 +789,40 @@ func renderReactActions(actions map[string]config.Action, imports *importTracker
 		case "navigate":
 			imports.addReact("useRouter", "next/navigation")
 			if action.URL != "" {
-				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push(%q)}`, action.URL))
+				url := interpolateActionURL(action.URL)
+				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push(%s)}`, url))
 			} else if action.Page != "" {
-				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push("/pages/%s")}`, action.Page))
+				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push("/%s")}`, action.Page))
 			}
 		case "http":
 			method := strings.ToUpper(action.Method)
 			if method == "" {
 				method = "POST"
 			}
-			attrs = append(attrs, fmt.Sprintf(` onClick={() => fetch(%q, { method: %q })}`, action.URL, method))
+			url := interpolateActionURL(action.URL)
+			attrs = append(attrs, fmt.Sprintf(` onClick={() => fetch(%s, { method: %q })}`, url, method))
+		case "filter":
+			// Filter emits a custom event with datasource + field + value for filtering
+			ds := action.Datasource
+			field := action.Field
+			if ds != "" && field != "" {
+				attrs = append(attrs, fmt.Sprintf(` onChange={(e) => window.dispatchEvent(new CustomEvent("filter:%s", { detail: { field: %q, value: e.target.value } }))}`, strings.ToLower(ds), field))
+			}
+		case "create":
+			// Create navigates to a create page or opens a modal
+			imports.addReact("useRouter", "next/navigation")
+			if action.Page != "" {
+				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push("/%s/new")}`, action.Page))
+			} else if action.URL != "" {
+				url := interpolateActionURL(action.URL)
+				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push(%s)}`, url))
+			}
 		case "emit":
 			if action.Event != "" {
 				attrs = append(attrs, fmt.Sprintf(` onClick={() => window.dispatchEvent(new CustomEvent(%q))}`, action.Event))
+			} else if action.Datasource != "" && action.Field != "" {
+				// emit with datasource/field acts as a filter event
+				attrs = append(attrs, fmt.Sprintf(` onChange={(e) => window.dispatchEvent(new CustomEvent("filter:%s", { detail: { field: %q, value: e.target.value } }))}`, strings.ToLower(action.Datasource), action.Field))
 			}
 		case "confirm":
 			if action.Message != "" {
@@ -746,6 +932,93 @@ func sortedBoolKeys(m map[string]bool) []string {
 	return keys
 }
 
+// interpolateTemplateVars converts Sigil template variables in a string to JSX expressions.
+// Patterns:
+//   - {{data.Alias.field}} → alias?.field  (camelCase alias with optional chaining)
+//   - {{param.field}}      → params.field
+//
+// If the entire string is a single template variable, returns a JSX expression like {expr}.
+// If the string mixes static text and template variables, returns a JSX template literal like {`text ${expr}`}.
+func interpolateTemplateVars(s string) string {
+	if !strings.Contains(s, "{{") {
+		return s
+	}
+
+	dataRe := regexp.MustCompile(`\{\{data\.([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+	paramRe := regexp.MustCompile(`\{\{param\.([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+	itemRe := regexp.MustCompile(`\{\{item\.([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+
+	// Check if the entire string is a single template variable
+	singleDataMatch := dataRe.FindStringSubmatch(s)
+	if singleDataMatch != nil && singleDataMatch[0] == s {
+		alias := toCamelCase(singleDataMatch[1])
+		field := singleDataMatch[2]
+		return "{" + alias + "?." + field + "}"
+	}
+	singleParamMatch := paramRe.FindStringSubmatch(s)
+	if singleParamMatch != nil && singleParamMatch[0] == s {
+		return "{params." + singleParamMatch[1] + "}"
+	}
+	singleItemMatch := itemRe.FindStringSubmatch(s)
+	if singleItemMatch != nil && singleItemMatch[0] == s {
+		return "{item." + singleItemMatch[1] + "}"
+	}
+
+	// Mixed content: replace all template vars and wrap in a template literal
+	result := s
+	result = dataRe.ReplaceAllStringFunc(result, func(match string) string {
+		parts := dataRe.FindStringSubmatch(match)
+		alias := toCamelCase(parts[1])
+		field := parts[2]
+		return "${" + alias + "?." + field + "}"
+	})
+	result = paramRe.ReplaceAllStringFunc(result, func(match string) string {
+		parts := paramRe.FindStringSubmatch(match)
+		return "${params." + parts[1] + "}"
+	})
+	result = itemRe.ReplaceAllStringFunc(result, func(match string) string {
+		parts := itemRe.FindStringSubmatch(match)
+		return "${item." + parts[1] + "}"
+	})
+	return "{`" + result + "`}"
+}
+
+// containsItemVars recursively checks whether a component tree contains any
+// {{item.*}} template variables, indicating it should be rendered inside a
+// datasource .map() iteration.
+func containsItemVars(c *config.Component) bool {
+	for _, v := range c.Props {
+		if s, ok := v.(string); ok && strings.Contains(s, "{{item.") {
+			return true
+		}
+	}
+	for i := range c.Children {
+		if containsItemVars(&c.Children[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+// getItemKeyField extracts the first {{item.*}} field name from a component
+// tree, to be used as the key prop in a .map() call. Falls back to "id".
+func getItemKeyField(c *config.Component) string {
+	re := regexp.MustCompile(`\{\{item\.([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+	for _, v := range c.Props {
+		if s, ok := v.(string); ok {
+			if m := re.FindStringSubmatch(s); m != nil {
+				return m[1]
+			}
+		}
+	}
+	for i := range c.Children {
+		if f := getItemKeyField(&c.Children[i]); f != "id" {
+			return f
+		}
+	}
+	return "id"
+}
+
 // Helper functions
 
 func getPropString(props map[string]interface{}, key, defaultVal string) string {
@@ -796,16 +1069,75 @@ func mapButtonVariant(variant string) string {
 	}
 }
 
-func mapBadgeVariant(variant string) string {
+// mapIconSize maps Sigil icon size names (or pixel values) to Tailwind size classes.
+func mapIconSize(size string) string {
+	switch size {
+	case "xs":
+		return "h-3 w-3"
+	case "sm":
+		return "h-4 w-4"
+	case "md", "":
+		return "h-5 w-5"
+	case "lg":
+		return "h-6 w-6"
+	case "xl":
+		return "h-8 w-8"
+	default:
+		// Accept pixel values like "16" or "20" — convert to nearest Tailwind size
+		return fmt.Sprintf("h-[%spx] w-[%spx]", size, size)
+	}
+}
+
+// interpolateActionURL converts template vars in action URLs to JS template literals.
+// e.g. "/api/deployments/{{param.id}}" → "`/api/deployments/${params.id}`"
+// Returns a raw JS expression (no JSX {} wrapper) suitable for use inside onClick handlers.
+func interpolateActionURL(url string) string {
+	if !strings.Contains(url, "{{") {
+		return fmt.Sprintf("%q", url)
+	}
+	paramRe := regexp.MustCompile(`\{\{param\.([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+	dataRe := regexp.MustCompile(`\{\{data\.([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+	itemRe := regexp.MustCompile(`\{\{item\.([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+
+	result := url
+	result = paramRe.ReplaceAllString(result, "${params.$1}")
+	result = dataRe.ReplaceAllStringFunc(result, func(match string) string {
+		parts := dataRe.FindStringSubmatch(match)
+		alias := toCamelCase(parts[1])
+		return "${" + alias + "?." + parts[2] + "}"
+	})
+	result = itemRe.ReplaceAllString(result, "${item.$1}")
+	return "`" + result + "`"
+}
+
+// escapeJSXText escapes characters that are special in JSX but should render
+// as literal text. Skips content that's already a JSX expression ({...} or {`...`}).
+func escapeJSXText(s string) string {
+	if strings.HasPrefix(s, "{") {
+		return s // already a JSX expression, don't double-escape
+	}
+	replacer := strings.NewReplacer(
+		"<", "{\"<\"}",
+		">", "{\">\"}",
+	)
+	return replacer.Replace(s)
+}
+
+// mapBadgeVariant maps Sigil semantic badge variants to a shadcn base variant
+// plus an optional Tailwind className for semantic color. This preserves visual
+// distinction between success/warning/info instead of collapsing them.
+func mapBadgeVariant(variant string) (shadcnVariant, className string) {
 	switch variant {
 	case "success":
-		return "default"
+		return "outline", "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
 	case "warning":
-		return "secondary"
+		return "outline", "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
 	case "danger", "error":
-		return "destructive"
+		return "destructive", ""
+	case "info":
+		return "outline", "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"
 	default:
-		return variant
+		return variant, ""
 	}
 }
 

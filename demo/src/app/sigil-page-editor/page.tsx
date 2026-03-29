@@ -55,7 +55,7 @@ export default function SigilPageEditor() {
           <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">YAML Editor</h3>
           <div className="flex flex-row gap-2">
             <Button variant="secondary" onClick={() => fetch("/api/sigil/validate", { method: "POST" })}>Validate</Button>
-            <Button variant="secondary" onClick={() => router.push("/pages/sigil-preview")}>Preview</Button>
+            <Button variant="secondary" onClick={() => router.push("/sigil-preview")}>Preview</Button>
           </div>
         </div>
         <div className="flex flex-col gap-1.5">

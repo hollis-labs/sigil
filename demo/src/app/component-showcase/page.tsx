@@ -95,7 +95,7 @@ export default function ComponentShowcase() {
       <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">Dropdown Menus</h2>
       <div className="flex flex-row gap-4">
         <DropdownMenu>
-          <DropdownMenuTrigger>Actions</DropdownMenuTrigger>
+          <DropdownMenuTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-9 px-3 hover:bg-accent hover:text-accent-foreground">Actions</DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem>Edit</DropdownMenuItem>
             <DropdownMenuItem>Duplicate</DropdownMenuItem>
@@ -104,7 +104,7 @@ export default function ComponentShowcase() {
           </DropdownMenuContent>
         </DropdownMenu>
         <DropdownMenu>
-          <DropdownMenuTrigger>Sort By</DropdownMenuTrigger>
+          <DropdownMenuTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-9 px-3 hover:bg-accent hover:text-accent-foreground">Sort By</DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem>Name (A-Z)</DropdownMenuItem>
             <DropdownMenuItem>Name (Z-A)</DropdownMenuItem>
@@ -113,7 +113,7 @@ export default function ComponentShowcase() {
           </DropdownMenuContent>
         </DropdownMenu>
         <DropdownMenu>
-          <DropdownMenuTrigger>Export</DropdownMenuTrigger>
+          <DropdownMenuTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-9 px-3 hover:bg-accent hover:text-accent-foreground">Export</DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem>Export as CSV</DropdownMenuItem>
             <DropdownMenuItem>Export as JSON</DropdownMenuItem>

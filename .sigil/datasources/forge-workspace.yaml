@@ -1,0 +1,33 @@
+alias: Workspace
+description: Team workspaces / projects
+capabilities: [list, read, create, update, delete, search, filter, sort, paginate]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+  - name: slug
+    type: string
+  - name: owner
+    type: string
+    searchable: true
+  - name: memberCount
+    type: integer
+  - name: deploymentCount
+    type: integer
+  - name: plan
+    type: string
+    filterable: true
+    values: [free, pro, enterprise]
+  - name: createdAt
+    type: datetime
+    sortable: true
+endpoints:
+  list: "GET /api/workspaces"
+  create: "POST /api/workspaces"
+  read: "GET /api/workspaces/{id}"
+  update: "PUT /api/workspaces/{id}"
+  delete: "DELETE /api/workspaces/{id}"

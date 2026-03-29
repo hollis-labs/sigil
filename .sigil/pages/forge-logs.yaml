@@ -1,0 +1,111 @@
+sigil: "1.0"
+kind: page
+id: forge-logs
+title: Logs
+overlay: page
+module: forge
+
+datasources:
+  - alias: LogEntry
+    capabilities: [search, filter, sort, paginate]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Logs
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: select
+              props:
+                placeholder: Last hour
+                options:
+                  - value: 1h
+                    label: Last hour
+                  - value: 24h
+                    label: Last 24 hours
+                  - value: 7d
+                    label: Last 7 days
+                  - value: 30d
+                    label: Last 30 days
+              actions:
+                change:
+                  type: emit
+                  datasource: LogEntry
+                  field: timeRange
+                  value: "{{value}}"
+            - type: select
+              props:
+                placeholder: All Levels
+                options:
+                  - value: all
+                    label: All Levels
+                  - value: debug
+                    label: Debug
+                  - value: info
+                    label: Info
+                  - value: warn
+                    label: Warn
+                  - value: error
+                    label: Error
+                  - value: fatal
+                    label: Fatal
+              actions:
+                change:
+                  type: emit
+                  datasource: LogEntry
+                  field: level
+                  value: "{{value}}"
+
+    # ── Search ──────────────────────────────────
+    - type: search-bar
+      props:
+        placeholder: Search logs...
+        debounce: 300
+        datasource: LogEntry
+
+    # ── Logs Table ──────────────────────────────
+    - type: card
+      props:
+        border: false
+      children:
+        - id: logs-table
+          type: data-table
+          props:
+            datasource: LogEntry
+            columns:
+              - label: Timestamp
+                field: timestamp
+                sortable: true
+              - label: Level
+                field: level
+                render: badge
+                variants:
+                  fatal: danger
+                  error: danger
+                  warn: warning
+                  info: info
+                  debug: default
+              - label: Service
+                field: service
+              - label: Message
+                field: message
+              - label: Source
+                field: source
+            pagination:
+              pageSize: 50

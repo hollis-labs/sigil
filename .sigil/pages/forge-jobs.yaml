@@ -1,0 +1,83 @@
+sigil: "1.0"
+kind: page
+id: forge-jobs
+title: Scheduled Jobs
+overlay: page
+module: forge
+
+datasources:
+  - alias: ScheduledJob
+    capabilities: [search, filter, sort, paginate, create]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Scheduled Jobs
+        - type: button
+          props:
+            label: New Job
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: navigate
+              page: forge-jobs
+
+    # ── Search ──────────────────────────────────
+    - type: search-bar
+      props:
+        placeholder: Search jobs...
+        debounce: 300
+        datasource: ScheduledJob
+
+    # ── Jobs Table ──────────────────────────────
+    - type: card
+      props:
+        border: false
+      children:
+        - id: jobs-table
+          type: data-table
+          props:
+            datasource: ScheduledJob
+            columns:
+              - label: Status
+                field: status
+                render: badge
+                variants:
+                  active: success
+                  running: info
+                  paused: warning
+                  failed: danger
+                  disabled: default
+              - label: Name
+                field: name
+                sortable: true
+              - label: Schedule
+                field: schedule
+              - label: Runtime
+                field: runtime
+              - label: Last Run
+                field: lastRun
+                sortable: true
+              - label: Next Run
+                field: nextRun
+                sortable: true
+              - label: Success Rate
+                field: successRate
+                sortable: true
+            pagination:
+              pageSize: 20

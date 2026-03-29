@@ -1,0 +1,144 @@
+sigil: "1.0"
+kind: page
+id: forge-assets
+title: Assets
+overlay: page
+module: forge
+
+datasources:
+  - alias: Asset
+    capabilities: [search, filter, sort, paginate, create]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Assets
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: select
+              props:
+                placeholder: All Providers
+                options:
+                  - value: all
+                    label: All Providers
+                  - value: aws
+                    label: AWS
+                  - value: azure
+                    label: Azure
+                  - value: gcp
+                    label: GCP
+                  - value: hetzner
+                    label: Hetzner
+                  - value: digitalocean
+                    label: DigitalOcean
+                  - value: cloudflare
+                    label: Cloudflare
+                  - value: custom
+                    label: Custom
+              actions:
+                change:
+                  type: emit
+                  datasource: Asset
+                  field: provider
+                  value: "{{value}}"
+            - type: select
+              props:
+                placeholder: All Types
+                options:
+                  - value: all
+                    label: All Types
+                  - value: server
+                    label: Server
+                  - value: database
+                    label: Database
+                  - value: bucket
+                    label: Bucket
+                  - value: cdn
+                    label: CDN
+                  - value: dns
+                    label: DNS
+                  - value: load-balancer
+                    label: Load Balancer
+                  - value: queue
+                    label: Queue
+              actions:
+                change:
+                  type: emit
+                  datasource: Asset
+                  field: type
+                  value: "{{value}}"
+            - type: button
+              props:
+                label: Add Asset
+                variant: primary
+                icon: plus
+              actions:
+                click:
+                  type: navigate
+                  page: forge-assets
+
+    # ── Search ──────────────────────────────────
+    - type: search-bar
+      props:
+        placeholder: Search assets...
+        debounce: 300
+        datasource: Asset
+
+    # ── Assets Table ────────────────────────────
+    - type: card
+      props:
+        border: false
+      children:
+        - id: assets-table
+          type: data-table
+          props:
+            datasource: Asset
+            columns:
+              - label: Status
+                field: status
+                render: badge
+                variants:
+                  healthy: success
+                  degraded: warning
+                  down: danger
+                  provisioning: info
+                  unknown: default
+              - label: Name
+                field: name
+                sortable: true
+              - label: Type
+                field: type
+              - label: Provider
+                field: provider
+              - label: Region
+                field: region
+              - label: Cost
+                field: cost
+                sortable: true
+              - label: Last Updated
+                field: updatedAt
+                sortable: true
+            pagination:
+              pageSize: 20
+          actions:
+            rowClick:
+              type: navigate
+              page: forge-asset-detail
+              params:
+                id: "{{row.id}}"

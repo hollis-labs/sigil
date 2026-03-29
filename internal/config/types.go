@@ -29,23 +29,26 @@ type Component struct {
 
 // Action defines an event handler.
 type Action struct {
-	Type      string                 `yaml:"type" json:"type"`
-	Page      string                 `yaml:"page,omitempty" json:"page,omitempty"`
-	URL       string                 `yaml:"url,omitempty" json:"url,omitempty"`
-	Method    string                 `yaml:"method,omitempty" json:"method,omitempty"`
-	Title     string                 `yaml:"title,omitempty" json:"title,omitempty"`
-	Size      string                 `yaml:"size,omitempty" json:"size,omitempty"`
-	Side      string                 `yaml:"side,omitempty" json:"side,omitempty"`
-	Fields    []FormField            `yaml:"fields,omitempty" json:"fields,omitempty"`
-	Submit    *SubmitConfig          `yaml:"submit,omitempty" json:"submit,omitempty"`
-	Refresh   string                 `yaml:"refresh,omitempty" json:"refresh,omitempty"`
-	Params    map[string]string      `yaml:"params,omitempty" json:"params,omitempty"`
-	Event     string                 `yaml:"event,omitempty" json:"event,omitempty"`
-	Payload   map[string]interface{} `yaml:"payload,omitempty" json:"payload,omitempty"`
-	Message   string                 `yaml:"message,omitempty" json:"message,omitempty"`
-	OnConfirm *Action                `yaml:"onConfirm,omitempty" json:"onConfirm,omitempty"`
-	OnSuccess *Action                `yaml:"onSuccess,omitempty" json:"onSuccess,omitempty"`
-	Target    string                 `yaml:"target,omitempty" json:"target,omitempty"`
+	Type       string                 `yaml:"type" json:"type"`
+	Page       string                 `yaml:"page,omitempty" json:"page,omitempty"`
+	URL        string                 `yaml:"url,omitempty" json:"url,omitempty"`
+	Method     string                 `yaml:"method,omitempty" json:"method,omitempty"`
+	Title      string                 `yaml:"title,omitempty" json:"title,omitempty"`
+	Size       string                 `yaml:"size,omitempty" json:"size,omitempty"`
+	Side       string                 `yaml:"side,omitempty" json:"side,omitempty"`
+	Fields     []FormField            `yaml:"fields,omitempty" json:"fields,omitempty"`
+	Submit     *SubmitConfig          `yaml:"submit,omitempty" json:"submit,omitempty"`
+	Refresh    string                 `yaml:"refresh,omitempty" json:"refresh,omitempty"`
+	Params     map[string]string      `yaml:"params,omitempty" json:"params,omitempty"`
+	Event      string                 `yaml:"event,omitempty" json:"event,omitempty"`
+	Payload    map[string]interface{} `yaml:"payload,omitempty" json:"payload,omitempty"`
+	Message    string                 `yaml:"message,omitempty" json:"message,omitempty"`
+	OnConfirm  *Action                `yaml:"onConfirm,omitempty" json:"onConfirm,omitempty"`
+	OnSuccess  *Action                `yaml:"onSuccess,omitempty" json:"onSuccess,omitempty"`
+	Target     string                 `yaml:"target,omitempty" json:"target,omitempty"`
+	Datasource string                 `yaml:"datasource,omitempty" json:"datasource,omitempty"`
+	Field      string                 `yaml:"field,omitempty" json:"field,omitempty"`
+	Value      string                 `yaml:"value,omitempty" json:"value,omitempty"`
 }
 
 // FormField defines a field in a modal/form.

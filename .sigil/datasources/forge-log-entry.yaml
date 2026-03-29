@@ -1,0 +1,26 @@
+alias: LogEntry
+description: Application log entries
+capabilities: [list, search, filter, sort, paginate]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: timestamp
+    type: datetime
+    sortable: true
+  - name: level
+    type: string
+    filterable: true
+    values: [debug, info, warn, error, fatal]
+  - name: service
+    type: string
+    filterable: true
+    searchable: true
+  - name: message
+    type: string
+    searchable: true
+  - name: source
+    type: string
+    filterable: true
+endpoints:
+  list: "GET /api/logs"

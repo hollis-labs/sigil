@@ -1,0 +1,147 @@
+sigil: "1.0"
+kind: page
+id: forge-workspaces
+title: Workspaces
+overlay: page
+module: forge
+
+datasources:
+  - alias: Workspace
+    capabilities: [search, filter, sort, paginate, create]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Workspaces
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: select
+              props:
+                placeholder: All Plans
+                options:
+                  - value: all
+                    label: All Plans
+                  - value: free
+                    label: Free
+                  - value: pro
+                    label: Pro
+                  - value: enterprise
+                    label: Enterprise
+              actions:
+                change:
+                  type: emit
+                  datasource: Workspace
+                  field: plan
+                  value: "{{value}}"
+            - type: button
+              props:
+                label: New Workspace
+                variant: primary
+                icon: plus
+              actions:
+                click:
+                  type: navigate
+                  page: forge-workspaces
+
+    # ── Search ──────────────────────────────────
+    - type: search-bar
+      props:
+        placeholder: Search workspaces...
+        debounce: 300
+        datasource: Workspace
+
+    # ── Card Grid View ──────────────────────────
+    - type: grid
+      props:
+        columns: 3
+        gap: 4
+        datasource: Workspace
+      children:
+        - type: card
+          props:
+            title: "{{item.name}}"
+            description: "{{item.slug}}"
+          children:
+            - type: columns
+              props:
+                justify: between
+                align: center
+              children:
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: avatar
+                      props:
+                        alt: "{{item.owner}}"
+                        size: sm
+                    - type: text
+                      props:
+                        text: "{{item.owner}}"
+                - type: columns
+                  props:
+                    gap: 2
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: "{{item.plan}}"
+                        variant: info
+                    - type: text
+                      props:
+                        text: "{{item.memberCount}} members"
+                        muted: true
+
+    # ── List View Table ─────────────────────────
+    - type: card
+      props:
+        title: All Workspaces
+        border: false
+      children:
+        - id: workspaces-table
+          type: data-table
+          props:
+            datasource: Workspace
+            columns:
+              - label: Name
+                field: name
+                sortable: true
+              - label: Slug
+                field: slug
+              - label: Owner
+                field: owner
+              - label: Plan
+                field: plan
+                render: badge
+                variants:
+                  enterprise: info
+                  pro: success
+                  free: default
+              - label: Members
+                field: memberCount
+                sortable: true
+              - label: Deployments
+                field: deploymentCount
+                sortable: true
+              - label: Created
+                field: createdAt
+                sortable: true
+            pagination:
+              pageSize: 20

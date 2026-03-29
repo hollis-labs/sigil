@@ -3,6 +3,7 @@
 
 "use client";
 
+import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,10 @@ export default function SigilComponents() {
         <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Components</h1>
         <Badge variant="default">49 types</Badge>
       </div>
-      <Input type="search" placeholder="Search components..." className="w-full" />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input type="search" placeholder="Search components..." className="w-full pl-9 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" />
+      </div>
       <div className="flex flex-row gap-6">
         <div className="flex flex-col gap-2">
           <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">Categories</h3>

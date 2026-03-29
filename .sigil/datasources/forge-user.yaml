@@ -1,0 +1,34 @@
+alias: User
+description: Team members and user accounts
+capabilities: [list, read, create, update, delete, search, filter, sort, paginate]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+  - name: email
+    type: string
+    required: true
+    searchable: true
+  - name: role
+    type: string
+    filterable: true
+    values: [owner, admin, member, viewer]
+  - name: status
+    type: string
+    filterable: true
+    values: [active, invited, suspended]
+  - name: lastActive
+    type: datetime
+    sortable: true
+  - name: teams
+    type: string
+endpoints:
+  list: "GET /api/users"
+  create: "POST /api/users"
+  read: "GET /api/users/{id}"
+  update: "PUT /api/users/{id}"
+  delete: "DELETE /api/users/{id}"
