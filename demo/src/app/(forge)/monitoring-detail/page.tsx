@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { SigilChart } from "@/components/sigil-chart";
 
 export default function ForgeMonitoringDetail() {
   return (
@@ -74,16 +75,75 @@ export default function ForgeMonitoringDetail() {
           </CardContent>
         </Card>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Latency Over Time</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-64 rounded-lg border border-dashed border-border bg-muted/20">
-            <p className="text-sm text-muted-foreground">Line chart placeholder</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Latency Over Time</CardTitle>
+            <CardDescription>P50/P95/P99 — last 12 hours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SigilChart
+              type="line"
+              xKey="time"
+              height={250}
+              showGrid
+              showLegend
+              dataKeys={["p50", "p95", "p99"]}
+              config={{
+                p50: { label: "P50", color: "var(--chart-1)" },
+                p95: { label: "P95", color: "var(--chart-2)" },
+                p99: { label: "P99", color: "var(--chart-3)" },
+              }}
+              data={[
+                {p50: 42, p95: 110, p99: 280, time: "00:00"},
+                {p50: 38, p95: 105, p99: 260, time: "02:00"},
+                {p50: 35, p95: 98, p99: 240, time: "04:00"},
+                {p50: 40, p95: 115, p99: 290, time: "06:00"},
+                {p50: 48, p95: 135, p99: 350, time: "08:00"},
+                {p50: 55, p95: 160, p99: 420, time: "10:00"},
+                {p50: 52, p95: 148, p99: 380, time: "12:00"},
+                {p50: 58, p95: 170, p99: 450, time: "14:00"},
+                {p50: 50, p95: 142, p99: 360, time: "16:00"},
+                {p50: 46, p95: 128, p99: 320, time: "18:00"},
+                {p50: 43, p95: 118, p99: 290, time: "20:00"},
+                {p50: 40, p95: 108, p99: 270, time: "22:00"},
+              ]}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Request Volume</CardTitle>
+            <CardDescription>Requests per minute — last 12 hours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SigilChart
+              type="bar"
+              xKey="time"
+              height={250}
+              showGrid
+              dataKeys={["requests"]}
+              config={{
+                requests: { label: "Requests/min", color: "var(--chart-1)" },
+              }}
+              data={[
+                {requests: 120, time: "00:00"},
+                {requests: 85, time: "02:00"},
+                {requests: 60, time: "04:00"},
+                {requests: 150, time: "06:00"},
+                {requests: 420, time: "08:00"},
+                {requests: 580, time: "10:00"},
+                {requests: 510, time: "12:00"},
+                {requests: 620, time: "14:00"},
+                {requests: 480, time: "16:00"},
+                {requests: 350, time: "18:00"},
+                {requests: 220, time: "20:00"},
+                {requests: 160, time: "22:00"},
+              ]}
+            />
+          </CardContent>
+        </Card>
+      </div>
       <Collapsible>
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-semibold">Alert Thresholds</h4>

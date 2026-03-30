@@ -82,13 +82,70 @@ layout:
               props:
                 text: "0.12%"
 
-    - type: card
+    - type: grid
       props:
-        title: Latency Over Time
+        columns: 2
+        columns_sm: 1
+        gap: 4
       children:
-        - type: chart
+        - type: card
           props:
-            type: line
+            title: Latency Over Time
+            description: P50/P95/P99 — last 12 hours
+          children:
+            - type: chart
+              props:
+                type: line
+                xKey: time
+                showGrid: true
+                showLegend: true
+                series:
+                  - key: p50
+                    label: P50
+                  - key: p95
+                    label: P95
+                  - key: p99
+                    label: P99
+                data:
+                  - { time: "00:00", p50: 42, p95: 110, p99: 280 }
+                  - { time: "02:00", p50: 38, p95: 105, p99: 260 }
+                  - { time: "04:00", p50: 35, p95: 98, p99: 240 }
+                  - { time: "06:00", p50: 40, p95: 115, p99: 290 }
+                  - { time: "08:00", p50: 48, p95: 135, p99: 350 }
+                  - { time: "10:00", p50: 55, p95: 160, p99: 420 }
+                  - { time: "12:00", p50: 52, p95: 148, p99: 380 }
+                  - { time: "14:00", p50: 58, p95: 170, p99: 450 }
+                  - { time: "16:00", p50: 50, p95: 142, p99: 360 }
+                  - { time: "18:00", p50: 46, p95: 128, p99: 320 }
+                  - { time: "20:00", p50: 43, p95: 118, p99: 290 }
+                  - { time: "22:00", p50: 40, p95: 108, p99: 270 }
+
+        - type: card
+          props:
+            title: Request Volume
+            description: Requests per minute — last 12 hours
+          children:
+            - type: chart
+              props:
+                type: bar
+                xKey: time
+                showGrid: true
+                series:
+                  - key: requests
+                    label: Requests/min
+                data:
+                  - { time: "00:00", requests: 120 }
+                  - { time: "02:00", requests: 85 }
+                  - { time: "04:00", requests: 60 }
+                  - { time: "06:00", requests: 150 }
+                  - { time: "08:00", requests: 420 }
+                  - { time: "10:00", requests: 580 }
+                  - { time: "12:00", requests: 510 }
+                  - { time: "14:00", requests: 620 }
+                  - { time: "16:00", requests: 480 }
+                  - { time: "18:00", requests: 350 }
+                  - { time: "20:00", requests: 220 }
+                  - { time: "22:00", requests: 160 }
 
     - type: collapsible
       props:

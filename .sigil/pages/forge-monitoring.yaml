@@ -162,6 +162,88 @@ layout:
                     text: Normal
                     variant: info
 
+    # ── Charts ──────────────────────────────────
+    - type: grid
+      props:
+        columns: 3
+        columns_sm: 1
+        gap: 4
+      children:
+        - type: card
+          props:
+            title: CPU Over Time
+            description: Average CPU usage — last 12 hours
+          children:
+            - type: chart
+              props:
+                type: area
+                xKey: time
+                series:
+                  - key: cpu
+                    label: CPU %
+                data:
+                  - { time: "00:00", cpu: 45 }
+                  - { time: "02:00", cpu: 38 }
+                  - { time: "04:00", cpu: 32 }
+                  - { time: "06:00", cpu: 41 }
+                  - { time: "08:00", cpu: 62 }
+                  - { time: "10:00", cpu: 78 }
+                  - { time: "12:00", cpu: 73 }
+                  - { time: "14:00", cpu: 81 }
+                  - { time: "16:00", cpu: 75 }
+                  - { time: "18:00", cpu: 58 }
+                  - { time: "20:00", cpu: 49 }
+                  - { time: "22:00", cpu: 42 }
+
+        - type: card
+          props:
+            title: Error Rate by Service
+            description: Errors in the last 24 hours
+          children:
+            - type: chart
+              props:
+                type: donut
+                xKey: service
+                showLegend: true
+                series:
+                  - key: errors
+                    label: Errors
+                data:
+                  - { service: "api", errors: 42, fill: "var(--color-api)" }
+                  - { service: "auth", errors: 18, fill: "var(--color-auth)" }
+                  - { service: "worker", errors: 7, fill: "var(--color-worker)" }
+                  - { service: "cdn", errors: 3, fill: "var(--color-cdn)" }
+
+        - type: card
+          props:
+            title: Memory Usage
+            description: Memory allocation — last 12 hours
+          children:
+            - type: chart
+              props:
+                type: bar
+                xKey: time
+                showGrid: true
+                series:
+                  - key: used
+                    label: Used (GB)
+                  - key: cached
+                    label: Cached (GB)
+                stacked: true
+                data:
+                  - { time: "00:00", used: 14, cached: 4 }
+                  - { time: "02:00", used: 13, cached: 5 }
+                  - { time: "04:00", used: 12, cached: 5 }
+                  - { time: "06:00", used: 15, cached: 4 }
+                  - { time: "08:00", used: 19, cached: 3 }
+                  - { time: "10:00", used: 22, cached: 3 }
+                  - { time: "12:00", used: 21, cached: 4 }
+                  - { time: "14:00", used: 23, cached: 3 }
+                  - { time: "16:00", used: 20, cached: 4 }
+                  - { time: "18:00", used: 17, cached: 5 }
+                  - { time: "20:00", used: 15, cached: 5 }
+                  - { time: "22:00", used: 14, cached: 5 }
+
     # ── Service Health ──────────────────────────
     - type: card
       props:

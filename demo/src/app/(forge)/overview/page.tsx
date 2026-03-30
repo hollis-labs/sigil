@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Toaster } from "@/components/ui/sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DataTable } from "@/components/data-table";
+import { SigilChart } from "@/components/sigil-chart";
 import { useAsset } from "@/hooks/use-asset";
 import { useDeployment } from "@/hooks/use-deployment";
 import { useScheduledJob } from "@/hooks/use-scheduledjob";
@@ -101,6 +102,81 @@ export default function ForgeOverview() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">18</div>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Deployments Over Time</CardTitle>
+            <CardDescription>Daily deployments — last 14 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SigilChart
+              type="area"
+              xKey="day"
+              height={250}
+              showLegend
+              stacked
+              dataKeys={["production", "staging", "preview"]}
+              config={{
+                production: { label: "Production", color: "var(--chart-1)" },
+                staging: { label: "Staging", color: "var(--chart-2)" },
+                preview: { label: "Preview", color: "var(--chart-3)" },
+              }}
+              data={[
+                {day: "Mar 16", preview: 2, production: 3, staging: 5},
+                {day: "Mar 17", preview: 3, production: 2, staging: 4},
+                {day: "Mar 18", preview: 1, production: 4, staging: 6},
+                {day: "Mar 19", preview: 4, production: 1, staging: 3},
+                {day: "Mar 20", preview: 2, production: 5, staging: 7},
+                {day: "Mar 21", preview: 1, production: 3, staging: 2},
+                {day: "Mar 22", preview: 3, production: 2, staging: 4},
+                {day: "Mar 23", preview: 4, production: 6, staging: 5},
+                {day: "Mar 24", preview: 2, production: 4, staging: 3},
+                {day: "Mar 25", preview: 5, production: 3, staging: 6},
+                {day: "Mar 26", preview: 3, production: 5, staging: 4},
+                {day: "Mar 27", preview: 2, production: 2, staging: 5},
+                {day: "Mar 28", preview: 4, production: 4, staging: 3},
+                {day: "Mar 29", preview: 3, production: 7, staging: 6},
+              ]}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Response Time</CardTitle>
+            <CardDescription>P50/P95 latency — last 14 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SigilChart
+              type="line"
+              xKey="day"
+              height={250}
+              showGrid
+              showLegend
+              dataKeys={["p50", "p95"]}
+              config={{
+                p50: { label: "P50 (ms)", color: "var(--chart-1)" },
+                p95: { label: "P95 (ms)", color: "var(--chart-2)" },
+              }}
+              data={[
+                {day: "Mar 16", p50: 42, p95: 120},
+                {day: "Mar 17", p50: 38, p95: 115},
+                {day: "Mar 18", p50: 45, p95: 135},
+                {day: "Mar 19", p50: 51, p95: 180},
+                {day: "Mar 20", p50: 44, p95: 125},
+                {day: "Mar 21", p50: 40, p95: 110},
+                {day: "Mar 22", p50: 43, p95: 128},
+                {day: "Mar 23", p50: 47, p95: 145},
+                {day: "Mar 24", p50: 39, p95: 112},
+                {day: "Mar 25", p50: 41, p95: 118},
+                {day: "Mar 26", p50: 46, p95: 140},
+                {day: "Mar 27", p50: 43, p95: 130},
+                {day: "Mar 28", p50: 38, p95: 108},
+                {day: "Mar 29", p50: 45, p95: 122},
+              ]}
+            />
           </CardContent>
         </Card>
       </div>

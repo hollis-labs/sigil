@@ -1,6 +1,6 @@
 type: chart
 category: data
-description: "Data chart"
+description: "Data chart using recharts via SigilChart component"
 props:
   type:
     type: string
@@ -10,6 +10,27 @@ props:
   datasource:
     type: string
     description: "DataSource alias"
-  config:
-    type: object
-    description: "Chart-specific configuration"
+  xKey:
+    type: string
+    description: "Data key for x-axis labels"
+  dataKeys:
+    type: array
+    description: "Data keys to plot as series"
+  series:
+    type: array
+    description: "Series config: [{key, label, color}]"
+  data:
+    type: array
+    description: "Inline chart data (used when no datasource)"
+  height:
+    type: integer
+    description: "Chart height in pixels"
+  showGrid:
+    type: boolean
+    description: "Show grid lines"
+  showLegend:
+    type: boolean
+    description: "Show chart legend"
+  stacked:
+    type: boolean
+    description: "Stack series on top of each other"

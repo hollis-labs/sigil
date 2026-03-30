@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { SigilChart } from "@/components/sigil-chart";
 
 export default function ForgeMonitoring() {
   const router = useRouter();
@@ -94,6 +95,97 @@ export default function ForgeMonitoring() {
               </div>
               <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">Normal</Badge>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>CPU Over Time</CardTitle>
+            <CardDescription>Average CPU usage — last 12 hours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SigilChart
+              type="area"
+              xKey="time"
+              height={250}
+              dataKeys={["cpu"]}
+              config={{
+                cpu: { label: "CPU %", color: "var(--chart-1)" },
+              }}
+              data={[
+                {cpu: 45, time: "00:00"},
+                {cpu: 38, time: "02:00"},
+                {cpu: 32, time: "04:00"},
+                {cpu: 41, time: "06:00"},
+                {cpu: 62, time: "08:00"},
+                {cpu: 78, time: "10:00"},
+                {cpu: 73, time: "12:00"},
+                {cpu: 81, time: "14:00"},
+                {cpu: 75, time: "16:00"},
+                {cpu: 58, time: "18:00"},
+                {cpu: 49, time: "20:00"},
+                {cpu: 42, time: "22:00"},
+              ]}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Error Rate by Service</CardTitle>
+            <CardDescription>Errors in the last 24 hours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SigilChart
+              type="donut"
+              xKey="service"
+              height={250}
+              showLegend
+              dataKeys={["errors"]}
+              config={{
+                errors: { label: "Errors", color: "var(--chart-1)" },
+              }}
+              data={[
+                {errors: 42, fill: "var(--color-api)", service: "api"},
+                {errors: 18, fill: "var(--color-auth)", service: "auth"},
+                {errors: 7, fill: "var(--color-worker)", service: "worker"},
+                {errors: 3, fill: "var(--color-cdn)", service: "cdn"},
+              ]}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Memory Usage</CardTitle>
+            <CardDescription>Memory allocation — last 12 hours</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SigilChart
+              type="bar"
+              xKey="time"
+              height={250}
+              showGrid
+              stacked
+              dataKeys={["used", "cached"]}
+              config={{
+                used: { label: "Used (GB)", color: "var(--chart-1)" },
+                cached: { label: "Cached (GB)", color: "var(--chart-2)" },
+              }}
+              data={[
+                {cached: 4, time: "00:00", used: 14},
+                {cached: 5, time: "02:00", used: 13},
+                {cached: 5, time: "04:00", used: 12},
+                {cached: 4, time: "06:00", used: 15},
+                {cached: 3, time: "08:00", used: 19},
+                {cached: 3, time: "10:00", used: 22},
+                {cached: 4, time: "12:00", used: 21},
+                {cached: 3, time: "14:00", used: 23},
+                {cached: 4, time: "16:00", used: 20},
+                {cached: 5, time: "18:00", used: 17},
+                {cached: 5, time: "20:00", used: 15},
+                {cached: 5, time: "22:00", used: 14},
+              ]}
+            />
           </CardContent>
         </Card>
       </div>

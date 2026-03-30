@@ -38,7 +38,7 @@ export default function ForgeIntegrations() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {integration.map((item) => (
-          <div key={item.name}>
+          <div key={item.provider}>
             <Card>
               <CardHeader>
                 <CardTitle>{item.name}</CardTitle>

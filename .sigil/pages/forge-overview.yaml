@@ -101,6 +101,79 @@ layout:
             trend: neutral
             icon: clock
 
+    # ── Charts Row ──────────────────────────────
+    - type: grid
+      props:
+        columns: 2
+        columns_sm: 1
+        gap: 4
+      children:
+        - type: card
+          props:
+            title: Deployments Over Time
+            description: Daily deployments — last 14 days
+          children:
+            - type: chart
+              props:
+                type: area
+                xKey: day
+                showLegend: true
+                series:
+                  - key: production
+                    label: Production
+                  - key: staging
+                    label: Staging
+                  - key: preview
+                    label: Preview
+                stacked: true
+                data:
+                  - { day: "Mar 16", production: 3, staging: 5, preview: 2 }
+                  - { day: "Mar 17", production: 2, staging: 4, preview: 3 }
+                  - { day: "Mar 18", production: 4, staging: 6, preview: 1 }
+                  - { day: "Mar 19", production: 1, staging: 3, preview: 4 }
+                  - { day: "Mar 20", production: 5, staging: 7, preview: 2 }
+                  - { day: "Mar 21", production: 3, staging: 2, preview: 1 }
+                  - { day: "Mar 22", production: 2, staging: 4, preview: 3 }
+                  - { day: "Mar 23", production: 6, staging: 5, preview: 4 }
+                  - { day: "Mar 24", production: 4, staging: 3, preview: 2 }
+                  - { day: "Mar 25", production: 3, staging: 6, preview: 5 }
+                  - { day: "Mar 26", production: 5, staging: 4, preview: 3 }
+                  - { day: "Mar 27", production: 2, staging: 5, preview: 2 }
+                  - { day: "Mar 28", production: 4, staging: 3, preview: 4 }
+                  - { day: "Mar 29", production: 7, staging: 6, preview: 3 }
+
+        - type: card
+          props:
+            title: Response Time
+            description: P50/P95 latency — last 14 days
+          children:
+            - type: chart
+              props:
+                type: line
+                xKey: day
+                showGrid: true
+                showLegend: true
+                series:
+                  - key: p50
+                    label: P50 (ms)
+                  - key: p95
+                    label: P95 (ms)
+                data:
+                  - { day: "Mar 16", p50: 42, p95: 120 }
+                  - { day: "Mar 17", p50: 38, p95: 115 }
+                  - { day: "Mar 18", p50: 45, p95: 135 }
+                  - { day: "Mar 19", p50: 51, p95: 180 }
+                  - { day: "Mar 20", p50: 44, p95: 125 }
+                  - { day: "Mar 21", p50: 40, p95: 110 }
+                  - { day: "Mar 22", p50: 43, p95: 128 }
+                  - { day: "Mar 23", p50: 47, p95: 145 }
+                  - { day: "Mar 24", p50: 39, p95: 112 }
+                  - { day: "Mar 25", p50: 41, p95: 118 }
+                  - { day: "Mar 26", p50: 46, p95: 140 }
+                  - { day: "Mar 27", p50: 43, p95: 130 }
+                  - { day: "Mar 28", p50: 38, p95: 108 }
+                  - { day: "Mar 29", p50: 45, p95: 122 }
+
     # ── Recent Deployments ──────────────────────
     - type: card
       props:

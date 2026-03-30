@@ -1431,11 +1431,119 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		}
 
 	case "chart":
-		// Chart is a placeholder — real charting requires a library like recharts
+		imports.addLocal("SigilChart", "@/components/sigil-chart")
 		chartType := getPropString(c.Props, "type", "bar")
-		fmt.Fprintf(buf, "%s<div className=\"flex items-center justify-center h-64 rounded-lg border border-dashed border-border bg-muted/20\">\n", indent)
-		fmt.Fprintf(buf, "%s  <p className=\"text-sm text-muted-foreground\">%s chart placeholder</p>\n", indent, strings.ToUpper(chartType[:1])+chartType[1:])
-		fmt.Fprintf(buf, "%s</div>\n", indent)
+		xKey := getPropString(c.Props, "xKey", "label")
+		height := getPropString(c.Props, "height", "250")
+		showGrid := getPropBool(c.Props, "showGrid")
+		showLegend := getPropBool(c.Props, "showLegend")
+		stacked := getPropBool(c.Props, "stacked")
+
+		// Collect dataKeys and series config
+		var dataKeys []string
+		type seriesEntry struct{ key, label, color string }
+		var series []seriesEntry
+
+		if s, ok := c.Props["series"]; ok {
+			if sSlice, ok := s.([]interface{}); ok {
+				for i, item := range sSlice {
+					if m, ok := item.(map[string]interface{}); ok {
+						key := fmt.Sprintf("%v", m["key"])
+						label := fmt.Sprintf("%v", m["label"])
+						color := fmt.Sprintf("var(--chart-%d)", i+1)
+						if c, ok := m["color"]; ok {
+							color = fmt.Sprintf("%v", c)
+						}
+						dataKeys = append(dataKeys, key)
+						series = append(series, seriesEntry{key, label, color})
+					}
+				}
+			}
+		}
+		if len(dataKeys) == 0 {
+			if dk, ok := c.Props["dataKeys"]; ok {
+				if dkSlice, ok := dk.([]interface{}); ok {
+					for i, k := range dkSlice {
+						key := fmt.Sprintf("%v", k)
+						dataKeys = append(dataKeys, key)
+						series = append(series, seriesEntry{key, key, fmt.Sprintf("var(--chart-%d)", i+1)})
+					}
+				}
+			}
+		}
+		if len(dataKeys) == 0 {
+			dataKeys = []string{"value"}
+			series = []seriesEntry{{"value", "Value", "var(--chart-1)"}}
+		}
+
+		// Build config object
+		fmt.Fprintf(buf, "%s<SigilChart\n", indent)
+		fmt.Fprintf(buf, "%s  type=%q\n", indent, chartType)
+		fmt.Fprintf(buf, "%s  xKey=%q\n", indent, xKey)
+		fmt.Fprintf(buf, "%s  height={%s}\n", indent, height)
+		if showGrid {
+			fmt.Fprintf(buf, "%s  showGrid\n", indent)
+		}
+		if showLegend {
+			fmt.Fprintf(buf, "%s  showLegend\n", indent)
+		}
+		if stacked {
+			fmt.Fprintf(buf, "%s  stacked\n", indent)
+		}
+		// dataKeys
+		fmt.Fprintf(buf, "%s  dataKeys={[", indent)
+		for i, k := range dataKeys {
+			if i > 0 {
+				fmt.Fprint(buf, ", ")
+			}
+			fmt.Fprintf(buf, "%q", k)
+		}
+		fmt.Fprint(buf, "]}\n")
+		// config
+		fmt.Fprintf(buf, "%s  config={{\n", indent)
+		for _, s := range series {
+			fmt.Fprintf(buf, "%s    %s: { label: %q, color: %q },\n", indent, s.key, s.label, s.color)
+		}
+		fmt.Fprintf(buf, "%s  }}\n", indent)
+		// inline data
+		if inlineData, ok := c.Props["data"]; ok {
+			if dataSlice, ok := inlineData.([]interface{}); ok {
+				fmt.Fprintf(buf, "%s  data={[\n", indent)
+				for _, item := range dataSlice {
+					if m, ok := item.(map[string]interface{}); ok {
+						fmt.Fprintf(buf, "%s    {", indent)
+						first := true
+						// Sort keys for deterministic output
+						keys := make([]string, 0, len(m))
+						for k := range m {
+							keys = append(keys, k)
+						}
+						sort.Strings(keys)
+						for _, k := range keys {
+							v := m[k]
+							if !first {
+								fmt.Fprint(buf, ", ")
+							}
+							first = false
+							switch val := v.(type) {
+							case string:
+								fmt.Fprintf(buf, "%s: %q", k, val)
+							default:
+								fmt.Fprintf(buf, "%s: %v", k, val)
+							}
+						}
+						fmt.Fprint(buf, "},\n")
+					}
+				}
+				fmt.Fprintf(buf, "%s  ]}\n", indent)
+			}
+		} else if datasource := getPropString(c.Props, "datasource", ""); datasource != "" {
+			varName := toCamelCase(datasource)
+			fmt.Fprintf(buf, "%s  data={%s ?? []}\n", indent, varName)
+		} else {
+			fmt.Fprintf(buf, "%s  data={[]}\n", indent)
+		}
+		fmt.Fprintf(buf, "%s/>\n", indent)
 
 	default:
 		idAttr := ""
