@@ -16,6 +16,9 @@ bin/
 coverage.out
 /sigil
 
+# Local
+.mcp.json
+
 # Demo app
 demo/node_modules/
 demo/.next/
