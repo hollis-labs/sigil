@@ -10,6 +10,8 @@ datasources:
     capabilities: [read]
     params:
       id: "{{param.id}}"
+  - alias: DeploymentEvent
+    capabilities: [read]
 
 layout:
   id: root
@@ -18,6 +20,13 @@ layout:
     gap: 6
     padding: 6
   children:
+    - type: breadcrumb
+      props:
+        items:
+          - label: Deployments
+            href: /forge-deployments
+          - label: "{{data.Deployment.name}}"
+
     # ── Header ──────────────────────────────────
     - id: header
       type: columns
@@ -52,6 +61,10 @@ layout:
                   type: http
                   method: POST
                   url: "/api/deployments/{{param.id}}/redeploy"
+                  onSuccess:
+                    type: toast
+                    title: success
+                    message: Redeployment started
             - type: dropdown-menu
               props:
                 trigger: "..."
@@ -80,81 +93,23 @@ layout:
           children:
             - type: card
               children:
-                - type: rows
+                - type: detail-view
                   props:
-                    gap: 3
-                  children:
-                    - type: columns
-                      props:
-                        justify: between
-                      children:
-                        - type: text
-                          props:
-                            text: Environment
-                            muted: true
-                        - type: text
-                          props:
-                            text: "{{data.Deployment.environment}}"
-                    - type: separator
-                    - type: columns
-                      props:
-                        justify: between
-                      children:
-                        - type: text
-                          props:
-                            text: Branch
-                            muted: true
-                        - type: text
-                          props:
-                            text: "{{data.Deployment.branch}}"
-                    - type: separator
-                    - type: columns
-                      props:
-                        justify: between
-                      children:
-                        - type: text
-                          props:
-                            text: Commit
-                            muted: true
-                        - type: text
-                          props:
-                            text: "{{data.Deployment.commit}}"
-                    - type: separator
-                    - type: columns
-                      props:
-                        justify: between
-                      children:
-                        - type: text
-                          props:
-                            text: Author
-                            muted: true
-                        - type: text
-                          props:
-                            text: "{{data.Deployment.author}}"
-                    - type: separator
-                    - type: columns
-                      props:
-                        justify: between
-                      children:
-                        - type: text
-                          props:
-                            text: Duration
-                            muted: true
-                        - type: text
-                          props:
-                            text: "{{data.Deployment.duration}}"
-                    - type: separator
-                    - type: columns
-                      props:
-                        justify: between
-                      children:
-                        - type: text
-                          props:
-                            text: Started
-                            muted: true
-                        - type: text
-                          props:
-                            text: "{{data.Deployment.createdAt}}"
+                    datasource: Deployment
+                    layout: stacked
+                    fields:
+                      - label: Environment
+                        field: environment
+                      - label: Branch
+                        field: branch
+                      - label: Commit
+                        field: commit
+                      - label: Author
+                        field: author
+                      - label: Duration
+                        field: duration
+                      - label: Started
+                        field: createdAt
 
         # Logs Tab
         - type: tab
@@ -163,11 +118,12 @@ layout:
             value: logs
           children:
             - type: card
+              props:
+                title: Build Log
               children:
-                - type: text
+                - type: timeline
                   props:
-                    text: Build and deployment logs will appear here.
-                    muted: true
+                    datasource: DeploymentEvent
 
         # Domains Tab
         - type: tab

@@ -147,10 +147,17 @@ layout:
                               props:
                                 text: Permanently delete this workspace and all data
                                 muted: true
-                        - type: button
+                        - type: confirm-dialog
                           props:
-                            label: Delete Workspace
+                            title: Delete Workspace
+                            message: This action cannot be undone. This will permanently delete your workspace and remove all associated data.
+                            confirmLabel: Delete
                             variant: destructive
+                          children:
+                            - type: button
+                              props:
+                                label: Delete Workspace
+                                variant: destructive
                     - type: separator
                     - type: columns
                       props:

@@ -85,27 +85,43 @@ layout:
     - type: card
       props:
         title: Latency Over Time
-        description: "Chart placeholder — would render a line chart in production."
+      children:
+        - type: chart
+          props:
+            type: line
+
+    - type: collapsible
+      props:
+        title: Alert Thresholds
       children:
         - type: rows
           props:
-            gap: 2
+            gap: 4
           children:
-            - type: progress
+            - type: slider
+              id: p95-threshold
               props:
-                value: 45
-            - type: progress
+                label: P95 Latency Threshold (ms)
+                min: 50
+                max: 500
+                step: 10
+                defaultValue: 200
+            - type: slider
+              id: p99-threshold
               props:
-                value: 62
-            - type: progress
+                label: P99 Latency Threshold (ms)
+                min: 100
+                max: 1000
+                step: 25
+                defaultValue: 500
+            - type: slider
+              id: error-rate-threshold
               props:
-                value: 38
-            - type: progress
-              props:
-                value: 55
-            - type: progress
-              props:
-                value: 71
+                label: Error Rate Threshold (%)
+                min: 0
+                max: 10
+                step: 0.1
+                defaultValue: 1
 
     - type: collapsible
       props:

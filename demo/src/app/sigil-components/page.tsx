@@ -3,7 +3,8 @@
 
 "use client";
 
-import { Search } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +12,20 @@ import { DataTable } from "@/components/data-table";
 import { useSigilComponent } from "@/hooks/use-sigilcomponent";
 
 export default function SigilComponents() {
+  const [searchSigilComponent, setSearchSigilComponent] = useState("");
+
   const { data: sigilComponent, isLoading: sigilComponentLoading } = useSigilComponent();
 
+  if (sigilComponentLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
+    <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
         <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Components</h1>
@@ -22,7 +33,7 @@ export default function SigilComponents() {
       </div>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input type="search" placeholder="Search components..." className="w-full pl-9 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" />
+        <Input type="search" placeholder="Search components..." className="w-full pl-9 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value={searchSigilComponent} onChange={(e) => setSearchSigilComponent(e.target.value)} />
       </div>
       <div className="flex flex-row gap-6">
         <div className="flex flex-col gap-2">
@@ -35,15 +46,20 @@ export default function SigilComponents() {
           <Button variant="ghost" onClick={() => window.dispatchEvent(new CustomEvent("filter-category"))}>Forms</Button>
         </div>
         <DataTable
-          data={sigilComponent ?? []}
+          data={(sigilComponent ?? []).filter((item) => {
+            if (!searchSigilComponent) return true;
+            const q = searchSigilComponent.toLowerCase();
+            return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
+          })}
           columns={[
             { accessorKey: "type", header: "Type" },
             { accessorKey: "category", header: "Category" },
             { accessorKey: "description", header: "Description" },
           ]}
+          emptyMessage="No matching results found."
         />
       </div>
     </div>
-    </div>
+    </>
   );
 }

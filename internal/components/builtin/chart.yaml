@@ -9,7 +9,6 @@ props:
     enum: [bar, line, pie, area, donut]
   datasource:
     type: string
-    required: true
     description: "DataSource alias"
   config:
     type: object

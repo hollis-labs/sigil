@@ -123,3 +123,7 @@ layout:
               type: http
               url: /api/deployments
               method: POST
+              onSuccess:
+                type: toast
+                title: success
+                message: Deployment started successfully

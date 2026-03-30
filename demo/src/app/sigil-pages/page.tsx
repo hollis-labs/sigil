@@ -4,7 +4,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Plus, Search } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/data-table";
@@ -12,24 +13,38 @@ import { useSigilPage } from "@/hooks/use-sigilpage";
 
 export default function SigilPages() {
   const router = useRouter();
+  const [searchSigilPage, setSearchSigilPage] = useState("");
+
   const { data: sigilPage, isLoading: sigilPageLoading } = useSigilPage();
 
+  if (sigilPageLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
+    <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
         <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Pages</h1>
-        <Button variant="default" onClick={() => router.push("/sigil-page-editor")}>
+        <Button variant="default" onClick={() => router.push("/page-editor")}>
           <Plus className="mr-2 h-4 w-4" />
           New Page
         </Button>
       </div>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input type="search" placeholder="Search pages..." className="w-full pl-9 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" />
+        <Input type="search" placeholder="Search pages..." className="w-full pl-9 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value={searchSigilPage} onChange={(e) => setSearchSigilPage(e.target.value)} />
       </div>
       <DataTable
-        data={sigilPage ?? []}
+        data={(sigilPage ?? []).filter((item) => {
+          if (!searchSigilPage) return true;
+          const q = searchSigilPage.toLowerCase();
+          return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
+        })}
         columns={[
           { accessorKey: "id", header: "ID" },
           { accessorKey: "title", header: "Title" },
@@ -37,8 +52,9 @@ export default function SigilPages() {
           { accessorKey: "module", header: "Module" },
           { accessorKey: "status", header: "Status" },
         ]}
+        emptyMessage="No matching results found."
       />
     </div>
-    </div>
+    </>
   );
 }

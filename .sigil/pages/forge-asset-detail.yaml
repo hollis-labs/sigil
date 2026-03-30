@@ -98,52 +98,58 @@ layout:
               props:
                 text: "{{data.Asset.region}}"
 
-    - type: collapsible
+    - type: split
       props:
-        title: Configuration Details
+        direction: horizontal
+        defaultSize: 60
       children:
+        # Left: detail-view
         - type: rows
           props:
-            gap: 3
+            gap: 4
+            padding: 4
           children:
-            - type: columns
+            - type: heading
               props:
-                justify: between
+                level: 3
+                text: Details
+            - type: detail-view
+              props:
+                datasource: Asset
+                layout: stacked
+                fields:
+                  - label: IP Address
+                    field: ipAddress
+                  - label: Cost
+                    field: cost
+                  - label: Created
+                    field: createdAt
+                  - label: Last Seen
+                    field: lastSeenAt
+
+        # Right: config info
+        - type: rows
+          props:
+            gap: 4
+            padding: 4
+          children:
+            - type: heading
+              props:
+                level: 3
+                text: Configuration
+            - type: collapsible
+              props:
+                title: Network Settings
               children:
                 - type: text
                   props:
-                    text: IP Address
+                    text: "VPC: vpc-0a1b2c3d4e5f | Subnet: subnet-abc123"
                     muted: true
-                - type: text
-                  props:
-                    text: "{{data.Asset.ipAddress}}"
-            - type: separator
-            - type: columns
+            - type: collapsible
               props:
-                justify: between
+                title: Health Checks
               children:
                 - type: text
                   props:
-                    text: Created
+                    text: "Last health check passed. Next check in 5 minutes."
                     muted: true
-                - type: text
-                  props:
-                    text: "{{data.Asset.createdAt}}"
-            - type: separator
-            - type: columns
-              props:
-                justify: between
-              children:
-                - type: text
-                  props:
-                    text: Last Seen
-                    muted: true
-                - type: popover
-                  props:
-                    trigger: "{{data.Asset.lastSeenAt}}"
-                    side: left
-                  children:
-                    - type: text
-                      props:
-                        text: "Last health check passed. Next check in 5 minutes."
-                        muted: true

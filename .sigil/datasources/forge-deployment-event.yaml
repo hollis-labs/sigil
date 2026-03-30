@@ -1,0 +1,16 @@
+alias: DeploymentEvent
+description: Build and deployment timeline events
+capabilities: [list, read]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: title
+    type: string
+  - name: timestamp
+    type: datetime
+  - name: status
+    type: string
+    values: [success, error, info]
+endpoints:
+  list: "GET /api/deployments/{id}/events"

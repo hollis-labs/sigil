@@ -4,6 +4,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,10 +14,20 @@ import { useSigilPage } from "@/hooks/use-sigilpage";
 
 export default function SigilPageEditor() {
   const router = useRouter();
+  const [yamlEditor, setYamlEditor] = useState("");
+
   const { data: sigilPage, isLoading: sigilPageLoading } = useSigilPage();
 
+  if (sigilPageLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
+    <>
     <div className="flex flex-row gap-0">
       <div className="flex flex-col gap-4 p-4">
         <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">Page Config</h3>
@@ -55,14 +67,14 @@ export default function SigilPageEditor() {
           <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">YAML Editor</h3>
           <div className="flex flex-row gap-2">
             <Button variant="secondary" onClick={() => fetch("/api/sigil/validate", { method: "POST" })}>Validate</Button>
-            <Button variant="secondary" onClick={() => router.push("/sigil-preview")}>Preview</Button>
+            <Button variant="secondary" onClick={() => router.push("/preview")}>Preview</Button>
           </div>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Input id="yaml-editor" type="text" placeholder="# Paste or edit YAML here" />
+          <Input id="yaml-editor" type="text" placeholder="# Paste or edit YAML here" value={yamlEditor} onChange={(e) => setYamlEditor(e.target.value)} />
         </div>
       </div>
     </div>
-    </div>
+    </>
   );
 }

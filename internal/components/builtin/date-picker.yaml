@@ -1,0 +1,11 @@
+type: date-picker
+category: inputs
+description: "Date picker with popover calendar"
+props:
+  label:
+    type: string
+    description: "Label text"
+  placeholder:
+    type: string
+    default: "Pick a date"
+    description: "Placeholder text"

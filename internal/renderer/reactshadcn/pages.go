@@ -18,6 +18,7 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 	funcName := toPascalCase(page.ID)
 
 	imports := newImportTracker()
+	imports.pageModule = page.Module
 	var bodyBuf bytes.Buffer
 	renderComponent(&bodyBuf, &page.Layout, 2, imports, ctx)
 
@@ -37,6 +38,9 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 	}
 	if hasParams {
 		imports.addReact("useParams", "next/navigation")
+	}
+	if len(page.DataSources) > 0 {
+		imports.addLucide("Loader2")
 	}
 
 	var buf bytes.Buffer
@@ -61,6 +65,29 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 		buf.WriteString("  const params = useParams();\n")
 	}
 
+	// Component state declarations (date-pickers, etc.)
+	for _, decl := range imports.stateDecls {
+		buf.WriteString(fmt.Sprintf("  %s\n", decl))
+	}
+	if len(imports.stateDecls) > 0 {
+		buf.WriteString("\n")
+	}
+
+	// Command palette state (if page uses command-palette component)
+	if imports.hasReact("useEffect") {
+		buf.WriteString("  const [open, setOpen] = useState(false);\n\n")
+		buf.WriteString("  useEffect(() => {\n")
+		buf.WriteString("    function onKeyDown(e: KeyboardEvent) {\n")
+		buf.WriteString("      if (e.key === \"k\" && (e.metaKey || e.ctrlKey)) {\n")
+		buf.WriteString("        e.preventDefault();\n")
+		buf.WriteString("        setOpen((prev) => !prev);\n")
+		buf.WriteString("      }\n")
+		buf.WriteString("    }\n")
+		buf.WriteString("    document.addEventListener(\"keydown\", onKeyDown);\n")
+		buf.WriteString("    return () => document.removeEventListener(\"keydown\", onKeyDown);\n")
+		buf.WriteString("  }, []);\n\n")
+	}
+
 	// DataSource hooks
 	for _, dsRef := range page.DataSources {
 		varName := toCamelCase(dsRef.Alias)
@@ -83,10 +110,38 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 		buf.WriteString("\n")
 	}
 
+	// Loading state
+	if len(page.DataSources) > 0 {
+		var loadingChecks []string
+		for _, dsRef := range page.DataSources {
+			loadingChecks = append(loadingChecks, toCamelCase(dsRef.Alias)+"Loading")
+		}
+		buf.WriteString(fmt.Sprintf("  if (%s) {\n", strings.Join(loadingChecks, " || ")))
+		buf.WriteString("    return (\n")
+		buf.WriteString("      <div className=\"flex items-center justify-center py-12\">\n")
+		buf.WriteString("        <Loader2 className=\"h-6 w-6 animate-spin text-muted-foreground\" />\n")
+		buf.WriteString("      </div>\n")
+		buf.WriteString("    );\n")
+		buf.WriteString("  }\n\n")
+	}
+
 	buf.WriteString("  return (\n")
-	buf.WriteString("    <div className=\"min-h-screen bg-background text-foreground font-sans\">\n")
-	buf.Write(bodyBuf.Bytes())
-	buf.WriteString("    </div>\n")
+	if page.Module != "" {
+		// Module pages render inside a shared layout — no outer wrapper needed
+		buf.WriteString("    <>\n")
+		buf.Write(bodyBuf.Bytes())
+		if imports.hasShadcn("Toaster") {
+			buf.WriteString("    <Toaster />\n")
+		}
+		buf.WriteString("    </>\n")
+	} else {
+		buf.WriteString("    <div className=\"min-h-screen bg-background text-foreground font-sans\">\n")
+		buf.Write(bodyBuf.Bytes())
+		if imports.hasShadcn("Toaster") {
+			buf.WriteString("    <Toaster />\n")
+		}
+		buf.WriteString("    </div>\n")
+	}
 	buf.WriteString("  );\n")
 	buf.WriteString("}\n")
 
@@ -184,9 +239,10 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 	case "text":
 		content := getPropString(c.Props, "text", "")
 		muted := getPropBool(c.Props, "muted")
-		classes := "text-base"
+		size := getPropString(c.Props, "size", "base")
+		classes := "text-" + size
 		if muted {
-			classes = "text-sm text-muted-foreground"
+			classes = "text-" + size + " text-muted-foreground"
 		}
 		content = interpolateTemplateVars(content)
 		content = escapeJSXText(content)
@@ -196,12 +252,16 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addShadcn("Button", "@/components/ui/button")
 		label := getPropString(c.Props, "label", "Button")
 		variant := getPropString(c.Props, "variant", "default")
+		size := getPropString(c.Props, "size", "")
 		icon := getPropString(c.Props, "icon", "")
 		disabled := getPropBool(c.Props, "disabled")
 
 		// Map sigil variants to shadcn variants
 		shadcnVariant := mapButtonVariant(variant)
 		attrs := fmt.Sprintf("variant=%q", shadcnVariant)
+		if size != "" {
+			attrs += fmt.Sprintf(" size=%q", size)
+		}
 		if disabled {
 			attrs += " disabled"
 		}
@@ -232,20 +292,43 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 
 	case "input":
 		imports.addShadcn("Input", "@/components/ui/input")
-		imports.addShadcn("Label", "@/components/ui/label")
 		placeholder := getPropString(c.Props, "placeholder", "")
 		inputType := getPropString(c.Props, "type", "text")
+		label := getPropString(c.Props, "label", "")
 		required := getPropBool(c.Props, "required")
+		disabled := getPropBool(c.Props, "disabled")
+		defaultValue := getPropString(c.Props, "defaultValue", "")
 		id := c.ID
 		if id == "" {
-			id = "input-" + placeholder
+			id = "input-" + toKebabCase(placeholder)
 		}
-		reqAttr := ""
+		var extraAttrs string
 		if required {
-			reqAttr = " required"
+			extraAttrs += " required"
+		}
+		if disabled {
+			extraAttrs += " disabled"
+		}
+		// Wire controlled state when component has an explicit ID
+		if c.ID != "" {
+			imports.addReact("useState", "react")
+			stateVar := toCamelCase(c.ID)
+			setterVar := "set" + toPascalCase(c.ID)
+			dv := `""`
+			if defaultValue != "" {
+				dv = fmt.Sprintf("%q", defaultValue)
+			}
+			imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState(%s);", stateVar, setterVar, dv))
+			extraAttrs += fmt.Sprintf(" value={%s} onChange={(e) => %s(e.target.value)}", stateVar, setterVar)
+		} else if defaultValue != "" {
+			extraAttrs += fmt.Sprintf(" defaultValue=%q", defaultValue)
 		}
 		fmt.Fprintf(buf, "%s<div className=\"flex flex-col gap-1.5\">\n", indent)
-		fmt.Fprintf(buf, "%s  <Input id=%q type=%q placeholder=%q%s />\n", indent, id, inputType, placeholder, reqAttr)
+		if label != "" {
+			imports.addShadcn("Label", "@/components/ui/label")
+			fmt.Fprintf(buf, "%s  <Label htmlFor=%q>%s</Label>\n", indent, id, label)
+		}
+		fmt.Fprintf(buf, "%s  <Input id=%q type=%q placeholder=%q%s />\n", indent, id, inputType, placeholder, extraAttrs)
 		fmt.Fprintf(buf, "%s</div>\n", indent)
 
 	case "select":
@@ -279,13 +362,30 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addLucide("Search")
 		placeholder := getPropString(c.Props, "placeholder", "Search...")
 		variant := getPropString(c.Props, "variant", "default")
+		datasource := getPropString(c.Props, "datasource", "")
 		inputClasses := "w-full pl-9 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
 		if variant == "ghost" {
 			inputClasses = "w-full pl-9 border-0 shadow-none focus-visible:ring-0 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
 		}
+		// Wire search state if datasource is specified
+		var valueAttr, onChangeAttr string
+		if datasource != "" {
+			imports.addReact("useState", "react")
+			stateVar := "search" + toPascalCase(datasource)
+			setterVar := "setSearch" + toPascalCase(datasource)
+			if imports.searchDatasources == nil {
+				imports.searchDatasources = map[string]string{}
+			}
+			if _, exists := imports.searchDatasources[datasource]; !exists {
+				imports.searchDatasources[datasource] = stateVar
+				imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState(\"\");", stateVar, setterVar))
+			}
+			valueAttr = fmt.Sprintf(" value={%s}", stateVar)
+			onChangeAttr = fmt.Sprintf(" onChange={(e) => %s(e.target.value)}", setterVar)
+		}
 		fmt.Fprintf(buf, "%s<div className=\"relative\">\n", indent)
 		fmt.Fprintf(buf, "%s  <Search className=\"absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground\" />\n", indent)
-		fmt.Fprintf(buf, "%s  <Input type=\"search\" placeholder=%q className=%q />\n", indent, placeholder, inputClasses)
+		fmt.Fprintf(buf, "%s  <Input type=\"search\" placeholder=%q className=%q%s%s />\n", indent, placeholder, inputClasses, valueAttr, onChangeAttr)
 		fmt.Fprintf(buf, "%s</div>\n", indent)
 
 	case "data-table":
@@ -364,7 +464,12 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 
 	case "separator":
 		imports.addShadcn("Separator", "@/components/ui/separator")
-		fmt.Fprintf(buf, "%s<Separator />\n", indent)
+		orientation := getPropString(c.Props, "orientation", "")
+		if orientation != "" && orientation != "horizontal" {
+			fmt.Fprintf(buf, "%s<Separator orientation=%q />\n", indent, orientation)
+		} else {
+			fmt.Fprintf(buf, "%s<Separator />\n", indent)
+		}
 
 	case "progress":
 		imports.addShadcn("Progress", "@/components/ui/progress")
@@ -377,6 +482,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addShadcn("AvatarFallback", "@/components/ui/avatar")
 		src := getPropString(c.Props, "src", "")
 		alt := getPropString(c.Props, "alt", "")
+		size := getPropString(c.Props, "size", "")
 		fallback := "?"
 		if alt != "" && !strings.Contains(alt, "{{") && len(alt) >= 2 {
 			fallback = strings.ToUpper(alt[:2])
@@ -384,7 +490,16 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 			fallback = "?"
 		}
 		altOut := interpolateTemplateVars(alt)
-		fmt.Fprintf(buf, "%s<Avatar>\n", indent)
+		sizeClass := ""
+		switch size {
+		case "sm":
+			sizeClass = " className=\"h-8 w-8\""
+		case "lg":
+			sizeClass = " className=\"h-12 w-12\""
+		case "xl":
+			sizeClass = " className=\"h-16 w-16\""
+		}
+		fmt.Fprintf(buf, "%s<Avatar%s>\n", indent, sizeClass)
 		if strings.Contains(alt, "{{") {
 			fmt.Fprintf(buf, "%s  <AvatarImage src=%q alt={%s} />\n", indent, src, strings.Trim(altOut, "{}"))
 		} else {
@@ -396,6 +511,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 	case "alert":
 		imports.addShadcn("Alert", "@/components/ui/alert")
 		imports.addShadcn("AlertDescription", "@/components/ui/alert")
+		title := getPropString(c.Props, "title", "")
 		message := getPropString(c.Props, "message", "")
 		variant := getPropString(c.Props, "variant", "default")
 		shadcnVariant := "default"
@@ -403,6 +519,10 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 			shadcnVariant = "destructive"
 		}
 		fmt.Fprintf(buf, "%s<Alert variant=%q>\n", indent, shadcnVariant)
+		if title != "" {
+			imports.addShadcn("AlertTitle", "@/components/ui/alert")
+			fmt.Fprintf(buf, "%s  <AlertTitle>%s</AlertTitle>\n", indent, title)
+		}
 		fmt.Fprintf(buf, "%s  <AlertDescription>%s</AlertDescription>\n", indent, message)
 		fmt.Fprintf(buf, "%s</Alert>\n", indent)
 
@@ -476,6 +596,115 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		fmt.Fprintf(buf, "%s  <Switch id=%q%s%s />\n", indent, id, defaultAttr, disabledAttr)
 		fmt.Fprintf(buf, "%s  <Label htmlFor=%q>%s</Label>\n", indent, id, label)
 		fmt.Fprintf(buf, "%s</div>\n", indent)
+
+	case "textarea":
+		imports.addShadcn("Label", "@/components/ui/label")
+		label := getPropString(c.Props, "label", "")
+		placeholder := getPropString(c.Props, "placeholder", "")
+		rows := getPropString(c.Props, "rows", "3")
+		disabled := getPropBool(c.Props, "disabled")
+		id := c.ID
+		if id == "" {
+			id = "textarea-" + toKebabCase(label)
+		}
+		var extraAttrs string
+		if disabled {
+			extraAttrs += " disabled"
+		}
+		// Wire controlled state when component has an explicit ID
+		if c.ID != "" {
+			imports.addReact("useState", "react")
+			stateVar := toCamelCase(c.ID)
+			setterVar := "set" + toPascalCase(c.ID)
+			imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState(\"\");", stateVar, setterVar))
+			extraAttrs += fmt.Sprintf(" value={%s} onChange={(e) => %s(e.target.value)}", stateVar, setterVar)
+		}
+		fmt.Fprintf(buf, "%s<div className=\"flex flex-col gap-1.5\">\n", indent)
+		if label != "" {
+			fmt.Fprintf(buf, "%s  <Label htmlFor=%q>%s</Label>\n", indent, id, label)
+		}
+		fmt.Fprintf(buf, "%s  <textarea id=%q placeholder=%q rows={%s} className=\"flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm\"%s />\n", indent, id, placeholder, rows, extraAttrs)
+		fmt.Fprintf(buf, "%s</div>\n", indent)
+
+	case "checkbox":
+		imports.addShadcn("Checkbox", "@/components/ui/checkbox")
+		imports.addShadcn("Label", "@/components/ui/label")
+		label := getPropString(c.Props, "label", "")
+		defaultChecked := getPropBool(c.Props, "defaultChecked")
+		disabled := getPropBool(c.Props, "disabled")
+		id := c.ID
+		if id == "" {
+			id = "checkbox-" + toKebabCase(label)
+		}
+		var extraAttrs string
+		if defaultChecked {
+			extraAttrs += " defaultChecked"
+		}
+		if disabled {
+			extraAttrs += " disabled"
+		}
+		fmt.Fprintf(buf, "%s<div className=\"flex items-center space-x-2\">\n", indent)
+		fmt.Fprintf(buf, "%s  <Checkbox id=%q%s />\n", indent, id, extraAttrs)
+		if label != "" {
+			fmt.Fprintf(buf, "%s  <Label htmlFor=%q>%s</Label>\n", indent, id, label)
+		}
+		fmt.Fprintf(buf, "%s</div>\n", indent)
+
+	case "date-picker":
+		imports.addShadcn("Button", "@/components/ui/button")
+		imports.addShadcn("Calendar", "@/components/ui/calendar")
+		imports.addShadcn("Popover", "@/components/ui/popover")
+		imports.addShadcn("PopoverContent", "@/components/ui/popover")
+		imports.addShadcn("PopoverTrigger", "@/components/ui/popover")
+		imports.addReact("useState", "react")
+		imports.addLucide("CalendarIcon")
+		placeholder := getPropString(c.Props, "placeholder", "Pick a date")
+		label := getPropString(c.Props, "label", "")
+		id := c.ID
+		if id == "" {
+			id = "date-picker"
+		}
+		stateVar := toCamelCase(id) + "Date"
+		setterName := "set" + toPascalCase(id) + "Date"
+		imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState<Date | undefined>();", stateVar, setterName))
+		if label != "" {
+			imports.addShadcn("Label", "@/components/ui/label")
+			fmt.Fprintf(buf, "%s<div className=\"flex flex-col gap-2\">\n", indent)
+			fmt.Fprintf(buf, "%s  <Label>%s</Label>\n", indent, label)
+		}
+		fmt.Fprintf(buf, "%s<Popover>\n", indent)
+		fmt.Fprintf(buf, "%s  <PopoverTrigger render={<Button variant=\"outline\" className=\"w-[240px] justify-start text-left font-normal\" />}>\n", indent)
+		fmt.Fprintf(buf, "%s    <CalendarIcon className=\"mr-2 h-4 w-4\" />\n", indent)
+		fmt.Fprintf(buf, "%s    {%s ? %s.toLocaleDateString() : <span className=\"text-muted-foreground\">%s</span>}\n", indent, stateVar, stateVar, placeholder)
+		fmt.Fprintf(buf, "%s  </PopoverTrigger>\n", indent)
+		fmt.Fprintf(buf, "%s  <PopoverContent className=\"w-auto p-0\">\n", indent)
+		fmt.Fprintf(buf, "%s    <Calendar mode=\"single\" selected={%s} onSelect={set%s} />\n", indent, stateVar, toPascalCase(id)+"Date")
+		fmt.Fprintf(buf, "%s  </PopoverContent>\n", indent)
+		fmt.Fprintf(buf, "%s</Popover>\n", indent)
+		if label != "" {
+			fmt.Fprintf(buf, "%s</div>\n", indent)
+		}
+
+	case "slider":
+		imports.addShadcn("Slider", "@/components/ui/slider")
+		imports.addShadcn("Label", "@/components/ui/label")
+		label := getPropString(c.Props, "label", "")
+		min := getPropString(c.Props, "min", "0")
+		max := getPropString(c.Props, "max", "100")
+		step := getPropString(c.Props, "step", "1")
+		defaultValue := getPropString(c.Props, "defaultValue", "50")
+		id := c.ID
+		if id == "" {
+			id = "slider-" + toKebabCase(label)
+		}
+		if label != "" {
+			fmt.Fprintf(buf, "%s<div className=\"flex flex-col gap-2\">\n", indent)
+			fmt.Fprintf(buf, "%s  <Label htmlFor=%q>%s</Label>\n", indent, id, label)
+			fmt.Fprintf(buf, "%s  <Slider id=%q defaultValue={[%s]} min={%s} max={%s} step={%s} />\n", indent, id, defaultValue, min, max, step)
+			fmt.Fprintf(buf, "%s</div>\n", indent)
+		} else {
+			fmt.Fprintf(buf, "%s<Slider id=%q defaultValue={[%s]} min={%s} max={%s} step={%s} />\n", indent, id, defaultValue, min, max, step)
+		}
 
 	case "dropdown-menu":
 		imports.addShadcn("DropdownMenu", "@/components/ui/dropdown-menu")
@@ -624,7 +853,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 						}
 						href := "#"
 						if page != "" {
-							href = "/pages/" + page
+							href = pageRoute(page, imports.pageModule)
 						}
 						if icon != "" {
 							iconPascal := toPascalCase(icon)
@@ -651,9 +880,11 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addShadcn("CommandEmpty", "@/components/ui/command")
 		imports.addShadcn("CommandGroup", "@/components/ui/command")
 		imports.addShadcn("CommandItem", "@/components/ui/command")
+		imports.addReact("useState", "react")
+		imports.addReact("useEffect", "react")
 		placeholder := getPropString(c.Props, "placeholder", "Type a command or search...")
 		emptyMessage := getPropString(c.Props, "emptyMessage", "No results found.")
-		fmt.Fprintf(buf, "%s<CommandDialog>\n", indent)
+		fmt.Fprintf(buf, "%s<CommandDialog open={open} onOpenChange={setOpen}>\n", indent)
 		fmt.Fprintf(buf, "%s  <CommandInput placeholder=%q />\n", indent, placeholder)
 		fmt.Fprintf(buf, "%s  <CommandList>\n", indent)
 		fmt.Fprintf(buf, "%s    <CommandEmpty>%s</CommandEmpty>\n", indent, emptyMessage)
@@ -766,6 +997,10 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 						href := ""
 						if h, ok := im["href"]; ok {
 							href = fmt.Sprintf("%v", h)
+							// Strip module prefix from breadcrumb hrefs (e.g., /forge-deployments → /deployments)
+							if imports.pageModule != "" && strings.HasPrefix(href, "/"+imports.pageModule+"-") {
+								href = "/" + strings.TrimPrefix(href, "/"+imports.pageModule+"-")
+							}
 						}
 						isLast := i == len(itemSlice)-1
 						fmt.Fprintf(buf, "%s    <BreadcrumbItem>\n", indent)
@@ -838,6 +1073,315 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		}
 		fmt.Fprintf(buf, "%s</ToggleGroup>\n", indent)
 
+	case "context-menu":
+		imports.addShadcn("ContextMenu", "@/components/ui/context-menu")
+		imports.addShadcn("ContextMenuTrigger", "@/components/ui/context-menu")
+		imports.addShadcn("ContextMenuContent", "@/components/ui/context-menu")
+		imports.addShadcn("ContextMenuItem", "@/components/ui/context-menu")
+		imports.addShadcn("ContextMenuSeparator", "@/components/ui/context-menu")
+		fmt.Fprintf(buf, "%s<ContextMenu>\n", indent)
+		fmt.Fprintf(buf, "%s  <ContextMenuTrigger>\n", indent)
+		for i := range c.Children {
+			renderComponent(buf, &c.Children[i], depth+2, imports, ctx)
+		}
+		fmt.Fprintf(buf, "%s  </ContextMenuTrigger>\n", indent)
+		fmt.Fprintf(buf, "%s  <ContextMenuContent>\n", indent)
+		if items, ok := c.Props["items"]; ok {
+			if itemSlice, ok := items.([]interface{}); ok {
+				for _, item := range itemSlice {
+					if im, ok := item.(map[string]interface{}); ok {
+						if _, isSep := im["separator"]; isSep {
+							fmt.Fprintf(buf, "%s    <ContextMenuSeparator />\n", indent)
+							continue
+						}
+						label := fmt.Sprintf("%v", im["label"])
+						icon := ""
+						if iconVal, ok := im["icon"]; ok {
+							icon = fmt.Sprintf("%v", iconVal)
+						}
+						variant := ""
+						if variantVal, ok := im["variant"]; ok {
+							variant = fmt.Sprintf("%v", variantVal)
+						}
+						className := ""
+						if variant == "danger" || variant == "destructive" {
+							className = ` className="text-destructive focus:text-destructive"`
+						}
+						// Build onSelect handler from action
+						onSelect := ""
+						if actionMap, ok := im["action"].(map[string]interface{}); ok {
+							actionType := fmt.Sprintf("%v", actionMap["type"])
+							switch actionType {
+							case "navigate":
+								imports.addReact("useRouter", "next/navigation")
+								if page, ok := actionMap["page"]; ok {
+									route := pageRoute(fmt.Sprintf("%v", page), imports.pageModule)
+									onSelect = fmt.Sprintf(` onSelect={() => router.push(%q)}`, route)
+								}
+							case "toast":
+								imports.addReact("toast", "sonner")
+								imports.addShadcn("Toaster", "@/components/ui/sonner")
+								msg := "Action completed"
+								if m, ok := actionMap["message"]; ok {
+									msg = fmt.Sprintf("%v", m)
+								}
+								onSelect = fmt.Sprintf(` onSelect={() => toast(%q)}`, msg)
+							}
+						}
+						if icon != "" {
+							iconComp := toPascalCase(icon)
+							imports.addLucide(iconComp)
+							fmt.Fprintf(buf, "%s    <ContextMenuItem%s%s><span className=\"flex items-center gap-2\"><%s className=\"h-4 w-4\" />%s</span></ContextMenuItem>\n", indent, className, onSelect, iconComp, label)
+						} else {
+							fmt.Fprintf(buf, "%s    <ContextMenuItem%s%s>%s</ContextMenuItem>\n", indent, className, onSelect, label)
+						}
+					}
+				}
+			}
+		}
+		fmt.Fprintf(buf, "%s  </ContextMenuContent>\n", indent)
+		fmt.Fprintf(buf, "%s</ContextMenu>\n", indent)
+
+	case "stat-card":
+		imports.addShadcn("Card", "@/components/ui/card")
+		imports.addShadcn("CardContent", "@/components/ui/card")
+		imports.addShadcn("CardHeader", "@/components/ui/card")
+		imports.addShadcn("CardTitle", "@/components/ui/card")
+		label := getPropString(c.Props, "label", "")
+		value := interpolateTemplateVars(getPropString(c.Props, "value", ""))
+		trend := getPropString(c.Props, "trend", "")
+		icon := getPropString(c.Props, "icon", "")
+		fmt.Fprintf(buf, "%s<Card>\n", indent)
+		fmt.Fprintf(buf, "%s  <CardHeader className=\"flex flex-row items-center justify-between space-y-0 pb-2\">\n", indent)
+		fmt.Fprintf(buf, "%s    <CardTitle className=\"text-sm font-medium\">%s</CardTitle>\n", indent, label)
+		if icon != "" {
+			iconComp := lucideIconName(icon)
+			imports.addLucide(iconComp)
+			fmt.Fprintf(buf, "%s    <%s className=\"h-4 w-4 text-muted-foreground\" />\n", indent, iconComp)
+		}
+		fmt.Fprintf(buf, "%s  </CardHeader>\n", indent)
+		fmt.Fprintf(buf, "%s  <CardContent>\n", indent)
+		fmt.Fprintf(buf, "%s    <div className=\"text-2xl font-bold\">%s</div>\n", indent, value)
+		if trend == "up" {
+			fmt.Fprintf(buf, "%s    <p className=\"text-xs text-emerald-500\">Trending up</p>\n", indent)
+		} else if trend == "down" {
+			fmt.Fprintf(buf, "%s    <p className=\"text-xs text-red-500\">Trending down</p>\n", indent)
+		}
+		fmt.Fprintf(buf, "%s  </CardContent>\n", indent)
+		fmt.Fprintf(buf, "%s</Card>\n", indent)
+
+	case "icon-button":
+		imports.addShadcn("Button", "@/components/ui/button")
+		icon := getPropString(c.Props, "icon", "circle")
+		variant := getPropString(c.Props, "variant", "ghost")
+		size := getPropString(c.Props, "size", "md")
+		tooltipText := getPropString(c.Props, "tooltip", "")
+		iconComp := lucideIconName(icon)
+		imports.addLucide(iconComp)
+		shadcnVariant := mapButtonVariant(variant)
+		btnSize := "icon"
+		iconSize := "h-4 w-4"
+		if size == "sm" {
+			btnSize = "sm"
+			iconSize = "h-3 w-3"
+		} else if size == "lg" {
+			btnSize = "lg"
+			iconSize = "h-5 w-5"
+		}
+		actions := renderReactActions(c.Actions, imports)
+		if tooltipText != "" {
+			imports.addShadcn("Tooltip", "@/components/ui/tooltip")
+			imports.addShadcn("TooltipContent", "@/components/ui/tooltip")
+			imports.addShadcn("TooltipProvider", "@/components/ui/tooltip")
+			imports.addShadcn("TooltipTrigger", "@/components/ui/tooltip")
+			fmt.Fprintf(buf, "%s<TooltipProvider>\n", indent)
+			fmt.Fprintf(buf, "%s  <Tooltip>\n", indent)
+			fmt.Fprintf(buf, "%s    <TooltipTrigger render={<Button variant=%q size=%q%s />}>\n", indent, shadcnVariant, btnSize, actions)
+			fmt.Fprintf(buf, "%s      <%s className=%q />\n", indent, iconComp, iconSize)
+			fmt.Fprintf(buf, "%s    </TooltipTrigger>\n", indent)
+			fmt.Fprintf(buf, "%s    <TooltipContent><p>%s</p></TooltipContent>\n", indent, tooltipText)
+			fmt.Fprintf(buf, "%s  </Tooltip>\n", indent)
+			fmt.Fprintf(buf, "%s</TooltipProvider>\n", indent)
+		} else {
+			fmt.Fprintf(buf, "%s<Button variant=%q size=%q%s>\n", indent, shadcnVariant, btnSize, actions)
+			fmt.Fprintf(buf, "%s  <%s className=%q />\n", indent, iconComp, iconSize)
+			fmt.Fprintf(buf, "%s</Button>\n", indent)
+		}
+
+	case "confirm-dialog":
+		imports.addShadcn("AlertDialog", "@/components/ui/alert-dialog")
+		imports.addShadcn("AlertDialogAction", "@/components/ui/alert-dialog")
+		imports.addShadcn("AlertDialogCancel", "@/components/ui/alert-dialog")
+		imports.addShadcn("AlertDialogContent", "@/components/ui/alert-dialog")
+		imports.addShadcn("AlertDialogDescription", "@/components/ui/alert-dialog")
+		imports.addShadcn("AlertDialogFooter", "@/components/ui/alert-dialog")
+		imports.addShadcn("AlertDialogHeader", "@/components/ui/alert-dialog")
+		imports.addShadcn("AlertDialogTitle", "@/components/ui/alert-dialog")
+		imports.addShadcn("AlertDialogTrigger", "@/components/ui/alert-dialog")
+		title := getPropString(c.Props, "title", "Are you sure?")
+		message := getPropString(c.Props, "message", "")
+		confirmLabel := getPropString(c.Props, "confirmLabel", "Confirm")
+		variant := getPropString(c.Props, "variant", "destructive")
+		shadcnVariant := mapButtonVariant(variant)
+		fmt.Fprintf(buf, "%s<AlertDialog>\n", indent)
+		// Use render prop to avoid nested <button> in base-ui trigger
+		if len(c.Children) > 0 && c.Children[0].Type == "button" {
+			child := &c.Children[0]
+			btnLabel := getPropString(child.Props, "label", "")
+			btnVariant := mapButtonVariant(getPropString(child.Props, "variant", "default"))
+			imports.addShadcn("Button", "@/components/ui/button")
+			fmt.Fprintf(buf, "%s  <AlertDialogTrigger render={<Button variant=%q />}>\n", indent, btnVariant)
+			fmt.Fprintf(buf, "%s    %s\n", indent, btnLabel)
+			fmt.Fprintf(buf, "%s  </AlertDialogTrigger>\n", indent)
+		} else {
+			fmt.Fprintf(buf, "%s  <AlertDialogTrigger>\n", indent)
+			for i := range c.Children {
+				renderComponent(buf, &c.Children[i], depth+2, imports, ctx)
+			}
+			fmt.Fprintf(buf, "%s  </AlertDialogTrigger>\n", indent)
+		}
+		fmt.Fprintf(buf, "%s  <AlertDialogContent>\n", indent)
+		fmt.Fprintf(buf, "%s    <AlertDialogHeader>\n", indent)
+		fmt.Fprintf(buf, "%s      <AlertDialogTitle>%s</AlertDialogTitle>\n", indent, title)
+		fmt.Fprintf(buf, "%s      <AlertDialogDescription>%s</AlertDialogDescription>\n", indent, message)
+		fmt.Fprintf(buf, "%s    </AlertDialogHeader>\n", indent)
+		fmt.Fprintf(buf, "%s    <AlertDialogFooter>\n", indent)
+		fmt.Fprintf(buf, "%s      <AlertDialogCancel>Cancel</AlertDialogCancel>\n", indent)
+		fmt.Fprintf(buf, "%s      <AlertDialogAction variant=%q>%s</AlertDialogAction>\n", indent, shadcnVariant, confirmLabel)
+		fmt.Fprintf(buf, "%s    </AlertDialogFooter>\n", indent)
+		fmt.Fprintf(buf, "%s  </AlertDialogContent>\n", indent)
+		fmt.Fprintf(buf, "%s</AlertDialog>\n", indent)
+
+	case "scroll-area":
+		imports.addShadcn("ScrollArea", "@/components/ui/scroll-area")
+		height := getPropString(c.Props, "height", "400px")
+		fmt.Fprintf(buf, "%s<ScrollArea className=\"h-[%s]\">\n", indent, height)
+		for i := range c.Children {
+			renderComponent(buf, &c.Children[i], depth+1, imports, ctx)
+		}
+		fmt.Fprintf(buf, "%s</ScrollArea>\n", indent)
+
+	case "list":
+		datasource := getPropString(c.Props, "datasource", "")
+		emptyMessage := getPropString(c.Props, "emptyMessage", "No items")
+		if datasource != "" {
+			varName := toCamelCase(datasource)
+			fmt.Fprintf(buf, "%s<div className=\"divide-y\">\n", indent)
+			fmt.Fprintf(buf, "%s  {%s && %s.length > 0 ? %s.map((item, i) => (\n", indent, varName, varName, varName)
+			fmt.Fprintf(buf, "%s    <div key={i} className=\"py-3\">\n", indent)
+			if len(c.Children) > 0 {
+				renderComponent(buf, &c.Children[0], depth+3, imports, ctx)
+			} else {
+				fmt.Fprintf(buf, "%s      <p className=\"text-sm\">{JSON.stringify(item)}</p>\n", indent)
+			}
+			fmt.Fprintf(buf, "%s    </div>\n", indent)
+			fmt.Fprintf(buf, "%s  )) : <p className=\"text-sm text-muted-foreground py-3\">%s</p>}\n", indent, emptyMessage)
+			fmt.Fprintf(buf, "%s</div>\n", indent)
+		}
+
+	case "field-group":
+		imports.addShadcn("Label", "@/components/ui/label")
+		label := getPropString(c.Props, "label", "")
+		fmt.Fprintf(buf, "%s<fieldset className=\"space-y-4\">\n", indent)
+		if label != "" {
+			fmt.Fprintf(buf, "%s  <legend className=\"text-sm font-medium\">%s</legend>\n", indent, label)
+		}
+		for i := range c.Children {
+			renderComponent(buf, &c.Children[i], depth+1, imports, ctx)
+		}
+		fmt.Fprintf(buf, "%s</fieldset>\n", indent)
+
+	case "split":
+		direction := getPropString(c.Props, "direction", "horizontal")
+		flexDir := "flex-row"
+		if direction == "vertical" {
+			flexDir = "flex-col"
+		}
+		defaultSize := getPropString(c.Props, "defaultSize", "50")
+		fmt.Fprintf(buf, "%s<div className=\"flex %s h-full\">\n", indent, flexDir)
+		if len(c.Children) > 0 {
+			fmt.Fprintf(buf, "%s  <div className=\"\" style={{flexBasis: \"%s%%\"}}>\n", indent, defaultSize)
+			renderComponent(buf, &c.Children[0], depth+2, imports, ctx)
+			fmt.Fprintf(buf, "%s  </div>\n", indent)
+		}
+		if direction == "horizontal" {
+			fmt.Fprintf(buf, "%s  <div className=\"w-px bg-border\" />\n", indent)
+		} else {
+			fmt.Fprintf(buf, "%s  <div className=\"h-px bg-border\" />\n", indent)
+		}
+		if len(c.Children) > 1 {
+			fmt.Fprintf(buf, "%s  <div className=\"flex-1\">\n", indent)
+			renderComponent(buf, &c.Children[1], depth+2, imports, ctx)
+			fmt.Fprintf(buf, "%s  </div>\n", indent)
+		}
+		fmt.Fprintf(buf, "%s</div>\n", indent)
+
+	case "detail-view":
+		datasource := getPropString(c.Props, "datasource", "")
+		layout := getPropString(c.Props, "layout", "stacked")
+		varName := toCamelCase(datasource)
+		containerClass := "space-y-4"
+		if layout == "grid" {
+			containerClass = "grid grid-cols-2 gap-4"
+		} else if layout == "inline" {
+			containerClass = "flex flex-wrap gap-x-8 gap-y-2"
+		}
+		fmt.Fprintf(buf, "%s<div className=%q>\n", indent, containerClass)
+		if fields, ok := c.Props["fields"]; ok {
+			if fieldSlice, ok := fields.([]interface{}); ok {
+				for _, f := range fieldSlice {
+					if fm, ok := f.(map[string]interface{}); ok {
+						label := fmt.Sprintf("%v", fm["label"])
+						field := fmt.Sprintf("%v", fm["field"])
+						fmt.Fprintf(buf, "%s  <div>\n", indent)
+						fmt.Fprintf(buf, "%s    <dt className=\"text-sm font-medium text-muted-foreground\">%s</dt>\n", indent, label)
+						fmt.Fprintf(buf, "%s    <dd className=\"text-sm mt-1\">{%s?.%s}</dd>\n", indent, varName, field)
+						fmt.Fprintf(buf, "%s  </div>\n", indent)
+					}
+				}
+			}
+		}
+		fmt.Fprintf(buf, "%s</div>\n", indent)
+
+	case "pagination":
+		imports.addShadcn("Button", "@/components/ui/button")
+		imports.addLucide("ChevronLeft")
+		imports.addLucide("ChevronRight")
+		fmt.Fprintf(buf, "%s<div className=\"flex items-center justify-center gap-2\">\n", indent)
+		fmt.Fprintf(buf, "%s  <Button variant=\"outline\" size=\"icon\" disabled><ChevronLeft className=\"h-4 w-4\" /></Button>\n", indent)
+		fmt.Fprintf(buf, "%s  <span className=\"text-sm text-muted-foreground\">Page 1</span>\n", indent)
+		fmt.Fprintf(buf, "%s  <Button variant=\"outline\" size=\"icon\"><ChevronRight className=\"h-4 w-4\" /></Button>\n", indent)
+		fmt.Fprintf(buf, "%s</div>\n", indent)
+
+	case "timeline":
+		datasource := getPropString(c.Props, "datasource", "")
+		titleField := getPropString(c.Props, "titleField", "title")
+		timeField := getPropString(c.Props, "timeField", "timestamp")
+		if datasource != "" {
+			varName := toCamelCase(datasource)
+			fmt.Fprintf(buf, "%s<div className=\"space-y-4\">\n", indent)
+			fmt.Fprintf(buf, "%s  {%s?.map((item, i) => (\n", indent, varName)
+			fmt.Fprintf(buf, "%s    <div key={i} className=\"flex gap-4\">\n", indent)
+			fmt.Fprintf(buf, "%s      <div className=\"flex flex-col items-center\">\n", indent)
+			fmt.Fprintf(buf, "%s        <div className=\"h-2 w-2 rounded-full bg-primary\" />\n", indent)
+			fmt.Fprintf(buf, "%s        <div className=\"flex-1 w-px bg-border\" />\n", indent)
+			fmt.Fprintf(buf, "%s      </div>\n", indent)
+			fmt.Fprintf(buf, "%s      <div className=\"pb-4\">\n", indent)
+			fmt.Fprintf(buf, "%s        <p className=\"text-sm font-medium\">{item.%s}</p>\n", indent, titleField)
+			fmt.Fprintf(buf, "%s        <p className=\"text-xs text-muted-foreground\">{item.%s}</p>\n", indent, timeField)
+			fmt.Fprintf(buf, "%s      </div>\n", indent)
+			fmt.Fprintf(buf, "%s    </div>\n", indent)
+			fmt.Fprintf(buf, "%s  ))}\n", indent)
+			fmt.Fprintf(buf, "%s</div>\n", indent)
+		}
+
+	case "chart":
+		// Chart is a placeholder — real charting requires a library like recharts
+		chartType := getPropString(c.Props, "type", "bar")
+		fmt.Fprintf(buf, "%s<div className=\"flex items-center justify-center h-64 rounded-lg border border-dashed border-border bg-muted/20\">\n", indent)
+		fmt.Fprintf(buf, "%s  <p className=\"text-sm text-muted-foreground\">%s chart placeholder</p>\n", indent, strings.ToUpper(chartType[:1])+chartType[1:])
+		fmt.Fprintf(buf, "%s</div>\n", indent)
+
 	default:
 		idAttr := ""
 		if c.ID != "" {
@@ -858,7 +1402,16 @@ func renderReactDataTable(buf *bytes.Buffer, c *config.Component, indent string,
 	fmt.Fprintf(buf, "%s<DataTable\n", indent)
 	if datasource != "" {
 		varName := toCamelCase(datasource)
-		fmt.Fprintf(buf, "%s  data={%s ?? []}\n", indent, varName)
+		// If a search-bar targets this datasource, filter the data
+		if searchVar, ok := imports.searchDatasources[datasource]; ok {
+			fmt.Fprintf(buf, "%s  data={(%s ?? []).filter((item) => {\n", indent, varName)
+			fmt.Fprintf(buf, "%s    if (!%s) return true;\n", indent, searchVar)
+			fmt.Fprintf(buf, "%s    const q = %s.toLowerCase();\n", indent, searchVar)
+			fmt.Fprintf(buf, "%s    return Object.values(item).some((v) => String(v).toLowerCase().includes(q));\n", indent)
+			fmt.Fprintf(buf, "%s  })}\n", indent)
+		} else {
+			fmt.Fprintf(buf, "%s  data={%s ?? []}\n", indent, varName)
+		}
 	} else {
 		fmt.Fprintf(buf, "%s  data={[]}\n", indent)
 	}
@@ -877,6 +1430,10 @@ func renderReactDataTable(buf *bytes.Buffer, c *config.Component, indent string,
 		}
 	}
 	fmt.Fprintf(buf, "%s  ]}\n", indent)
+	// Pass contextual empty message when search is wired
+	if _, ok := imports.searchDatasources[datasource]; ok {
+		fmt.Fprintf(buf, "%s  emptyMessage=\"No matching results found.\"\n", indent)
+	}
 	fmt.Fprintf(buf, "%s/>\n", indent)
 }
 
@@ -986,7 +1543,8 @@ func renderReactActions(actions map[string]config.Action, imports *importTracker
 				url := interpolateActionURL(action.URL)
 				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push(%s)}`, url))
 			} else if action.Page != "" {
-				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push("/%s")}`, action.Page))
+				route := pageRoute(action.Page, imports.pageModule)
+				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push(%q)}`, route))
 			}
 		case "http":
 			method := strings.ToUpper(action.Method)
@@ -994,7 +1552,23 @@ func renderReactActions(actions map[string]config.Action, imports *importTracker
 				method = "POST"
 			}
 			url := interpolateActionURL(action.URL)
-			attrs = append(attrs, fmt.Sprintf(` onClick={() => fetch(%s, { method: %q })}`, url, method))
+			if action.OnSuccess != nil && action.OnSuccess.Type == "toast" {
+				imports.addReact("toast", "sonner")
+				imports.addShadcn("Toaster", "@/components/ui/sonner")
+				msg := action.OnSuccess.Message
+				if msg == "" {
+					msg = "Success"
+				}
+				toastCall := renderToastCall(action.OnSuccess)
+				attrs = append(attrs, fmt.Sprintf(` onClick={() => fetch(%s, { method: %q }).then(() => %s)}`, url, method, toastCall))
+			} else {
+				attrs = append(attrs, fmt.Sprintf(` onClick={() => fetch(%s, { method: %q })}`, url, method))
+			}
+		case "toast":
+			imports.addReact("toast", "sonner")
+			imports.addShadcn("Toaster", "@/components/ui/sonner")
+			toastCall := renderToastCall(&action)
+			attrs = append(attrs, fmt.Sprintf(` onClick={() => %s}`, toastCall))
 		case "filter":
 			// Filter emits a custom event with datasource + field + value for filtering
 			ds := action.Datasource
@@ -1006,7 +1580,8 @@ func renderReactActions(actions map[string]config.Action, imports *importTracker
 			// Create navigates to a create page or opens a modal
 			imports.addReact("useRouter", "next/navigation")
 			if action.Page != "" {
-				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push("/%s/new")}`, action.Page))
+				route := pageRoute(action.Page, imports.pageModule)
+				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push(%q)}`, route+"/new"))
 			} else if action.URL != "" {
 				url := interpolateActionURL(action.URL)
 				attrs = append(attrs, fmt.Sprintf(` onClick={() => router.push(%s)}`, url))
@@ -1036,6 +1611,12 @@ type importTracker struct {
 	lucide map[string]bool
 	react  map[string]map[string]bool
 	local  map[string]map[string]bool
+	// stateDecls collects useState declarations needed by components (e.g., date-pickers)
+	stateDecls []string
+	// searchDatasources tracks datasources that have a search-bar wired to them (datasource name -> state var)
+	searchDatasources map[string]string
+	// pageModule is the module prefix for the current page (e.g., "forge")
+	pageModule string
 }
 
 func newImportTracker() *importTracker {
@@ -1052,6 +1633,15 @@ func (t *importTracker) addShadcn(name, module string) {
 		t.shadcn[module] = map[string]bool{}
 	}
 	t.shadcn[module][name] = true
+}
+
+func (t *importTracker) hasShadcn(name string) bool {
+	for _, names := range t.shadcn {
+		if names[name] {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *importTracker) addLucide(name string) {
@@ -1285,6 +1875,39 @@ func mapIconSize(size string) string {
 // interpolateActionURL converts template vars in action URLs to JS template literals.
 // e.g. "/api/deployments/{{param.id}}" → "`/api/deployments/${params.id}`"
 // Returns a raw JS expression (no JSX {} wrapper) suitable for use inside onClick handlers.
+// pageRoute converts a page ID to a route path, stripping the module prefix if present.
+// e.g., "forge-deployments" with module "forge" → "/deployments"
+func pageRoute(pageID, module string) string {
+	if module != "" && strings.HasPrefix(pageID, module+"-") {
+		return "/" + strings.TrimPrefix(pageID, module+"-")
+	}
+	return "/" + pageID
+}
+
+func renderToastCall(action *config.Action) string {
+	msg := action.Message
+	if msg == "" {
+		msg = "Success"
+	}
+	// Map Sigil variant to sonner method: toast(), toast.success(), toast.error(), etc.
+	switch action.Title {
+	case "success":
+		return fmt.Sprintf("toast.success(%q)", msg)
+	case "error", "danger":
+		return fmt.Sprintf("toast.error(%q)", msg)
+	case "warning":
+		return fmt.Sprintf("toast.warning(%q)", msg)
+	case "info":
+		return fmt.Sprintf("toast.info(%q)", msg)
+	default:
+		// Use title as the toast title with message as description if both present
+		if action.Title != "" {
+			return fmt.Sprintf("toast(%q, { description: %q })", action.Title, msg)
+		}
+		return fmt.Sprintf("toast(%q)", msg)
+	}
+}
+
 func interpolateActionURL(url string) string {
 	if !strings.Contains(url, "{{") {
 		return fmt.Sprintf("%q", url)

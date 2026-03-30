@@ -67,48 +67,74 @@ layout:
         datasource: Deployment
 
     # ── Deployments Table ───────────────────────
-    - type: card
+    - type: context-menu
       props:
-        border: false
-      children:
-        - id: deployments-table
-          type: data-table
-          props:
-            datasource: Deployment
-            columns:
-              - label: Status
-                field: status
-                render: badge
-                variants:
-                  ready: success
-                  deploying: info
-                  building: default
-                  failed: danger
-                  cancelled: warning
-              - label: Name
-                field: name
-                sortable: true
-              - label: Environment
-                field: environment
-                render: badge
-                variants:
-                  production: danger
-                  staging: warning
-                  preview: default
-              - label: Branch
-                field: branch
-              - label: Author
-                field: author
-              - label: Duration
-                field: duration
-              - label: Created
-                field: createdAt
-                sortable: true
-            pagination:
-              pageSize: 20
-          actions:
-            rowClick:
-              type: sheet
+        items:
+          - label: View Details
+            icon: eye
+            action:
+              type: navigate
               page: forge-deployment-detail
-              params:
-                id: "{{row.id}}"
+          - label: Promote to Production
+            icon: arrow-up-circle
+            action:
+              type: toast
+              message: Deployment promoted to production
+          - label: Rollback
+            icon: undo-2
+            action:
+              type: toast
+              message: Rollback initiated
+          - separator: true
+          - label: Delete Deployment
+            icon: trash-2
+            variant: danger
+            action:
+              type: toast
+              message: Deployment deleted
+      children:
+        - type: card
+          props:
+            border: false
+          children:
+            - id: deployments-table
+              type: data-table
+              props:
+                datasource: Deployment
+                columns:
+                  - label: Status
+                    field: status
+                    render: badge
+                    variants:
+                      ready: success
+                      deploying: info
+                      building: default
+                      failed: danger
+                      cancelled: warning
+                  - label: Name
+                    field: name
+                    sortable: true
+                  - label: Environment
+                    field: environment
+                    render: badge
+                    variants:
+                      production: danger
+                      staging: warning
+                      preview: default
+                  - label: Branch
+                    field: branch
+                  - label: Author
+                    field: author
+                  - label: Duration
+                    field: duration
+                  - label: Created
+                    field: createdAt
+                    sortable: true
+                pagination:
+                  pageSize: 20
+              actions:
+                rowClick:
+                  type: sheet
+                  page: forge-deployment-detail
+                  params:
+                    id: "{{row.id}}"

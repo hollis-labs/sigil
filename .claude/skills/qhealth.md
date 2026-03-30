@@ -1,0 +1,1 @@
+/Users/chrispian/Projects-apps/sigil/.agentrc/skills/qhealth.md

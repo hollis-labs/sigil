@@ -47,6 +47,15 @@ layout:
                     label: Last 7 days
                   - value: 30d
                     label: Last 30 days
+            - type: icon-button
+              props:
+                icon: refresh-cw
+                variant: ghost
+                tooltip: Refresh data
+              actions:
+                click:
+                  type: toast
+                  message: Data refreshed
             - type: button
               props:
                 label: Deploy
@@ -55,121 +64,42 @@ layout:
               actions:
                 click:
                   type: navigate
-                  page: forge-deployments
+                  page: forge-deploy-create
 
     # ── Stat Cards ──────────────────────────────
     - type: grid
       props:
         columns: 4
+        columns_sm: 2
         gap: 4
       children:
-        - type: card
+        - type: stat-card
           props:
-            title: Deployments
-            padding: 4
-          children:
-            - type: columns
-              props:
-                justify: between
-                align: center
-              children:
-                - type: rows
-                  props:
-                    gap: 1
-                  children:
-                    - type: heading
-                      props:
-                        level: 2
-                        text: "142"
-                    - type: text
-                      props:
-                        text: "+12% from last week"
-                        muted: true
-                - type: badge
-                  props:
-                    text: "↑ 12%"
-                    variant: default
+            label: Deployments
+            value: "142"
+            trend: up
+            icon: rocket
 
-        - type: card
+        - type: stat-card
           props:
-            title: Uptime
-            padding: 4
-          children:
-            - type: columns
-              props:
-                justify: between
-                align: center
-              children:
-                - type: rows
-                  props:
-                    gap: 1
-                  children:
-                    - type: heading
-                      props:
-                        level: 2
-                        text: "99.98%"
-                    - type: text
-                      props:
-                        text: "2m downtime this month"
-                        muted: true
-                - type: badge
-                  props:
-                    text: Healthy
-                    variant: success
+            label: Uptime
+            value: "99.98%"
+            trend: up
+            icon: activity
 
-        - type: card
+        - type: stat-card
           props:
-            title: Assets
-            padding: 4
-          children:
-            - type: columns
-              props:
-                justify: between
-                align: center
-              children:
-                - type: rows
-                  props:
-                    gap: 1
-                  children:
-                    - type: heading
-                      props:
-                        level: 2
-                        text: "37"
-                    - type: text
-                      props:
-                        text: "3 need attention"
-                        muted: true
-                - type: badge
-                  props:
-                    text: "3 alerts"
-                    variant: danger
+            label: Assets
+            value: "37"
+            trend: down
+            icon: server
 
-        - type: card
+        - type: stat-card
           props:
-            title: Jobs
-            padding: 4
-          children:
-            - type: columns
-              props:
-                justify: between
-                align: center
-              children:
-                - type: rows
-                  props:
-                    gap: 1
-                  children:
-                    - type: heading
-                      props:
-                        level: 2
-                        text: "18"
-                    - type: text
-                      props:
-                        text: "2 failed in last 24h"
-                        muted: true
-                - type: badge
-                  props:
-                    text: "2 failed"
-                    variant: warning
+            label: Jobs
+            value: "18"
+            trend: neutral
+            icon: clock
 
     # ── Recent Deployments ──────────────────────
     - type: card

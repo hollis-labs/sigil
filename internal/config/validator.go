@@ -48,6 +48,7 @@ var validActionTypes = map[string]bool{
 	"confirm":  true,
 	"close":    true,
 	"focus":    true,
+	"toast":    true,
 }
 
 // Validate checks a Page config for structural correctness.
@@ -181,6 +182,10 @@ func validateAction(action Action, path string, result *ValidationResult) {
 		}
 		if action.Method == "" {
 			result.Errors = append(result.Errors, ValidationError{Path: path, Message: "http action requires 'method'"})
+		}
+	case "toast":
+		if action.Message == "" {
+			result.Errors = append(result.Errors, ValidationError{Path: path, Message: "toast action requires 'message'"})
 		}
 	}
 

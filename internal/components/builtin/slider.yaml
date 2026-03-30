@@ -1,0 +1,26 @@
+type: slider
+category: inputs
+description: "Range slider input"
+props:
+  min:
+    type: number
+    default: 0
+    description: "Minimum value"
+  max:
+    type: number
+    default: 100
+    description: "Maximum value"
+  step:
+    type: number
+    default: 1
+    description: "Step increment"
+  defaultValue:
+    type: number
+    description: "Initial value"
+  label:
+    type: string
+    description: "Label text"
+  showValue:
+    type: boolean
+    default: false
+    description: "Display current value"

@@ -30,25 +30,16 @@ layout:
         - type: columns
           props:
             gap: 2
+            align: center
           children:
-            - type: select
+            - type: date-picker
+              id: log-start
               props:
-                placeholder: Last hour
-                options:
-                  - value: 1h
-                    label: Last hour
-                  - value: 24h
-                    label: Last 24 hours
-                  - value: 7d
-                    label: Last 7 days
-                  - value: 30d
-                    label: Last 30 days
-              actions:
-                change:
-                  type: emit
-                  datasource: LogEntry
-                  field: timeRange
-                  value: "{{value}}"
+                placeholder: Start date
+            - type: date-picker
+              id: log-end
+              props:
+                placeholder: End date
             - type: select
               props:
                 placeholder: All Levels
@@ -80,32 +71,41 @@ layout:
         datasource: LogEntry
 
     # ── Logs Table ──────────────────────────────
-    - type: card
+    - type: scroll-area
       props:
-        border: false
+        height: "calc(100vh - 200px)"
       children:
-        - id: logs-table
-          type: data-table
+        - type: card
           props:
-            datasource: LogEntry
-            columns:
-              - label: Timestamp
-                field: timestamp
-                sortable: true
-              - label: Level
-                field: level
-                render: badge
-                variants:
-                  fatal: danger
-                  error: danger
-                  warn: warning
-                  info: info
-                  debug: default
-              - label: Service
-                field: service
-              - label: Message
-                field: message
-              - label: Source
-                field: source
-            pagination:
-              pageSize: 50
+            border: false
+          children:
+            - id: logs-table
+              type: data-table
+              props:
+                datasource: LogEntry
+                columns:
+                  - label: Timestamp
+                    field: timestamp
+                    sortable: true
+                  - label: Level
+                    field: level
+                    render: badge
+                    variants:
+                      fatal: danger
+                      error: danger
+                      warn: warning
+                      info: info
+                      debug: default
+                  - label: Service
+                    field: service
+                  - label: Message
+                    field: message
+                  - label: Source
+                    field: source
+                pagination:
+                  pageSize: 50
+
+    - type: pagination
+      props:
+        total: 500
+        pageSize: 50
