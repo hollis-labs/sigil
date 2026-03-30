@@ -46,11 +46,12 @@ export default function SigilComponents() {
           <Button variant="ghost" onClick={() => window.dispatchEvent(new CustomEvent("filter-category"))}>Forms</Button>
         </div>
         <DataTable
-          data={(sigilComponent ?? []).filter((item) => {
-            if (!searchSigilComponent) return true;
-            const q = searchSigilComponent.toLowerCase();
-            return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
-          })}
+          data={(sigilComponent ?? [])
+            .filter((item) => {
+              if (!searchSigilComponent) return true;
+              const q = searchSigilComponent.toLowerCase();
+              return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
+            })}
           columns={[
             { accessorKey: "type", header: "Type" },
             { accessorKey: "category", header: "Category" },

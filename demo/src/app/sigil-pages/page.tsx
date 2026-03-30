@@ -40,11 +40,12 @@ export default function SigilPages() {
         <Input type="search" placeholder="Search pages..." className="w-full pl-9 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value={searchSigilPage} onChange={(e) => setSearchSigilPage(e.target.value)} />
       </div>
       <DataTable
-        data={(sigilPage ?? []).filter((item) => {
-          if (!searchSigilPage) return true;
-          const q = searchSigilPage.toLowerCase();
-          return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
-        })}
+        data={(sigilPage ?? [])
+          .filter((item) => {
+            if (!searchSigilPage) return true;
+            const q = searchSigilPage.toLowerCase();
+            return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
+          })}
         columns={[
           { accessorKey: "id", header: "ID" },
           { accessorKey: "title", header: "Title" },

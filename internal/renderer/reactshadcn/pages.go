@@ -197,6 +197,10 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		colsMd := getPropString(c.Props, "columns_md", "")
 		colsSm := getPropString(c.Props, "columns_sm", "")
 		gap := getPropString(c.Props, "gap", "4")
+		// Default: grids with 3+ columns stack to 1 column on mobile
+		if colsSm == "" && cols != "1" && cols != "2" {
+			colsSm = "1"
+		}
 		classes := fmt.Sprintf("grid grid-cols-%s gap-%s", cols, gap)
 		if colsMd != "" {
 			classes = fmt.Sprintf("grid grid-cols-%s md:grid-cols-%s gap-%s", colsMd, cols, gap)
@@ -319,6 +323,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 				dv = fmt.Sprintf("%q", defaultValue)
 			}
 			imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState(%s);", stateVar, setterVar, dv))
+			imports.formResetters = append(imports.formResetters, fmt.Sprintf("%s(%s)", setterVar, dv))
 			extraAttrs += fmt.Sprintf(" value={%s} onChange={(e) => %s(e.target.value)}", stateVar, setterVar)
 		} else if defaultValue != "" {
 			extraAttrs += fmt.Sprintf(" defaultValue=%q", defaultValue)
@@ -338,7 +343,30 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addShadcn("SelectTrigger", "@/components/ui/select")
 		imports.addShadcn("SelectValue", "@/components/ui/select")
 		placeholder := getPropString(c.Props, "placeholder", "Select...")
-		fmt.Fprintf(buf, "%s<Select>\n", indent)
+		// Wire filter state if select has an emit action with datasource + field
+		var selectOnChange string
+		if changeAction, ok := c.Actions["change"]; ok && changeAction.Type == "emit" && changeAction.Datasource != "" && changeAction.Field != "" {
+			imports.addReact("useState", "react")
+			stateVar := "filter" + toPascalCase(changeAction.Datasource) + toPascalCase(changeAction.Field)
+			setterVar := "setFilter" + toPascalCase(changeAction.Datasource) + toPascalCase(changeAction.Field)
+			if imports.filterBindings == nil {
+				imports.filterBindings = map[string][]filterBinding{}
+			}
+			// Only add state declaration once per unique stateVar
+			alreadyExists := false
+			for _, fb := range imports.filterBindings[changeAction.Datasource] {
+				if fb.stateVar == stateVar {
+					alreadyExists = true
+					break
+				}
+			}
+			if !alreadyExists {
+				imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState(\"all\");", stateVar, setterVar))
+				imports.filterBindings[changeAction.Datasource] = append(imports.filterBindings[changeAction.Datasource], filterBinding{field: changeAction.Field, stateVar: stateVar})
+			}
+			selectOnChange = fmt.Sprintf(" onValueChange={(v) => %s(v as string)}", setterVar)
+		}
+		fmt.Fprintf(buf, "%s<Select%s>\n", indent, selectOnChange)
 		fmt.Fprintf(buf, "%s  <SelectTrigger>\n", indent)
 		fmt.Fprintf(buf, "%s    <SelectValue placeholder=%q />\n", indent, placeholder)
 		fmt.Fprintf(buf, "%s  </SelectTrigger>\n", indent)
@@ -400,15 +428,38 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addShadcn("DialogContent", "@/components/ui/dialog")
 		imports.addShadcn("DialogHeader", "@/components/ui/dialog")
 		imports.addShadcn("DialogTitle", "@/components/ui/dialog")
+		imports.addShadcn("DialogTrigger", "@/components/ui/dialog")
 		title := getPropString(c.Props, "title", "")
 		fmt.Fprintf(buf, "%s<Dialog>\n", indent)
+		// If first child is a button, use it as the trigger
+		contentStart := 0
+		if len(c.Children) > 0 && c.Children[0].Type == "button" {
+			child := &c.Children[0]
+			btnLabel := getPropString(child.Props, "label", "Open")
+			btnVariant := mapButtonVariant(getPropString(child.Props, "variant", "default"))
+			btnIcon := getPropString(child.Props, "icon", "")
+			imports.addShadcn("Button", "@/components/ui/button")
+			if btnIcon != "" {
+				lucideIcon := toPascalCase(btnIcon)
+				imports.addLucide(lucideIcon)
+				fmt.Fprintf(buf, "%s  <DialogTrigger render={<Button variant=%q />}>\n", indent, btnVariant)
+				fmt.Fprintf(buf, "%s    <%s className=\"mr-2 h-4 w-4\" />\n", indent, lucideIcon)
+				fmt.Fprintf(buf, "%s    %s\n", indent, btnLabel)
+				fmt.Fprintf(buf, "%s  </DialogTrigger>\n", indent)
+			} else {
+				fmt.Fprintf(buf, "%s  <DialogTrigger render={<Button variant=%q />}>\n", indent, btnVariant)
+				fmt.Fprintf(buf, "%s    %s\n", indent, btnLabel)
+				fmt.Fprintf(buf, "%s  </DialogTrigger>\n", indent)
+			}
+			contentStart = 1
+		}
 		fmt.Fprintf(buf, "%s  <DialogContent>\n", indent)
 		if title != "" {
 			fmt.Fprintf(buf, "%s    <DialogHeader>\n", indent)
 			fmt.Fprintf(buf, "%s      <DialogTitle>%s</DialogTitle>\n", indent, title)
 			fmt.Fprintf(buf, "%s    </DialogHeader>\n", indent)
 		}
-		for i := range c.Children {
+		for i := contentStart; i < len(c.Children); i++ {
 			renderComponent(buf, &c.Children[i], depth+2, imports, ctx)
 		}
 		fmt.Fprintf(buf, "%s  </DialogContent>\n", indent)
@@ -617,6 +668,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 			stateVar := toCamelCase(c.ID)
 			setterVar := "set" + toPascalCase(c.ID)
 			imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState(\"\");", stateVar, setterVar))
+			imports.formResetters = append(imports.formResetters, fmt.Sprintf("%s(\"\")", setterVar))
 			extraAttrs += fmt.Sprintf(" value={%s} onChange={(e) => %s(e.target.value)}", stateVar, setterVar)
 		}
 		fmt.Fprintf(buf, "%s<div className=\"flex flex-col gap-1.5\">\n", indent)
@@ -1293,20 +1345,23 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 
 	case "split":
 		direction := getPropString(c.Props, "direction", "horizontal")
-		flexDir := "flex-row"
-		if direction == "vertical" {
-			flexDir = "flex-col"
-		}
 		defaultSize := getPropString(c.Props, "defaultSize", "50")
-		fmt.Fprintf(buf, "%s<div className=\"flex %s h-full\">\n", indent, flexDir)
-		if len(c.Children) > 0 {
-			fmt.Fprintf(buf, "%s  <div className=\"\" style={{flexBasis: \"%s%%\"}}>\n", indent, defaultSize)
-			renderComponent(buf, &c.Children[0], depth+2, imports, ctx)
-			fmt.Fprintf(buf, "%s  </div>\n", indent)
-		}
 		if direction == "horizontal" {
-			fmt.Fprintf(buf, "%s  <div className=\"w-px bg-border\" />\n", indent)
+			// Stack vertically on mobile, side-by-side on md+
+			fmt.Fprintf(buf, "%s<div className=\"flex flex-col md:flex-row\">\n", indent)
+			if len(c.Children) > 0 {
+				fmt.Fprintf(buf, "%s  <div className=\"md:w-auto\" style={{flexBasis: \"%s%%\"}}>\n", indent, defaultSize)
+				renderComponent(buf, &c.Children[0], depth+2, imports, ctx)
+				fmt.Fprintf(buf, "%s  </div>\n", indent)
+			}
+			fmt.Fprintf(buf, "%s  <div className=\"h-px md:h-auto md:w-px bg-border\" />\n", indent)
 		} else {
+			fmt.Fprintf(buf, "%s<div className=\"flex flex-col\">\n", indent)
+			if len(c.Children) > 0 {
+				fmt.Fprintf(buf, "%s  <div style={{flexBasis: \"%s%%\"}}>\n", indent, defaultSize)
+				renderComponent(buf, &c.Children[0], depth+2, imports, ctx)
+				fmt.Fprintf(buf, "%s  </div>\n", indent)
+			}
 			fmt.Fprintf(buf, "%s  <div className=\"h-px bg-border\" />\n", indent)
 		}
 		if len(c.Children) > 1 {
@@ -1402,13 +1457,26 @@ func renderReactDataTable(buf *bytes.Buffer, c *config.Component, indent string,
 	fmt.Fprintf(buf, "%s<DataTable\n", indent)
 	if datasource != "" {
 		varName := toCamelCase(datasource)
-		// If a search-bar targets this datasource, filter the data
-		if searchVar, ok := imports.searchDatasources[datasource]; ok {
-			fmt.Fprintf(buf, "%s  data={(%s ?? []).filter((item) => {\n", indent, varName)
-			fmt.Fprintf(buf, "%s    if (!%s) return true;\n", indent, searchVar)
-			fmt.Fprintf(buf, "%s    const q = %s.toLowerCase();\n", indent, searchVar)
-			fmt.Fprintf(buf, "%s    return Object.values(item).some((v) => String(v).toLowerCase().includes(q));\n", indent)
-			fmt.Fprintf(buf, "%s  })}\n", indent)
+		_, hasSearch := imports.searchDatasources[datasource]
+		filters := imports.filterBindings[datasource]
+		hasFilters := len(filters) > 0
+
+		if hasSearch || hasFilters {
+			fmt.Fprintf(buf, "%s  data={(%s ?? [])", indent, varName)
+			// Apply select filters
+			for _, fb := range filters {
+				fmt.Fprintf(buf, "\n%s    .filter((item) => %s === \"all\" || item.%s === %s)", indent, fb.stateVar, fb.field, fb.stateVar)
+			}
+			// Apply search filter
+			if hasSearch {
+				searchVar := imports.searchDatasources[datasource]
+				fmt.Fprintf(buf, "\n%s    .filter((item) => {\n", indent)
+				fmt.Fprintf(buf, "%s      if (!%s) return true;\n", indent, searchVar)
+				fmt.Fprintf(buf, "%s      const q = %s.toLowerCase();\n", indent, searchVar)
+				fmt.Fprintf(buf, "%s      return Object.values(item).some((v) => String(v).toLowerCase().includes(q));\n", indent)
+				fmt.Fprintf(buf, "%s    })", indent)
+			}
+			fmt.Fprintf(buf, "}\n")
 		} else {
 			fmt.Fprintf(buf, "%s  data={%s ?? []}\n", indent, varName)
 		}
@@ -1430,9 +1498,37 @@ func renderReactDataTable(buf *bytes.Buffer, c *config.Component, indent string,
 		}
 	}
 	fmt.Fprintf(buf, "%s  ]}\n", indent)
-	// Pass contextual empty message when search is wired
-	if _, ok := imports.searchDatasources[datasource]; ok {
+	// Pass contextual empty message when search or filters are wired
+	_, hasSearchForEmpty := imports.searchDatasources[datasource]
+	if hasSearchForEmpty || len(imports.filterBindings[datasource]) > 0 {
 		fmt.Fprintf(buf, "%s  emptyMessage=\"No matching results found.\"\n", indent)
+	}
+	// Wire rowClick action
+	if rowClick, ok := c.Actions["rowClick"]; ok {
+		switch rowClick.Type {
+		case "navigate":
+			imports.addReact("useRouter", "next/navigation")
+			if rowClick.Page != "" {
+				route := pageRoute(rowClick.Page, imports.pageModule)
+				// If params include id, build a dynamic route
+				if _, hasID := rowClick.Params["id"]; hasID {
+					fmt.Fprintf(buf, "%s  onRowClick={(row) => router.push(`%s/${(row as { id: string }).id}`)}\n", indent, route)
+				} else {
+					fmt.Fprintf(buf, "%s  onRowClick={() => router.push(%q)}\n", indent, route)
+				}
+			}
+		case "sheet":
+			// For sheet actions, navigate to the detail page as a fallback
+			imports.addReact("useRouter", "next/navigation")
+			if rowClick.Page != "" {
+				route := pageRoute(rowClick.Page, imports.pageModule)
+				if _, hasID := rowClick.Params["id"]; hasID {
+					fmt.Fprintf(buf, "%s  onRowClick={(row) => router.push(`%s/${(row as { id: string }).id}`)}\n", indent, route)
+				} else {
+					fmt.Fprintf(buf, "%s  onRowClick={() => router.push(%q)}\n", indent, route)
+				}
+			}
+		}
 	}
 	fmt.Fprintf(buf, "%s/>\n", indent)
 }
@@ -1560,7 +1656,13 @@ func renderReactActions(actions map[string]config.Action, imports *importTracker
 					msg = "Success"
 				}
 				toastCall := renderToastCall(action.OnSuccess)
-				attrs = append(attrs, fmt.Sprintf(` onClick={() => fetch(%s, { method: %q }).then(() => %s)}`, url, method, toastCall))
+				// Include form resets after toast if available
+				if len(imports.formResetters) > 0 {
+					resetCalls := strings.Join(imports.formResetters, "; ")
+					attrs = append(attrs, fmt.Sprintf(` onClick={() => fetch(%s, { method: %q }).then(() => { %s; %s; })}`, url, method, toastCall, resetCalls))
+				} else {
+					attrs = append(attrs, fmt.Sprintf(` onClick={() => fetch(%s, { method: %q }).then(() => %s)}`, url, method, toastCall))
+				}
 			} else {
 				attrs = append(attrs, fmt.Sprintf(` onClick={() => fetch(%s, { method: %q })}`, url, method))
 			}
@@ -1615,8 +1717,17 @@ type importTracker struct {
 	stateDecls []string
 	// searchDatasources tracks datasources that have a search-bar wired to them (datasource name -> state var)
 	searchDatasources map[string]string
+	// filterBindings tracks select filters wired to datasources (datasource name -> [{field, stateVar}])
+	filterBindings map[string][]filterBinding
+	// formResetters collects setter calls to reset form state (e.g., "setDeployName(\"\")")
+	formResetters []string
 	// pageModule is the module prefix for the current page (e.g., "forge")
 	pageModule string
+}
+
+type filterBinding struct {
+	field    string
+	stateVar string
 }
 
 func newImportTracker() *importTracker {

@@ -39,7 +39,7 @@ export default function ForgeMonitoring() {
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>CPU Usage</CardTitle>

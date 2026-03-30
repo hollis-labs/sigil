@@ -8,13 +8,17 @@ import { useState } from "react";
 import { Loader2, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable } from "@/components/data-table";
 import { useAsset } from "@/hooks/use-asset";
 
 export default function ForgeAssets() {
   const router = useRouter();
+  const [filterAssetProvider, setFilterAssetProvider] = useState("all");
+  const [filterAssetType, setFilterAssetType] = useState("all");
   const [searchAsset, setSearchAsset] = useState("");
 
   const { data: asset, isLoading: assetLoading } = useAsset();
@@ -33,7 +37,7 @@ export default function ForgeAssets() {
       <div className="flex flex-row gap-4 justify-between items-center">
         <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Assets</h1>
         <div className="flex flex-row gap-2">
-          <Select>
+          <Select onValueChange={(v) => setFilterAssetProvider(v as string)}>
             <SelectTrigger>
               <SelectValue placeholder="All Providers" />
             </SelectTrigger>
@@ -48,7 +52,7 @@ export default function ForgeAssets() {
               <SelectItem value="custom">Custom</SelectItem>
             </SelectContent>
           </Select>
-          <Select>
+          <Select onValueChange={(v) => setFilterAssetType(v as string)}>
             <SelectTrigger>
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
@@ -63,10 +67,39 @@ export default function ForgeAssets() {
               <SelectItem value="queue">Queue</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="default" onClick={() => router.push("/assets")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Asset
-          </Button>
+          <Dialog>
+            <DialogTrigger render={<Button variant="default" />}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Asset
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Asset</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="input-my-server-01">Asset Name</Label>
+                  <Input id="input-my-server-01" type="text" placeholder="my-server-01" />
+                </div>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="aws">AWS</SelectItem>
+                    <SelectItem value="gcp">GCP</SelectItem>
+                    <SelectItem value="azure">Azure</SelectItem>
+                    <SelectItem value="hetzner">Hetzner</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="input-us-east-1">Region</Label>
+                  <Input id="input-us-east-1" type="text" placeholder="us-east-1" />
+                </div>
+                <Button variant="default">Create Asset</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
       <div className="relative">
@@ -76,11 +109,14 @@ export default function ForgeAssets() {
       <Card className="border-0 shadow-none ring-0">
         <CardContent>
           <DataTable
-            data={(asset ?? []).filter((item) => {
-              if (!searchAsset) return true;
-              const q = searchAsset.toLowerCase();
-              return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
-            })}
+            data={(asset ?? [])
+              .filter((item) => filterAssetProvider === "all" || item.provider === filterAssetProvider)
+              .filter((item) => filterAssetType === "all" || item.type === filterAssetType)
+              .filter((item) => {
+                if (!searchAsset) return true;
+                const q = searchAsset.toLowerCase();
+                return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
+              })}
             columns={[
               { accessorKey: "status", header: "Status" },
               { accessorKey: "name", header: "Name" },
@@ -91,6 +127,7 @@ export default function ForgeAssets() {
               { accessorKey: "updatedAt", header: "Last Updated" },
             ]}
             emptyMessage="No matching results found."
+            onRowClick={(row) => router.push(`/asset-detail/${(row as { id: string }).id}`)}
           />
         </CardContent>
       </Card>

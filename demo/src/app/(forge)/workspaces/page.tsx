@@ -17,6 +17,7 @@ import { useWorkspace } from "@/hooks/use-workspace";
 
 export default function ForgeWorkspaces() {
   const router = useRouter();
+  const [filterWorkspacePlan, setFilterWorkspacePlan] = useState("all");
   const [searchWorkspace, setSearchWorkspace] = useState("");
 
   const { data: workspace, isLoading: workspaceLoading } = useWorkspace();
@@ -35,7 +36,7 @@ export default function ForgeWorkspaces() {
       <div className="flex flex-row gap-4 justify-between items-center">
         <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Workspaces</h1>
         <div className="flex flex-row gap-2">
-          <Select>
+          <Select onValueChange={(v) => setFilterWorkspacePlan(v as string)}>
             <SelectTrigger>
               <SelectValue placeholder="All Plans" />
             </SelectTrigger>
@@ -56,7 +57,7 @@ export default function ForgeWorkspaces() {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input type="search" placeholder="Search workspaces..." className="w-full pl-9 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value={searchWorkspace} onChange={(e) => setSearchWorkspace(e.target.value)} />
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {workspace.map((item) => (
           <div key={item.name}>
             <Card>
@@ -89,11 +90,13 @@ export default function ForgeWorkspaces() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={(workspace ?? []).filter((item) => {
-              if (!searchWorkspace) return true;
-              const q = searchWorkspace.toLowerCase();
-              return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
-            })}
+            data={(workspace ?? [])
+              .filter((item) => filterWorkspacePlan === "all" || item.plan === filterWorkspacePlan)
+              .filter((item) => {
+                if (!searchWorkspace) return true;
+                const q = searchWorkspace.toLowerCase();
+                return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
+              })}
             columns={[
               { accessorKey: "name", header: "Name" },
               { accessorKey: "slug", header: "Slug" },

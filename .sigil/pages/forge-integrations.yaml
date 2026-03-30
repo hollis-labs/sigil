@@ -62,3 +62,28 @@ layout:
                   props:
                     text: "{{item.connectedAt}}"
                     muted: true
+            - type: separator
+            - type: dialog
+              props:
+                trigger: Configure
+                triggerVariant: outline
+                title: Integration Settings
+                description: Update the configuration for this integration.
+              children:
+                - type: rows
+                  props:
+                    gap: 4
+                  children:
+                    - type: input
+                      props:
+                        label: API Key
+                        placeholder: Enter API key...
+                        type: password
+                    - type: input
+                      props:
+                        label: Webhook URL
+                        placeholder: https://...
+                    - type: button
+                      props:
+                        label: Save Configuration
+                        variant: primary

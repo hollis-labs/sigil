@@ -43,11 +43,12 @@ export default function ForgeJobs() {
       <Card className="border-0 shadow-none ring-0">
         <CardContent>
           <DataTable
-            data={(scheduledJob ?? []).filter((item) => {
-              if (!searchScheduledJob) return true;
-              const q = searchScheduledJob.toLowerCase();
-              return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
-            })}
+            data={(scheduledJob ?? [])
+              .filter((item) => {
+                if (!searchScheduledJob) return true;
+                const q = searchScheduledJob.toLowerCase();
+                return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
+              })}
             columns={[
               { accessorKey: "status", header: "Status" },
               { accessorKey: "name", header: "Name" },

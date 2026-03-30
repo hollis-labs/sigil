@@ -18,6 +18,7 @@ import { useLogEntry } from "@/hooks/use-logentry";
 export default function ForgeLogs() {
   const [logStartDate, setLogStartDate] = useState<Date | undefined>();
   const [logEndDate, setLogEndDate] = useState<Date | undefined>();
+  const [filterLogEntryLevel, setFilterLogEntryLevel] = useState("all");
   const [searchLogEntry, setSearchLogEntry] = useState("");
 
   const { data: logEntry, isLoading: logEntryLoading } = useLogEntry();
@@ -54,7 +55,7 @@ export default function ForgeLogs() {
               <Calendar mode="single" selected={logEndDate} onSelect={setLogEndDate} />
             </PopoverContent>
           </Popover>
-          <Select>
+          <Select onValueChange={(v) => setFilterLogEntryLevel(v as string)}>
             <SelectTrigger>
               <SelectValue placeholder="All Levels" />
             </SelectTrigger>
@@ -77,11 +78,13 @@ export default function ForgeLogs() {
         <Card className="border-0 shadow-none ring-0">
           <CardContent>
             <DataTable
-              data={(logEntry ?? []).filter((item) => {
-                if (!searchLogEntry) return true;
-                const q = searchLogEntry.toLowerCase();
-                return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
-              })}
+              data={(logEntry ?? [])
+                .filter((item) => filterLogEntryLevel === "all" || item.level === filterLogEntryLevel)
+                .filter((item) => {
+                  if (!searchLogEntry) return true;
+                  const q = searchLogEntry.toLowerCase();
+                  return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
+                })}
               columns={[
                 { accessorKey: "timestamp", header: "Timestamp" },
                 { accessorKey: "level", header: "Level" },

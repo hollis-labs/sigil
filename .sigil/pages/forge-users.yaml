@@ -32,9 +32,11 @@ layout:
             gap: 2
             align: center
           children:
-            - type: select
+            - type: combobox
               props:
-                placeholder: All Roles
+                placeholder: Filter by role...
+                searchPlaceholder: Search roles...
+                emptyMessage: No matching roles.
                 options:
                   - value: all
                     label: All Roles

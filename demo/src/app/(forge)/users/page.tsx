@@ -9,7 +9,7 @@ import { Loader2, Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/combobox";
 import { DataTable } from "@/components/data-table";
 import { useUser } from "@/hooks/use-user";
 
@@ -33,18 +33,18 @@ export default function ForgeUsers() {
       <div className="flex flex-row gap-4 justify-between items-center">
         <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Users</h1>
         <div className="flex flex-row gap-2 items-center">
-          <Select>
-            <SelectTrigger>
-              <SelectValue placeholder="All Roles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="owner">Owner</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="member">Member</SelectItem>
-              <SelectItem value="viewer">Viewer</SelectItem>
-            </SelectContent>
-          </Select>
+          <Combobox
+            placeholder="Filter by role..."
+            searchPlaceholder="Search roles..."
+            emptyMessage="No matching roles."
+            options={[
+              { value: "all", label: "All Roles" },
+              { value: "owner", label: "Owner" },
+              { value: "admin", label: "Admin" },
+              { value: "member", label: "Member" },
+              { value: "viewer", label: "Viewer" },
+            ]}
+          />
           <Button variant="default" onClick={() => router.push("/users")}>
             <UserPlus className="mr-2 h-4 w-4" />
             Invite User
@@ -58,11 +58,12 @@ export default function ForgeUsers() {
       <Card className="border-0 shadow-none ring-0">
         <CardContent>
           <DataTable
-            data={(user ?? []).filter((item) => {
-              if (!searchUser) return true;
-              const q = searchUser.toLowerCase();
-              return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
-            })}
+            data={(user ?? [])
+              .filter((item) => {
+                if (!searchUser) return true;
+                const q = searchUser.toLowerCase();
+                return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
+              })}
             columns={[
               { accessorKey: "status", header: "Status" },
               { accessorKey: "name", header: "Name" },

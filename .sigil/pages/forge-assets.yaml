@@ -83,15 +83,44 @@ layout:
                   datasource: Asset
                   field: type
                   value: "{{value}}"
-            - type: button
+            - type: modal
               props:
-                label: Add Asset
-                variant: primary
-                icon: plus
-              actions:
-                click:
-                  type: navigate
-                  page: forge-assets
+                title: Add New Asset
+                size: md
+              children:
+                - type: button
+                  props:
+                    label: Add Asset
+                    variant: primary
+                    icon: plus
+                - type: rows
+                  props:
+                    gap: 4
+                  children:
+                    - type: input
+                      props:
+                        label: Asset Name
+                        placeholder: my-server-01
+                    - type: select
+                      props:
+                        placeholder: Select provider
+                        options:
+                          - value: aws
+                            label: AWS
+                          - value: gcp
+                            label: GCP
+                          - value: azure
+                            label: Azure
+                          - value: hetzner
+                            label: Hetzner
+                    - type: input
+                      props:
+                        label: Region
+                        placeholder: us-east-1
+                    - type: button
+                      props:
+                        label: Create Asset
+                        variant: primary
 
     # ── Search ──────────────────────────────────
     - type: search-bar

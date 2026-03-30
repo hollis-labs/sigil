@@ -18,6 +18,7 @@ import { useDeployment } from "@/hooks/use-deployment";
 
 export default function ForgeDeployments() {
   const router = useRouter();
+  const [filterDeploymentEnvironment, setFilterDeploymentEnvironment] = useState("all");
   const [searchDeployment, setSearchDeployment] = useState("");
 
   const { data: deployment, isLoading: deploymentLoading } = useDeployment();
@@ -36,7 +37,7 @@ export default function ForgeDeployments() {
       <div className="flex flex-row gap-4 justify-between items-center">
         <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Deployments</h1>
         <div className="flex flex-row gap-2">
-          <Select>
+          <Select onValueChange={(v) => setFilterDeploymentEnvironment(v as string)}>
             <SelectTrigger>
               <SelectValue placeholder="All Environments" />
             </SelectTrigger>
@@ -62,11 +63,13 @@ export default function ForgeDeployments() {
           <Card className="border-0 shadow-none ring-0">
             <CardContent>
               <DataTable
-                data={(deployment ?? []).filter((item) => {
-                  if (!searchDeployment) return true;
-                  const q = searchDeployment.toLowerCase();
-                  return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
-                })}
+                data={(deployment ?? [])
+                  .filter((item) => filterDeploymentEnvironment === "all" || item.environment === filterDeploymentEnvironment)
+                  .filter((item) => {
+                    if (!searchDeployment) return true;
+                    const q = searchDeployment.toLowerCase();
+                    return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
+                  })}
                 columns={[
                   { accessorKey: "status", header: "Status" },
                   { accessorKey: "name", header: "Name" },
@@ -77,6 +80,7 @@ export default function ForgeDeployments() {
                   { accessorKey: "createdAt", header: "Created" },
                 ]}
                 emptyMessage="No matching results found."
+                onRowClick={(row) => router.push(`/deployment-detail/${(row as { id: string }).id}`)}
               />
             </CardContent>
           </Card>

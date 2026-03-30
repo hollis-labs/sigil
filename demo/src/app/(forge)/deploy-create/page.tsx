@@ -65,6 +65,7 @@ export default function ForgeDeployCreate() {
               <Label htmlFor="deploy-branch">Branch</Label>
               <Input id="deploy-branch" type="text" placeholder="main" value={deployBranch} onChange={(e) => setDeployBranch(e.target.value)} />
             </div>
+            <Label>Environment</Label>
             <RadioGroup defaultValue="production">
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="production" id="production" />
@@ -91,7 +92,8 @@ export default function ForgeDeployCreate() {
           <CardTitle>Build Settings</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-4">
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-medium">Build Configuration</legend>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="build-command">Build Command</Label>
               <Input id="build-command" type="text" placeholder="npm run build" value={buildCommand} onChange={(e) => setBuildCommand(e.target.value)} />
@@ -100,6 +102,9 @@ export default function ForgeDeployCreate() {
               <Label htmlFor="output-dir">Output Directory</Label>
               <Input id="output-dir" type="text" placeholder=".next" value={outputDir} onChange={(e) => setOutputDir(e.target.value)} />
             </div>
+          </fieldset>
+          <fieldset className="space-y-4">
+            <legend className="text-sm font-medium">Options</legend>
             <div className="flex items-center space-x-2">
               <Checkbox id="install-deps" defaultChecked />
               <Label htmlFor="install-deps">Install dependencies</Label>
@@ -108,12 +113,12 @@ export default function ForgeDeployCreate() {
               <Checkbox id="clean-build" />
               <Label htmlFor="clean-build">Clean build (no cache)</Label>
             </div>
-          </div>
+          </fieldset>
         </CardContent>
       </Card>
       <div className="flex flex-row gap-2 justify-end">
         <Button variant="ghost" onClick={() => router.push("/deployments")}>Cancel</Button>
-        <Button variant="default" onClick={() => fetch("/api/deployments", { method: "POST" }).then(() => toast.success("Deployment started successfully"))}>
+        <Button variant="default" onClick={() => fetch("/api/deployments", { method: "POST" }).then(() => { toast.success("Deployment started successfully"); setDeployName(""); setDeployBranch(""); setDeployNotes(""); setBuildCommand(""); setOutputDir(""); })}>
           <Rocket className="mr-2 h-4 w-4" />
           Deploy
         </Button>

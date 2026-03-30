@@ -171,10 +171,15 @@ layout:
                     - type: text
                       props:
                         text: "Databases"
-                    - type: badge
+                    - type: tooltip
                       props:
-                        text: "1 degraded"
-                        variant: danger
+                        content: "db-replica-03 is experiencing high latency"
+                        side: left
+                      children:
+                        - type: badge
+                          props:
+                            text: "1 degraded"
+                            variant: danger
                 - type: progress
                   props:
                     value: 85
@@ -198,9 +203,10 @@ layout:
           props:
             title: Recent Jobs
           children:
-            - type: rows
+            - type: list
               props:
-                gap: 3
+                datasource: ScheduledJob
+                emptyMessage: No recent jobs
               children:
                 - type: columns
                   props:
@@ -213,54 +219,12 @@ layout:
                       children:
                         - type: text
                           props:
-                            text: "db-backup-prod"
+                            text: "{{item.name}}"
                         - type: text
                           props:
-                            text: "Completed 2m ago"
+                            text: "{{item.lastRun}}"
                             muted: true
                     - type: badge
                       props:
-                        text: Success
-                        variant: success
-                - type: separator
-                - type: columns
-                  props:
-                    justify: between
-                    align: center
-                  children:
-                    - type: rows
-                      props:
-                        gap: 0
-                      children:
-                        - type: text
-                          props:
-                            text: "cache-purge"
-                        - type: text
-                          props:
-                            text: "Running now"
-                            muted: true
-                    - type: badge
-                      props:
-                        text: Running
+                        text: "{{item.status}}"
                         variant: default
-                - type: separator
-                - type: columns
-                  props:
-                    justify: between
-                    align: center
-                  children:
-                    - type: rows
-                      props:
-                        gap: 0
-                      children:
-                        - type: text
-                          props:
-                            text: "ssl-cert-renew"
-                        - type: text
-                          props:
-                            text: "Failed 1h ago"
-                            muted: true
-                    - type: badge
-                      props:
-                        text: Failed
-                        variant: danger

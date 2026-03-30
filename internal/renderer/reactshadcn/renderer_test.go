@@ -53,8 +53,8 @@ func TestRendererRegistered(t *testing.T) {
 
 func TestRenderBasicPage(t *testing.T) {
 	page := testPage(config.Component{
-		ID:   "root",
-		Type: "rows",
+		ID:    "root",
+		Type:  "rows",
 		Props: map[string]interface{}{"gap": 4},
 		Children: []config.Component{
 			{
@@ -434,8 +434,8 @@ func TestRenderTabs(t *testing.T) {
 
 func TestRenderGrid(t *testing.T) {
 	page := testPage(config.Component{
-		ID:   "root",
-		Type: "grid",
+		ID:    "root",
+		Type:  "grid",
 		Props: map[string]interface{}{"columns": 3, "gap": 4},
 		Children: []config.Component{
 			{Type: "text", Props: map[string]interface{}{"text": "A"}},
@@ -449,15 +449,15 @@ func TestRenderGrid(t *testing.T) {
 		t.Fatalf("renderPage: %v", err)
 	}
 	content := string(files[0].Content)
-	if !strings.Contains(content, "grid grid-cols-3 gap-4") {
-		t.Error("expected grid classes")
+	if !strings.Contains(content, "grid grid-cols-1 md:grid-cols-3 gap-4") {
+		t.Error("expected responsive grid classes")
 	}
 }
 
 func TestRenderColumns(t *testing.T) {
 	page := testPage(config.Component{
-		ID:   "root",
-		Type: "columns",
+		ID:    "root",
+		Type:  "columns",
 		Props: map[string]interface{}{"gap": 6, "justify": "between"},
 		Children: []config.Component{
 			{Type: "text", Props: map[string]interface{}{"text": "Left"}},
@@ -883,13 +883,13 @@ func TestE2EGeneration(t *testing.T) {
 		Title:   "Dashboard",
 		Overlay: "page",
 		Layout: config.Component{
-			ID:   "root",
-			Type: "rows",
+			ID:    "root",
+			Type:  "rows",
 			Props: map[string]interface{}{"gap": 4},
 			Children: []config.Component{
 				{Type: "heading", Props: map[string]interface{}{"level": 1, "text": "Dashboard"}},
 				{
-					Type: "columns",
+					Type:  "columns",
 					Props: map[string]interface{}{"gap": 4},
 					Children: []config.Component{
 						{Type: "button", Props: map[string]interface{}{"label": "New", "variant": "primary"}},
@@ -1006,7 +1006,7 @@ func TestNavigateAction(t *testing.T) {
 		Type: "rows",
 		Children: []config.Component{
 			{
-				Type: "button",
+				Type:  "button",
 				Props: map[string]interface{}{"label": "Go"},
 				Actions: map[string]config.Action{
 					"click": {Type: "navigate", Page: "dashboard"},

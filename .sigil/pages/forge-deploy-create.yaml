@@ -50,6 +50,9 @@ layout:
                 label: Branch
                 placeholder: main
 
+            - type: label
+              props:
+                text: Environment
             - type: radio-group
               props:
                 defaultValue: production
@@ -72,9 +75,9 @@ layout:
       props:
         title: Build Settings
       children:
-        - type: rows
+        - type: field-group
           props:
-            gap: 4
+            label: Build Configuration
           children:
             - type: input
               id: build-command
@@ -88,6 +91,10 @@ layout:
                 label: Output Directory
                 placeholder: .next
 
+        - type: field-group
+          props:
+            label: Options
+          children:
             - type: checkbox
               id: install-deps
               props:

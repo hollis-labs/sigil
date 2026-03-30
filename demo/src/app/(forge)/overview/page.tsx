@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Toaster } from "@/components/ui/sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DataTable } from "@/components/data-table";
@@ -121,6 +120,7 @@ export default function ForgeOverview() {
               { accessorKey: "duration", header: "Duration" },
               { accessorKey: "createdAt", header: "Created" },
             ]}
+            onRowClick={(row) => router.push(`/deployment-detail/${(row as { id: string }).id}`)}
           />
         </CardContent>
       </Card>
@@ -138,7 +138,16 @@ export default function ForgeOverview() {
               <Progress value={100} />
               <div className="flex flex-row gap-4 justify-between">
                 <p className="text-base">Databases</p>
-                <Badge variant="destructive">1 degraded</Badge>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger render={<span />}>
+                      <Badge variant="destructive">1 degraded</Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">
+                      <p>db-replica-03 is experiencing high latency</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <Progress value={85} />
               <div className="flex flex-row gap-4 justify-between">
@@ -154,30 +163,18 @@ export default function ForgeOverview() {
             <CardTitle>Recent Jobs</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-row gap-4 justify-between items-center">
-                <div className="flex flex-col gap-0">
-                  <p className="text-base">db-backup-prod</p>
-                  <p className="text-base text-muted-foreground">Completed 2m ago</p>
+            <div className="divide-y">
+              {scheduledJob && scheduledJob.length > 0 ? scheduledJob.map((item, i) => (
+                <div key={i} className="py-3">
+                  <div className="flex flex-row gap-4 justify-between items-center">
+                    <div className="flex flex-col gap-0">
+                      <p className="text-base">{item.name}</p>
+                      <p className="text-base text-muted-foreground">{item.lastRun}</p>
+                    </div>
+                    <Badge variant="default">{item.status}</Badge>
+                  </div>
                 </div>
-                <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Success</Badge>
-              </div>
-              <Separator />
-              <div className="flex flex-row gap-4 justify-between items-center">
-                <div className="flex flex-col gap-0">
-                  <p className="text-base">cache-purge</p>
-                  <p className="text-base text-muted-foreground">Running now</p>
-                </div>
-                <Badge variant="default">Running</Badge>
-              </div>
-              <Separator />
-              <div className="flex flex-row gap-4 justify-between items-center">
-                <div className="flex flex-col gap-0">
-                  <p className="text-base">ssl-cert-renew</p>
-                  <p className="text-base text-muted-foreground">Failed 1h ago</p>
-                </div>
-                <Badge variant="destructive">Failed</Badge>
-              </div>
+              )) : <p className="text-sm text-muted-foreground py-3">No recent jobs</p>}
             </div>
           </CardContent>
         </Card>

@@ -82,6 +82,36 @@ layout:
                         label: Save Changes
                         variant: primary
 
+            - type: accordion
+              children:
+                - type: accordion-item
+                  props:
+                    title: What happens when I change the workspace slug?
+                    value: faq-slug
+                  children:
+                    - type: text
+                      props:
+                        text: "Changing the workspace slug will update all URLs. Existing links will redirect for 30 days."
+                        muted: true
+                - type: accordion-item
+                  props:
+                    title: Can I switch environments after deploying?
+                    value: faq-env
+                  children:
+                    - type: text
+                      props:
+                        text: "Yes, you can promote deployments between environments from the deployment detail page."
+                        muted: true
+                - type: accordion-item
+                  props:
+                    title: How do I reset my API keys?
+                    value: faq-keys
+                  children:
+                    - type: text
+                      props:
+                        text: "Go to Settings → Integrations and regenerate the API key. The old key is revoked immediately."
+                        muted: true
+
         # Notifications Tab
         - type: tab
           props:

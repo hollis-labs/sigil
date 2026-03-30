@@ -8,6 +8,10 @@ import { Loader2, Plug } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { useIntegration } from "@/hooks/use-integration";
 
 export default function ForgeIntegrations() {
@@ -32,7 +36,7 @@ export default function ForgeIntegrations() {
           Add Integration
         </Button>
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {integration.map((item) => (
           <div key={item.name}>
             <Card>
@@ -45,6 +49,29 @@ export default function ForgeIntegrations() {
                   <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{item.status}</Badge>
                   <p className="text-base text-muted-foreground">{item.connectedAt}</p>
                 </div>
+                <Separator />
+                <Dialog>
+                  <DialogTrigger render={<Button variant="outline" />}>
+                    Configure
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Integration Settings</DialogTitle>
+                      <DialogDescription>Update the configuration for this integration.</DialogDescription>
+                    </DialogHeader>
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor="input-enter api key...">API Key</Label>
+                          <Input id="input-enter api key..." type="password" placeholder="Enter API key..." />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor="input-https://...">Webhook URL</Label>
+                          <Input id="input-https://..." type="text" placeholder="https://..." />
+                        </div>
+                        <Button variant="default">Save Configuration</Button>
+                      </div>
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
           </div>

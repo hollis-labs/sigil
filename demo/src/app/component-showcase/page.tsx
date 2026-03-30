@@ -25,7 +25,7 @@ export default function ComponentShowcase() {
       </div>
       <p className="text-base text-muted-foreground">Demonstrating card, switch, dropdown-menu, accordion, combobox, and tooltip components.</p>
       <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">Cards</h2>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Team Members</CardTitle>

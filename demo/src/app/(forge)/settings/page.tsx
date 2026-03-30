@@ -3,6 +3,7 @@
 
 "use client";
 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +61,26 @@ export default function ForgeSettings() {
               </div>
             </CardContent>
           </Card>
+          <Accordion className="w-full">
+            <AccordionItem value="faq-slug">
+              <AccordionTrigger>What happens when I change the workspace slug?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-base text-muted-foreground">Changing the workspace slug will update all URLs. Existing links will redirect for 30 days.</p>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="faq-env">
+              <AccordionTrigger>Can I switch environments after deploying?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-base text-muted-foreground">Yes, you can promote deployments between environments from the deployment detail page.</p>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="faq-keys">
+              <AccordionTrigger>How do I reset my API keys?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-base text-muted-foreground">Go to Settings → Integrations and regenerate the API key. The old key is revoked immediately.</p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </TabsContent>
         <TabsContent value="notifications">
           <Card>

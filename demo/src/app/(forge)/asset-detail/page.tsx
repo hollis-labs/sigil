@@ -56,7 +56,7 @@ export default function ForgeAssetDetail() {
         </div>
       </div>
       <Separator />
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Provider</CardTitle>
@@ -85,8 +85,8 @@ export default function ForgeAssetDetail() {
           </CardContent>
         </Card>
       </div>
-      <div className="flex flex-row h-full">
-        <div className="" style={{flexBasis: "60%"}}>
+      <div className="flex flex-col md:flex-row">
+        <div className="md:w-auto" style={{flexBasis: "60%"}}>
           <div className="flex flex-col gap-4 p-4">
             <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">Details</h3>
             <div className="space-y-4">
@@ -109,7 +109,7 @@ export default function ForgeAssetDetail() {
             </div>
           </div>
         </div>
-        <div className="w-px bg-border" />
+        <div className="h-px md:h-auto md:w-px bg-border" />
         <div className="flex-1">
           <div className="flex flex-col gap-4 p-4">
             <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">Configuration</h3>
