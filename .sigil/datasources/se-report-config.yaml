@@ -1,0 +1,31 @@
+alias: ReportConfig
+description: Report definitions — lens + filters for curated views
+capabilities: [search, paginate, create, read, delete]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+    sortable: true
+  - name: lens_id
+    type: string
+    filterable: true
+  - name: lens_name
+    type: string
+  - name: repo_count
+    type: number
+  - name: audience
+    type: string
+    filterable: true
+    values: [engineer, product, leadership]
+endpoints:
+  list: "GET /api/reports"
+  create: "POST /api/reports"
+  read: "GET /api/reports/{id}"
+  delete: "DELETE /api/reports/{id}"
+defaults:
+  sort: { field: name, direction: asc }
+  pageSize: 25

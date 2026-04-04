@@ -1,0 +1,31 @@
+alias: Scorecard
+description: Per-repo score containers with overall score per lens
+capabilities: [filter, sort, paginate, read]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: repo_id
+    type: string
+    filterable: true
+  - name: repo_name
+    type: string
+    searchable: true
+    sortable: true
+  - name: lens_id
+    type: string
+    filterable: true
+  - name: lens_name
+    type: string
+  - name: overall
+    type: number
+    sortable: true
+  - name: scored_at
+    type: datetime
+    sortable: true
+endpoints:
+  list: "GET /api/scorecards"
+  read: "GET /api/scorecards/{id}"
+defaults:
+  sort: { field: overall, direction: desc }
+  pageSize: 25

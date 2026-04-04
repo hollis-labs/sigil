@@ -1,0 +1,173 @@
+sigil: "1.0"
+kind: page
+id: se-settings
+title: Settings
+overlay: page
+module: se
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 5
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - type: heading
+      props:
+        level: 1
+        text: Settings
+
+    # ── Tabs ────────────────────────────────────
+    - type: tabs
+      props:
+        defaultTab: general
+      children:
+        # General Tab
+        - type: tab
+          props:
+            label: General
+            value: general
+            icon: settings
+          children:
+            - type: rows
+              props:
+                gap: 4
+              children:
+                - type: card
+                  props:
+                    title: Database Statistics
+                    description: Current database contents
+                  children:
+                    - type: grid
+                      props:
+                        columns: 3
+                        columns_sm: 2
+                        gap: 4
+                      children:
+                        - type: stat-card
+                          props:
+                            label: Repos
+                            value: "112"
+                            icon: git-fork
+                        - type: stat-card
+                          props:
+                            label: Dimensions
+                            value: "18"
+                            icon: layers
+                        - type: stat-card
+                          props:
+                            label: Lenses
+                            value: "9"
+                            icon: eye
+                        - type: stat-card
+                          props:
+                            label: Patterns
+                            value: "26"
+                            icon: shapes
+                        - type: stat-card
+                          props:
+                            label: Findings
+                            value: "43"
+                            icon: alert-triangle
+                        - type: stat-card
+                          props:
+                            label: Snapshots
+                            value: "340"
+                            icon: camera
+
+        # Import/Export Tab
+        - type: tab
+          props:
+            label: Import / Export
+            value: import-export
+            icon: upload
+          children:
+            - type: rows
+              props:
+                gap: 4
+              children:
+                - type: card
+                  props:
+                    title: Import Data
+                    description: Import repos from YAML files
+                  children:
+                    - type: columns
+                      props:
+                        gap: 3
+                      children:
+                        - type: button
+                          props:
+                            label: Import Repos YAML
+                            variant: outline
+                            icon: upload
+                          actions:
+                            click:
+                              type: toast
+                              message: YAML import coming soon
+                        - type: button
+                          props:
+                            label: Import Scores CSV
+                            variant: outline
+                            icon: upload
+                          actions:
+                            click:
+                              type: toast
+                              message: CSV import coming soon
+
+                - type: card
+                  props:
+                    title: Export Data
+                    description: Export data for backup or sharing
+                  children:
+                    - type: columns
+                      props:
+                        gap: 3
+                      children:
+                        - type: button
+                          props:
+                            label: Export Repos YAML
+                            variant: outline
+                            icon: download
+                          actions:
+                            click:
+                              type: toast
+                              message: YAML export coming soon
+                        - type: button
+                          props:
+                            label: Backup Database
+                            variant: outline
+                            icon: database
+                          actions:
+                            click:
+                              type: toast
+                              message: Database backup coming soon
+
+        # About Tab
+        - type: tab
+          props:
+            label: About
+            value: about
+            icon: info
+          children:
+            - type: card
+              props:
+                title: Stack Explorer
+                description: AI agent tooling research platform
+              children:
+                - type: rows
+                  props:
+                    gap: 3
+                  children:
+                    - type: text
+                      props:
+                        text: "Version: 0.1.0"
+                    - type: text
+                      props:
+                        text: "Stack Explorer is a multi-audience analytics platform for understanding the AI agent and developer tooling landscape. It tracks, scores, compares, and surfaces insights across repos, frameworks, and ecosystems."
+                        muted: true
+                    - type: separator
+                    - type: text
+                      props:
+                        text: "Built with Sigil — UI defined in YAML, generated as React/shadcn"
+                        muted: true

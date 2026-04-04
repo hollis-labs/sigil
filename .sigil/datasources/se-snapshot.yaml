@@ -1,0 +1,37 @@
+alias: Snapshot
+description: Time-series metrics snapshots for repos
+capabilities: [filter, sort, paginate, create]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: repo_id
+    type: string
+    filterable: true
+  - name: captured_at
+    type: datetime
+    sortable: true
+  - name: stars
+    type: number
+    sortable: true
+  - name: forks
+    type: number
+  - name: loc
+    type: number
+    sortable: true
+  - name: files
+    type: number
+  - name: contributors
+    type: number
+  - name: commits_30d
+    type: number
+    sortable: true
+  - name: complexity_avg
+    type: number
+endpoints:
+  list: "GET /api/snapshots"
+  create: "POST /api/snapshots"
+  read: "GET /api/snapshots/{id}"
+defaults:
+  sort: { field: captured_at, direction: desc }
+  pageSize: 25

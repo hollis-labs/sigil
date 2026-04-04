@@ -1,0 +1,176 @@
+sigil: "1.0"
+kind: page
+id: se-gap-analysis
+title: Gap Analysis
+overlay: page
+module: se
+
+datasources:
+  - alias: ComparisonSet
+    capabilities: [list]
+  - alias: Finding
+    capabilities: [filter]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 5
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: rows
+          props:
+            gap: 1
+          children:
+            - type: heading
+              props:
+                level: 1
+                text: Gap Analysis
+            - type: text
+              props:
+                text: "Compare your projects against reference implementations"
+                muted: true
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: select
+              props:
+                placeholder: Select comparison set
+                options:
+                  - value: own-vs-top
+                    label: "Own Projects vs Top Frameworks"
+                  - value: go-vs-ts
+                    label: "Go Agents vs TypeScript Agents"
+                  - value: oss-vs-commercial
+                    label: "Open Source vs Commercial"
+            - type: button
+              props:
+                label: New Comparison
+                variant: primary
+                icon: plus
+              actions:
+                click:
+                  type: modal
+                  title: Create Comparison Set
+                  fields:
+                    - name: name
+                      label: Name
+                      type: text
+                      required: true
+                      placeholder: "e.g., Own vs Top 10"
+                  submit:
+                    datasource: ComparisonSet
+                    method: POST
+
+    # ── Charts Row ──────────────────────────────
+    - type: grid
+      props:
+        columns: 2
+        columns_sm: 1
+        gap: 4
+      children:
+        - type: card
+          props:
+            title: Advantages
+            description: "Dimensions where own projects outperform references"
+          children:
+            - type: chart
+              props:
+                type: bar
+                xKey: dimension
+                showGrid: true
+                showLegend: false
+                series:
+                  - key: delta
+                    label: Advantage
+                    color: "oklch(0.75 0.18 155)"
+                data:
+                  - { dimension: "Code Quality", delta: 1.3 }
+                  - { dimension: "Architecture", delta: 1.2 }
+                  - { dimension: "Developer UX", delta: 0.8 }
+                  - { dimension: "Performance", delta: 0.4 }
+
+        - type: card
+          props:
+            title: Gaps
+            description: "Dimensions where own projects trail references"
+          children:
+            - type: chart
+              props:
+                type: bar
+                xKey: dimension
+                showGrid: true
+                showLegend: false
+                series:
+                  - key: gap
+                    label: Gap
+                    color: "oklch(0.65 0.2 25)"
+                data:
+                  - { dimension: "Community", gap: 4.6 }
+                  - { dimension: "Testing", gap: 0.9 }
+                  - { dimension: "Security", gap: 0.5 }
+                  - { dimension: "Documentation", gap: 0.3 }
+
+    # ── Dimension Breakdown Table ───────────────
+    - type: card
+      props:
+        title: Dimension Breakdown
+        description: "Side-by-side comparison — own projects vs reference average"
+      children:
+        - id: gap-table
+          type: data-table
+          props:
+            datasource: ComparisonSet
+            columns:
+              - label: Comparison Set
+                field: name
+                sortable: true
+              - label: Subjects
+                field: subject_count
+              - label: References
+                field: reference_count
+            pagination:
+              pageSize: 10
+            dense: true
+
+    # ── Gap Findings ────────────────────────────
+    - type: card
+      props:
+        title: Gap Findings
+        description: Findings generated from gap analysis
+      children:
+        - id: gap-findings
+          type: data-table
+          props:
+            datasource: Finding
+            columns:
+              - label: Title
+                field: title
+                sortable: true
+              - label: Category
+                field: category
+                render: badge
+                variants:
+                  gap: danger
+                  strength: success
+                  opportunity: info
+              - label: Severity
+                field: severity
+                render: badge
+                variants:
+                  critical: danger
+                  high: warning
+                  medium: default
+                  low: info
+              - label: Repo
+                field: repo_name
+            pagination:
+              pageSize: 10
+            dense: true

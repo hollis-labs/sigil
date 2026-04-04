@@ -1,0 +1,292 @@
+sigil: "1.0"
+kind: page
+id: se-dashboard
+title: Dashboard
+overlay: page
+module: se
+
+datasources:
+  - alias: Repo
+    capabilities: [list, filter]
+  - alias: Finding
+    capabilities: [list, filter]
+  - alias: Scorecard
+    capabilities: [list, filter]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: rows
+          props:
+            gap: 1
+          children:
+            - type: heading
+              props:
+                level: 1
+                text: Dashboard
+            - type: text
+              props:
+                text: AI agent tooling research landscape
+                muted: true
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: select
+              props:
+                placeholder: Last 30 days
+                options:
+                  - value: 7d
+                    label: Last 7 days
+                  - value: 30d
+                    label: Last 30 days
+                  - value: 90d
+                    label: Last 90 days
+                  - value: all
+                    label: All time
+            - type: button
+              props:
+                label: Run Scan
+                variant: primary
+                icon: play
+              actions:
+                click:
+                  type: toast
+                  message: Scan queued — this would trigger a Hadron blueprint
+
+    # ── Stat Cards ──────────────────────────────
+    - type: grid
+      props:
+        columns: 5
+        columns_md: 3
+        columns_sm: 2
+        gap: 4
+      children:
+        - type: stat-card
+          props:
+            label: Total Repos
+            value: "112"
+            icon: git-fork
+        - type: stat-card
+          props:
+            label: Scored
+            value: "47"
+            trend: up
+            icon: bar-chart-3
+        - type: stat-card
+          props:
+            label: Dimensions
+            value: "18"
+            icon: layers
+        - type: stat-card
+          props:
+            label: Patterns
+            value: "26"
+            icon: shapes
+        - type: stat-card
+          props:
+            label: Findings
+            value: "43"
+            trend: up
+            icon: alert-triangle
+
+    # ── Charts Row ──────────────────────────────
+    - type: grid
+      props:
+        columns: 3
+        columns_md: 2
+        columns_sm: 1
+        gap: 4
+      children:
+        - type: card
+          props:
+            title: Repos by Category
+            description: Distribution across repo types
+          children:
+            - type: chart
+              props:
+                type: donut
+                xKey: category
+                showLegend: true
+                series:
+                  - key: count
+                    label: Repos
+                data:
+                  - { category: "Framework", count: 28, fill: "oklch(0.623 0.214 259.815)" }
+                  - { category: "Library", count: 24, fill: "oklch(0.6 0.118 184.704)" }
+                  - { category: "Tool", count: 22, fill: "oklch(0.828 0.189 84.429)" }
+                  - { category: "Platform", count: 18, fill: "oklch(0.769 0.188 70.08)" }
+                  - { category: "SDK", count: 12, fill: "oklch(0.646 0.222 41.116)" }
+                  - { category: "Other", count: 8, fill: "oklch(0.55 0.02 0)" }
+
+        - type: card
+          props:
+            title: Score Distribution
+            description: Repos by overall score range
+          children:
+            - type: chart
+              props:
+                type: bar
+                xKey: range
+                showGrid: true
+                showLegend: false
+                series:
+                  - key: count
+                    label: Repos
+                data:
+                  - { range: "0-2", count: 3 }
+                  - { range: "2-4", count: 8 }
+                  - { range: "4-6", count: 14 }
+                  - { range: "6-8", count: 16 }
+                  - { range: "8-10", count: 6 }
+
+        - type: card
+          props:
+            title: Own Projects vs References
+            description: Average scores by dimension
+          children:
+            - type: chart
+              props:
+                type: bar
+                xKey: dimension
+                showGrid: true
+                showLegend: true
+                series:
+                  - key: own
+                    label: Own Projects
+                    color: "oklch(0.623 0.214 259.815)"
+                  - key: reference
+                    label: Reference Avg
+                    color: "oklch(0.55 0.02 0)"
+                data:
+                  - { dimension: "Code Quality", own: 7.8, reference: 6.5 }
+                  - { dimension: "Testing", own: 6.2, reference: 7.1 }
+                  - { dimension: "Docs", own: 5.5, reference: 5.8 }
+                  - { dimension: "Architecture", own: 8.1, reference: 6.9 }
+                  - { dimension: "Security", own: 6.8, reference: 7.3 }
+                  - { dimension: "Community", own: 3.2, reference: 7.8 }
+
+    # ── Bottom Row ──────────────────────────────
+    - type: grid
+      props:
+        columns: 2
+        columns_sm: 1
+        gap: 4
+      children:
+        # Top Scored Repos
+        - type: card
+          props:
+            title: Top Scored Repos
+            description: Highest overall scores in current lens
+          children:
+            - id: table-top-repos
+              type: data-table
+              props:
+                datasource: Scorecard
+                columns:
+                  - label: Repo
+                    field: repo_name
+                    sortable: true
+                  - label: Score
+                    field: overall
+                    sortable: true
+                  - label: Lens
+                    field: lens_name
+                    render: badge
+                    variants:
+                      Engineering: info
+                      Product: default
+                      Leadership: warning
+                      Security: danger
+                      Community: success
+                      Overall: default
+                      Maintainability: info
+                      Innovation: success
+                      Adoption: warning
+                pagination:
+                  pageSize: 5
+                dense: true
+
+        # Recent Findings
+        - type: card
+          props:
+            title: Recent Findings
+            description: Latest research observations
+          children:
+            - id: table-recent-findings
+              type: data-table
+              props:
+                datasource: Finding
+                columns:
+                  - label: Title
+                    field: title
+                    sortable: true
+                  - label: Repo
+                    field: repo_name
+                  - label: Category
+                    field: category
+                    render: badge
+                    variants:
+                      gap: danger
+                      strength: success
+                      opportunity: info
+                      risk: warning
+                  - label: Severity
+                    field: severity
+                    render: badge
+                    variants:
+                      critical: danger
+                      high: warning
+                      medium: default
+                      low: info
+                pagination:
+                  pageSize: 5
+                dense: true
+              actions:
+                rowClick:
+                  type: navigate
+                  page: se-findings
+
+    # ── Quick Actions ───────────────────────────
+    - type: columns
+      props:
+        gap: 3
+      children:
+        - type: button
+          props:
+            label: Add Repo
+            variant: outline
+            icon: git-fork
+          actions:
+            click:
+              type: toast
+              message: Add repo coming soon
+        - type: button
+          props:
+            label: Generate Report
+            variant: outline
+            icon: file-text
+          actions:
+            click:
+              type: toast
+              message: Report generation coming soon
+        - type: button
+          props:
+            label: New Comparison
+            variant: outline
+            icon: git-compare
+          actions:
+            click:
+              type: toast
+              message: Comparison set creation coming soon

@@ -1,0 +1,50 @@
+alias: Repo
+description: Repository catalog — tracked repos with metadata and scores
+capabilities: [search, filter, sort, paginate, create, read, update, delete]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+    sortable: true
+  - name: url
+    type: string
+    required: true
+  - name: description
+    type: string
+    searchable: true
+  - name: stack
+    type: string
+    filterable: true
+    values: [TypeScript, Go, Rust, Python, Java, Ruby, C#, Multi]
+  - name: category
+    type: string
+    filterable: true
+    values: [framework, library, tool, platform, sdk, runtime, infra]
+  - name: is_own
+    type: boolean
+    filterable: true
+    default: false
+  - name: local_path
+    type: string
+  - name: score
+    type: number
+    sortable: true
+  - name: loc
+    type: number
+    sortable: true
+  - name: tags
+    type: string
+    searchable: true
+endpoints:
+  list: "GET /api/repos"
+  create: "POST /api/repos"
+  read: "GET /api/repos/{id}"
+  update: "PUT /api/repos/{id}"
+  delete: "DELETE /api/repos/{id}"
+defaults:
+  sort: { field: name, direction: asc }
+  pageSize: 25

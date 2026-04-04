@@ -1,0 +1,28 @@
+alias: Dimension
+description: Scoring dimensions — axes along which repos are evaluated
+capabilities: [search, paginate, create, read]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+    sortable: true
+  - name: category
+    type: string
+    filterable: true
+    values: [code-quality, architecture, community, operations, documentation, security]
+  - name: weight
+    type: number
+    default: 1.0
+  - name: description
+    type: string
+endpoints:
+  list: "GET /api/dimensions"
+  create: "POST /api/dimensions"
+  read: "GET /api/dimensions/{id}"
+defaults:
+  sort: { field: category, direction: asc }
+  pageSize: 50

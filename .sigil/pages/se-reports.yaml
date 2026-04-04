@@ -1,0 +1,118 @@
+sigil: "1.0"
+kind: page
+id: se-reports
+title: Reports
+overlay: page
+module: se
+
+datasources:
+  - alias: ReportConfig
+    capabilities: [search, paginate, create, delete]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 5
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: rows
+          props:
+            gap: 1
+          children:
+            - type: heading
+              props:
+                level: 1
+                text: Reports
+            - type: text
+              props:
+                text: "Curated views combining a lens with filtered repos"
+                muted: true
+        - type: button
+          props:
+            label: Create Report
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: modal
+              title: Create Report Config
+              size: lg
+              fields:
+                - name: name
+                  label: Report Name
+                  type: text
+                  required: true
+                  placeholder: "e.g., Q1 Agent Framework Review"
+                - name: audience
+                  label: Audience
+                  type: select
+                  options:
+                    - { value: engineer, label: Engineer }
+                    - { value: product, label: Product }
+                    - { value: leadership, label: Leadership }
+                - name: lens_id
+                  label: Lens
+                  type: select
+                  options:
+                    - { value: engineering, label: Engineering }
+                    - { value: product, label: Product }
+                    - { value: leadership, label: Leadership }
+                    - { value: security, label: Security }
+                    - { value: overall, label: Overall }
+              submit:
+                datasource: ReportConfig
+                method: POST
+              refresh: reports-table
+
+    # ── Search ──────────────────────────────────
+    - id: search-reports
+      type: search-bar
+      props:
+        placeholder: "Search reports..."
+        datasource: ReportConfig
+        debounce: 300
+
+    # ── Reports Table ───────────────────────────
+    - type: card
+      props:
+        title: Report Configs
+        description: "Each report combines a lens with filtered repos for a curated view"
+      children:
+        - id: reports-table
+          type: data-table
+          props:
+            datasource: ReportConfig
+            columns:
+              - label: Name
+                field: name
+                sortable: true
+              - label: Lens
+                field: lens_name
+                render: badge
+                variants:
+                  Engineering: info
+                  Product: default
+                  Leadership: warning
+              - label: Repos
+                field: repo_count
+              - label: Audience
+                field: audience
+                render: badge
+                variants:
+                  engineer: info
+                  product: success
+                  leadership: warning
+            pagination:
+              pageSize: 15
+            hoverable: true
+          actions:
+            rowClick:
+              type: toast
+              message: Report detail coming soon

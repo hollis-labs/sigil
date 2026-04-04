@@ -1,0 +1,181 @@
+sigil: "1.0"
+kind: page
+id: se-findings
+title: Findings
+overlay: page
+module: se
+
+datasources:
+  - alias: Finding
+    capabilities: [search, filter, sort, paginate, create]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 5
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: rows
+          props:
+            gap: 1
+          children:
+            - type: heading
+              props:
+                level: 1
+                text: Findings
+            - type: text
+              props:
+                text: "Research observations — gaps, strengths, opportunities, and risks"
+                muted: true
+        - type: button
+          props:
+            label: Add Finding
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: modal
+              title: Add Finding
+              size: lg
+              fields:
+                - name: title
+                  label: Title
+                  type: text
+                  required: true
+                  placeholder: "e.g., Missing retry logic in error handling"
+                - name: category
+                  label: Category
+                  type: select
+                  options:
+                    - { value: gap, label: Gap }
+                    - { value: strength, label: Strength }
+                    - { value: opportunity, label: Opportunity }
+                    - { value: risk, label: Risk }
+                - name: severity
+                  label: Severity
+                  type: select
+                  options:
+                    - { value: critical, label: Critical }
+                    - { value: high, label: High }
+                    - { value: medium, label: Medium }
+                    - { value: low, label: Low }
+                - name: description
+                  label: Description
+                  type: textarea
+                  rows: 4
+              submit:
+                datasource: Finding
+                method: POST
+              refresh: findings-table
+
+    # ── Search + Filters ────────────────────────
+    - type: columns
+      props:
+        gap: 3
+        align: center
+      children:
+        - id: search-findings
+          type: search-bar
+          props:
+            placeholder: "Search findings..."
+            datasource: Finding
+            debounce: 300
+        - id: filter-category
+          type: select
+          props:
+            placeholder: All Categories
+            options:
+              - { value: all, label: All Categories }
+              - { value: gap, label: Gap }
+              - { value: strength, label: Strength }
+              - { value: opportunity, label: Opportunity }
+              - { value: risk, label: Risk }
+          actions:
+            change:
+              type: emit
+              datasource: Finding
+              field: category
+        - id: filter-severity
+          type: select
+          props:
+            placeholder: All Severities
+            options:
+              - { value: all, label: All Severities }
+              - { value: critical, label: Critical }
+              - { value: high, label: High }
+              - { value: medium, label: Medium }
+              - { value: low, label: Low }
+          actions:
+            change:
+              type: emit
+              datasource: Finding
+              field: severity
+        - id: filter-status
+          type: select
+          props:
+            placeholder: All Statuses
+            options:
+              - { value: all, label: All Statuses }
+              - { value: open, label: Open }
+              - { value: acknowledged, label: Acknowledged }
+              - { value: resolved, label: Resolved }
+          actions:
+            change:
+              type: emit
+              datasource: Finding
+              field: status
+
+    # ── Findings Table ──────────────────────────
+    - type: card
+      props:
+        title: All Findings
+        description: "Research observations sorted by severity — click to expand"
+      children:
+        - id: findings-table
+          type: data-table
+          props:
+            datasource: Finding
+            columns:
+              - label: Title
+                field: title
+                sortable: true
+              - label: Repo
+                field: repo_name
+              - label: Category
+                field: category
+                render: badge
+                variants:
+                  gap: danger
+                  strength: success
+                  opportunity: info
+                  risk: warning
+              - label: Severity
+                field: severity
+                render: badge
+                variants:
+                  critical: danger
+                  high: warning
+                  medium: default
+                  low: info
+              - label: Status
+                field: status
+                render: badge
+                variants:
+                  open: danger
+                  acknowledged: warning
+                  resolved: success
+            pagination:
+              pageSize: 20
+            hoverable: true
+            dense: true
+          actions:
+            rowClick:
+              type: toast
+              message: Finding detail coming soon

@@ -1,0 +1,26 @@
+alias: DimensionScore
+description: Individual dimension scores within a scorecard
+capabilities: [filter, create, update]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: scorecard_id
+    type: string
+    filterable: true
+  - name: dimension_id
+    type: string
+    filterable: true
+  - name: dimension_name
+    type: string
+  - name: score
+    type: number
+    sortable: true
+  - name: evidence
+    type: string
+endpoints:
+  list: "GET /api/scores"
+  create: "POST /api/scores"
+  update: "PUT /api/scores/{id}"
+defaults:
+  pageSize: 50

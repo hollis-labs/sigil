@@ -1,0 +1,163 @@
+sigil: "1.0"
+kind: page
+id: se-scorecards
+title: Scorecards
+overlay: page
+module: se
+
+datasources:
+  - alias: Scorecard
+    capabilities: [filter, sort, paginate]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 5
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: rows
+          props:
+            gap: 1
+          children:
+            - type: heading
+              props:
+                level: 1
+                text: Scorecards
+            - type: text
+              props:
+                text: "Compare repos across dimensions — scores colored by range"
+                muted: true
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: button
+              props:
+                label: Export CSV
+                variant: outline
+                icon: download
+              actions:
+                click:
+                  type: toast
+                  message: CSV export coming soon
+            - type: button
+              props:
+                label: Compare
+                variant: primary
+                icon: git-compare
+              actions:
+                click:
+                  type: toast
+                  message: Compare mode coming soon
+
+    # ── Search ──────────────────────────────────
+    - id: search-scorecards
+      type: search-bar
+      props:
+        placeholder: "Search scorecards by repo name..."
+        datasource: Scorecard
+        debounce: 300
+
+    # ── Scorecard Table ─────────────────────────
+    - type: card
+      props:
+        title: All Scorecards
+        description: "Scored repos ranked by overall score in the active lens"
+      children:
+        - type: columns
+          props:
+            gap: 4
+            align: center
+            padding: 0
+          children:
+            - type: text
+              props:
+                text: "Score key:"
+                muted: true
+            - type: badge
+              props:
+                text: "8-10 Strong"
+                variant: success
+            - type: badge
+              props:
+                text: "5-7 Average"
+                variant: warning
+            - type: badge
+              props:
+                text: "0-4 Weak"
+                variant: danger
+            - type: badge
+              props:
+                text: "— Unscored"
+                variant: default
+        - id: scorecards-table
+          type: data-table
+          props:
+            datasource: Scorecard
+            columns:
+              - label: Repo
+                field: repo_name
+                sortable: true
+              - label: Overall
+                field: overall
+                sortable: true
+              - label: Lens
+                field: lens_name
+                render: badge
+                variants:
+                  Engineering: info
+                  Product: default
+                  Leadership: warning
+                  Security: danger
+                  Community: success
+                  Overall: default
+                  Maintainability: info
+                  Innovation: success
+                  Adoption: warning
+              - label: Scored
+                field: scored_at
+                sortable: true
+            pagination:
+              pageSize: 25
+            dense: true
+            hoverable: true
+          actions:
+            rowClick:
+              type: navigate
+              page: se-repo-detail
+              params:
+                id: "{{row.repo_id}}"
+
+    # ── Distribution Chart ──────────────────────
+    - type: card
+      props:
+        title: Score Distribution
+        description: Overall scores across all scored repos
+      children:
+        - type: chart
+          props:
+            type: bar
+            xKey: repo
+            showGrid: true
+            showLegend: false
+            series:
+              - key: score
+                label: Overall Score
+            data:
+              - { repo: "LangChain", score: 8.4 }
+              - { repo: "AutoGen", score: 7.9 }
+              - { repo: "CrewAI", score: 7.6 }
+              - { repo: "Semantic Kernel", score: 7.2 }
+              - { repo: "LlamaIndex", score: 7.0 }
+              - { repo: "Haystack", score: 6.8 }
+              - { repo: "Flowise", score: 6.5 }
+              - { repo: "Dify", score: 6.2 }
+              - { repo: "OpenDevin", score: 5.8 }
+              - { repo: "MetaGPT", score: 5.4 }

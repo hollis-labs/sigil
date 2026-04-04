@@ -1,0 +1,40 @@
+alias: Finding
+description: Research findings — observations, gaps, and opportunities
+capabilities: [search, filter, sort, paginate, create, read, update]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: title
+    type: string
+    required: true
+    searchable: true
+    sortable: true
+  - name: repo_id
+    type: string
+    filterable: true
+  - name: repo_name
+    type: string
+    searchable: true
+  - name: category
+    type: string
+    filterable: true
+    values: [gap, strength, opportunity, risk]
+  - name: severity
+    type: string
+    filterable: true
+    values: [critical, high, medium, low]
+  - name: status
+    type: string
+    filterable: true
+    values: [open, acknowledged, resolved]
+  - name: description
+    type: string
+endpoints:
+  list: "GET /api/findings"
+  create: "POST /api/findings"
+  read: "GET /api/findings/{id}"
+  update: "PUT /api/findings/{id}"
+defaults:
+  sort: { field: severity, direction: asc }
+  pageSize: 25

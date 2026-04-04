@@ -1,0 +1,22 @@
+name: stack-explorer
+description: Dark theme with blue accents for Stack Explorer — information-dense analytics dashboard
+extends: dark
+tokens:
+  colors:
+    # Primary action color — blue-500
+    primary: "59 130 246"
+    primary-foreground: "255 255 255"
+
+    # Accent — blue-500
+    accent: "30 41 59"
+    accent-foreground: "224 231 255"
+
+    # Ring / focus — blue-500
+    ring: "59 130 246"
+
+    # Info — blue-400 (slightly lighter for dark bg)
+    info: "96 165 250"
+
+  typography:
+    font-sans: "Inter, system-ui, sans-serif"
+    font-mono: "JetBrains Mono, Fira Code, monospace"

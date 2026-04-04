@@ -243,7 +243,14 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 	case "text":
 		content := getPropString(c.Props, "text", "")
 		muted := getPropBool(c.Props, "muted")
-		size := getPropString(c.Props, "size", "base")
+		size := getPropString(c.Props, "size", "")
+		if size == "" {
+			if muted {
+				size = "sm"
+			} else {
+				size = "base"
+			}
+		}
 		classes := "text-" + size
 		if muted {
 			classes = "text-" + size + " text-muted-foreground"
@@ -253,6 +260,12 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		fmt.Fprintf(buf, "%s<p className=%q>%s</p>\n", indent, classes, content)
 
 	case "button":
+		// If the button's click action is a modal, render as Dialog + form
+		if modalAction := getModalClickAction(c.Actions); modalAction != nil {
+			renderModalButton(buf, c, indent, imports, modalAction)
+			break
+		}
+
 		imports.addShadcn("Button", "@/components/ui/button")
 		label := getPropString(c.Props, "label", "Button")
 		variant := getPropString(c.Props, "variant", "default")
@@ -1053,6 +1066,9 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 							if imports.pageModule != "" && strings.HasPrefix(href, "/"+imports.pageModule+"-") {
 								href = "/" + strings.TrimPrefix(href, "/"+imports.pageModule+"-")
 							}
+						} else if p, ok := im["page"]; ok {
+							// Convert page reference to route
+							href = pageRoute(fmt.Sprintf("%v", p), imports.pageModule)
 						}
 						isLast := i == len(itemSlice)-1
 						fmt.Fprintf(buf, "%s    <BreadcrumbItem>\n", indent)
@@ -1593,6 +1609,7 @@ func renderReactDataTable(buf *bytes.Buffer, c *config.Component, indent string,
 	}
 
 	// Columns
+	hasBadgeColumn := false
 	fmt.Fprintf(buf, "%s  columns={[\n", indent)
 	if cols, ok := c.Props["columns"]; ok {
 		if colSlice, ok := cols.([]interface{}); ok {
@@ -1600,12 +1617,47 @@ func renderReactDataTable(buf *bytes.Buffer, c *config.Component, indent string,
 				if colMap, ok := col.(map[string]interface{}); ok {
 					field := fmt.Sprintf("%v", colMap["field"])
 					label := fmt.Sprintf("%v", colMap["label"])
-					fmt.Fprintf(buf, "%s    { accessorKey: %q, header: %q },\n", indent, field, label)
+					render, _ := colMap["render"].(string)
+					variants, hasVariants := colMap["variants"].(map[string]interface{})
+
+					if render == "badge" && hasVariants {
+						hasBadgeColumn = true
+						// Build variants map
+						fmt.Fprintf(buf, "%s    {\n", indent)
+						fmt.Fprintf(buf, "%s      accessorKey: %q,\n", indent, field)
+						fmt.Fprintf(buf, "%s      header: %q,\n", indent, label)
+						fmt.Fprintf(buf, "%s      cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {\n", indent)
+						fmt.Fprintf(buf, "%s        const v = String(row.getValue(%q) ?? \"\");\n", indent, field)
+						fmt.Fprintf(buf, "%s        const variants: Record<string, string> = {", indent)
+						first := true
+						for k, v := range variants {
+							if !first {
+								fmt.Fprint(buf, ",")
+							}
+							fmt.Fprintf(buf, " %q: %q", k, v)
+							first = false
+						}
+						fmt.Fprint(buf, " };\n")
+						fmt.Fprintf(buf, "%s        const variant = variants[v] ?? variants[v.toLowerCase()] ?? \"default\";\n", indent)
+						fmt.Fprintf(buf, "%s        return <Badge variant={variant === \"danger\" ? \"destructive\" : variant === \"success\" || variant === \"warning\" || variant === \"info\" ? \"outline\" : \"secondary\"} className={\n", indent)
+						fmt.Fprintf(buf, "%s          variant === \"success\" ? \"border-emerald-500/30 bg-emerald-500/10 text-emerald-400\" :\n", indent)
+						fmt.Fprintf(buf, "%s          variant === \"warning\" ? \"border-amber-500/30 bg-amber-500/10 text-amber-400\" :\n", indent)
+						fmt.Fprintf(buf, "%s          variant === \"info\" ? \"border-blue-500/30 bg-blue-500/10 text-blue-400\" :\n", indent)
+						fmt.Fprintf(buf, "%s          variant === \"danger\" ? \"\" : \"\"\n", indent)
+						fmt.Fprintf(buf, "%s        }>{v}</Badge>;\n", indent)
+						fmt.Fprintf(buf, "%s      },\n", indent)
+						fmt.Fprintf(buf, "%s    },\n", indent)
+					} else {
+						fmt.Fprintf(buf, "%s    { accessorKey: %q, header: %q },\n", indent, field, label)
+					}
 				}
 			}
 		}
 	}
 	fmt.Fprintf(buf, "%s  ]}\n", indent)
+	if hasBadgeColumn {
+		imports.addShadcn("Badge", "@/components/ui/badge")
+	}
 	// Pass contextual empty message when search or filters are wired
 	_, hasSearchForEmpty := imports.searchDatasources[datasource]
 	if hasSearchForEmpty || len(imports.filterBindings[datasource]) > 0 {
@@ -1814,6 +1866,168 @@ func renderReactActions(actions map[string]config.Action, imports *importTracker
 	return strings.Join(attrs, "")
 }
 
+// getModalClickAction returns the click action if it is a modal, nil otherwise.
+func getModalClickAction(actions map[string]config.Action) *config.Action {
+	if a, ok := actions["click"]; ok && a.Type == "modal" {
+		return &a
+	}
+	return nil
+}
+
+// renderModalButton renders a button that opens a Dialog containing a form built from action.Fields.
+func renderModalButton(buf *bytes.Buffer, c *config.Component, indent string, imports *importTracker, action *config.Action) {
+	imports.addShadcn("Button", "@/components/ui/button")
+	imports.addShadcn("Dialog", "@/components/ui/dialog")
+	imports.addShadcn("DialogContent", "@/components/ui/dialog")
+	imports.addShadcn("DialogHeader", "@/components/ui/dialog")
+	imports.addShadcn("DialogTitle", "@/components/ui/dialog")
+	imports.addShadcn("DialogTrigger", "@/components/ui/dialog")
+	imports.addShadcn("DialogFooter", "@/components/ui/dialog")
+	imports.addShadcn("Label", "@/components/ui/label")
+	imports.addReact("useState", "react")
+
+	label := getPropString(c.Props, "label", "Button")
+	variant := mapButtonVariant(getPropString(c.Props, "variant", "default"))
+	size := getPropString(c.Props, "size", "")
+	icon := getPropString(c.Props, "icon", "")
+
+	// Generate unique state variable suffix for this modal
+	imports.modalCounter++
+	suffix := ""
+	if imports.modalCounter > 1 {
+		suffix = fmt.Sprintf("%d", imports.modalCounter)
+	}
+	openVar := fmt.Sprintf("modalOpen%s", suffix)
+	setOpenVar := fmt.Sprintf("setModalOpen%s", suffix)
+	imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState(false);", openVar, setOpenVar))
+
+	// Size class for DialogContent
+	sizeClass := ""
+	switch action.Size {
+	case "lg":
+		sizeClass = " className=\"sm:max-w-lg\""
+	case "xl":
+		sizeClass = " className=\"sm:max-w-xl\""
+	case "2xl":
+		sizeClass = " className=\"sm:max-w-2xl\""
+	case "full":
+		sizeClass = " className=\"sm:max-w-4xl\""
+	}
+
+	// Dialog wrapper
+	fmt.Fprintf(buf, "%s<Dialog open={%s} onOpenChange={%s}>\n", indent, openVar, setOpenVar)
+
+	// Trigger button
+	sizeAttr := ""
+	if size != "" {
+		sizeAttr = fmt.Sprintf(" size=%q", size)
+	}
+	if icon != "" {
+		iconComp := lucideIconName(icon)
+		imports.addLucide(iconComp)
+		fmt.Fprintf(buf, "%s  <DialogTrigger render={<Button variant=%q%s />}>\n", indent, variant, sizeAttr)
+		fmt.Fprintf(buf, "%s    <%s className=\"mr-2 h-4 w-4\" />\n", indent, iconComp)
+		fmt.Fprintf(buf, "%s    %s\n", indent, label)
+		fmt.Fprintf(buf, "%s  </DialogTrigger>\n", indent)
+	} else {
+		fmt.Fprintf(buf, "%s  <DialogTrigger render={<Button variant=%q%s />}>\n", indent, variant, sizeAttr)
+		fmt.Fprintf(buf, "%s    %s\n", indent, label)
+		fmt.Fprintf(buf, "%s  </DialogTrigger>\n", indent)
+	}
+
+	// Dialog content
+	fmt.Fprintf(buf, "%s  <DialogContent%s>\n", indent, sizeClass)
+	if action.Title != "" {
+		fmt.Fprintf(buf, "%s    <DialogHeader>\n", indent)
+		fmt.Fprintf(buf, "%s      <DialogTitle>%s</DialogTitle>\n", indent, action.Title)
+		fmt.Fprintf(buf, "%s    </DialogHeader>\n", indent)
+	}
+
+	// Form fields
+	fmt.Fprintf(buf, "%s    <div className=\"flex flex-col gap-4 py-4\">\n", indent)
+	for _, field := range action.Fields {
+		renderModalFormField(buf, field, indent+"      ", imports)
+	}
+	fmt.Fprintf(buf, "%s    </div>\n", indent)
+
+	// Footer with cancel + submit
+	fmt.Fprintf(buf, "%s    <DialogFooter>\n", indent)
+	fmt.Fprintf(buf, "%s      <Button variant=\"outline\" onClick={() => %s(false)}>Cancel</Button>\n", indent, setOpenVar)
+
+	// Build submit handler: toast success + close modal
+	imports.addReact("toast", "sonner")
+	imports.addShadcn("Toaster", "@/components/ui/sonner")
+	submitLabel := "Save"
+	toastMsg := "Saved successfully"
+	if action.Title != "" {
+		toastMsg = action.Title + " saved"
+	}
+	fmt.Fprintf(buf, "%s      <Button onClick={() => { toast.success(%q); %s(false); }}>%s</Button>\n", indent, toastMsg, setOpenVar, submitLabel)
+	fmt.Fprintf(buf, "%s    </DialogFooter>\n", indent)
+
+	fmt.Fprintf(buf, "%s  </DialogContent>\n", indent)
+	fmt.Fprintf(buf, "%s</Dialog>\n", indent)
+}
+
+// renderModalFormField renders a single form field inside a modal dialog.
+func renderModalFormField(buf *bytes.Buffer, field config.FormField, indent string, imports *importTracker) {
+	reqAttr := ""
+	if field.Required {
+		reqAttr = " required"
+	}
+
+	fmt.Fprintf(buf, "%s<div className=\"flex flex-col gap-1.5\">\n", indent)
+	fmt.Fprintf(buf, "%s  <Label htmlFor=%q>%s</Label>\n", indent, field.Name, field.Label)
+
+	switch field.Type {
+	case "textarea":
+		imports.addShadcn("Textarea", "@/components/ui/textarea")
+		rows := 3
+		if field.Rows > 0 {
+			rows = field.Rows
+		}
+		fmt.Fprintf(buf, "%s  <Textarea id=%q name=%q placeholder=%q rows={%d}%s />\n",
+			indent, field.Name, field.Name, field.Placeholder, rows, reqAttr)
+	case "select":
+		imports.addShadcn("Select", "@/components/ui/select")
+		imports.addShadcn("SelectContent", "@/components/ui/select")
+		imports.addShadcn("SelectItem", "@/components/ui/select")
+		imports.addShadcn("SelectTrigger", "@/components/ui/select")
+		imports.addShadcn("SelectValue", "@/components/ui/select")
+		placeholder := "Select..."
+		if field.Placeholder != "" {
+			placeholder = field.Placeholder
+		}
+		fmt.Fprintf(buf, "%s  <Select name=%q>\n", indent, field.Name)
+		fmt.Fprintf(buf, "%s    <SelectTrigger>\n", indent)
+		fmt.Fprintf(buf, "%s      <SelectValue placeholder=%q />\n", indent, placeholder)
+		fmt.Fprintf(buf, "%s    </SelectTrigger>\n", indent)
+		fmt.Fprintf(buf, "%s    <SelectContent>\n", indent)
+		for _, opt := range field.Options {
+			fmt.Fprintf(buf, "%s      <SelectItem value=%q>%s</SelectItem>\n", indent, opt.Value, opt.Label)
+		}
+		fmt.Fprintf(buf, "%s    </SelectContent>\n", indent)
+		fmt.Fprintf(buf, "%s  </Select>\n", indent)
+	case "switch":
+		imports.addShadcn("Switch", "@/components/ui/switch")
+		fmt.Fprintf(buf, "%s  <Switch id=%q name=%q />\n", indent, field.Name, field.Name)
+	case "checkbox":
+		imports.addShadcn("Checkbox", "@/components/ui/checkbox")
+		fmt.Fprintf(buf, "%s  <Checkbox id=%q name=%q />\n", indent, field.Name, field.Name)
+	default:
+		// text, email, url, number, etc.
+		imports.addShadcn("Input", "@/components/ui/input")
+		inputType := field.Type
+		if inputType == "" {
+			inputType = "text"
+		}
+		fmt.Fprintf(buf, "%s  <Input id=%q name=%q type=%q placeholder=%q%s />\n",
+			indent, field.Name, field.Name, inputType, field.Placeholder, reqAttr)
+	}
+
+	fmt.Fprintf(buf, "%s</div>\n", indent)
+}
+
 // importTracker collects and deduplicates imports for a TSX file.
 type importTracker struct {
 	// module -> set of named imports
@@ -1831,6 +2045,8 @@ type importTracker struct {
 	formResetters []string
 	// pageModule is the module prefix for the current page (e.g., "forge")
 	pageModule string
+	// modalCounter increments to generate unique state variable names for modal dialogs
+	modalCounter int
 }
 
 type filterBinding struct {
@@ -2043,15 +2259,15 @@ func getPropBool(props map[string]interface{}, key string) bool {
 func headingClasses(level string) string {
 	switch level {
 	case "1":
-		return "scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground"
+		return "text-2xl font-semibold tracking-tight text-foreground"
 	case "2":
-		return "scroll-m-20 text-3xl font-semibold tracking-tight text-foreground"
+		return "text-xl font-semibold tracking-tight text-foreground"
 	case "3":
-		return "scroll-m-20 text-2xl font-semibold tracking-tight text-foreground"
+		return "text-lg font-semibold tracking-tight text-foreground"
 	case "4":
-		return "scroll-m-20 text-xl font-semibold tracking-tight text-foreground"
+		return "text-base font-medium tracking-tight text-foreground"
 	default:
-		return "scroll-m-20 text-3xl font-semibold tracking-tight text-foreground"
+		return "text-xl font-semibold tracking-tight text-foreground"
 	}
 }
 

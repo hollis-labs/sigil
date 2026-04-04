@@ -1,0 +1,19 @@
+alias: Tag
+description: Faceted tags for repo classification
+capabilities: [search, paginate, create, delete]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+    sortable: true
+endpoints:
+  list: "GET /api/tags"
+  create: "POST /api/tags"
+  delete: "DELETE /api/tags/{id}"
+defaults:
+  sort: { field: name, direction: asc }
+  pageSize: 50

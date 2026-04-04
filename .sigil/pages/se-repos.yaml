@@ -1,0 +1,203 @@
+sigil: "1.0"
+kind: page
+id: se-repos
+title: Repositories
+overlay: page
+module: se
+
+datasources:
+  - alias: Repo
+    capabilities: [search, filter, sort, paginate, create, delete]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 5
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: rows
+          props:
+            gap: 1
+          children:
+            - type: heading
+              props:
+                level: 1
+                text: Repositories
+            - type: text
+              props:
+                text: "112 repos tracked across the AI agent landscape"
+                muted: true
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: button
+              props:
+                label: Import YAML
+                variant: outline
+                icon: upload
+              actions:
+                click:
+                  type: toast
+                  message: YAML import coming soon
+            - type: button
+              props:
+                label: Add Repo
+                variant: primary
+                icon: plus
+              actions:
+                click:
+                  type: modal
+                  title: Add Repository
+                  size: lg
+                  fields:
+                    - name: name
+                      label: Name
+                      type: text
+                      required: true
+                      placeholder: "e.g., langchain"
+                    - name: url
+                      label: URL
+                      type: text
+                      required: true
+                      placeholder: "https://github.com/org/repo"
+                    - name: description
+                      label: Description
+                      type: textarea
+                      rows: 2
+                    - name: category
+                      label: Category
+                      type: select
+                      options:
+                        - { value: framework, label: Framework }
+                        - { value: library, label: Library }
+                        - { value: tool, label: Tool }
+                        - { value: platform, label: Platform }
+                        - { value: sdk, label: SDK }
+                        - { value: runtime, label: Runtime }
+                        - { value: infra, label: Infrastructure }
+                    - name: stack
+                      label: Primary Stack
+                      type: select
+                      options:
+                        - { value: TypeScript, label: TypeScript }
+                        - { value: Go, label: Go }
+                        - { value: Rust, label: Rust }
+                        - { value: Python, label: Python }
+                        - { value: Java, label: Java }
+                        - { value: Ruby, label: Ruby }
+                        - { value: "C#", label: "C#" }
+                        - { value: Multi, label: Multi-language }
+                    - name: is_own
+                      label: Own Project
+                      type: switch
+                      default: false
+                  submit:
+                    datasource: Repo
+                    method: POST
+                  refresh: repos-table
+
+    # ── Search + Filters ────────────────────────
+    - type: columns
+      props:
+        gap: 3
+        align: center
+      children:
+        - id: search-repos
+          type: search-bar
+          props:
+            placeholder: "Search repos by name, description, or tags..."
+            datasource: Repo
+            debounce: 300
+        - id: filter-category
+          type: select
+          props:
+            placeholder: All Categories
+            options:
+              - { value: all, label: All Categories }
+              - { value: framework, label: Framework }
+              - { value: library, label: Library }
+              - { value: tool, label: Tool }
+              - { value: platform, label: Platform }
+              - { value: sdk, label: SDK }
+          actions:
+            change:
+              type: emit
+              datasource: Repo
+              field: category
+        - id: filter-stack
+          type: select
+          props:
+            placeholder: All Stacks
+            options:
+              - { value: all, label: All Stacks }
+              - { value: TypeScript, label: TypeScript }
+              - { value: Go, label: Go }
+              - { value: Rust, label: Rust }
+              - { value: Python, label: Python }
+          actions:
+            change:
+              type: emit
+              datasource: Repo
+              field: stack
+
+    # ── Data Table ──────────────────────────────
+    - type: card
+      props:
+        title: Repo Catalog
+        description: "Click a row to view details — multi-select for bulk actions"
+      children:
+        - id: repos-table
+          type: data-table
+          props:
+            datasource: Repo
+            columns:
+              - label: Name
+                field: name
+                sortable: true
+              - label: Category
+                field: category
+                render: badge
+                variants:
+                  framework: info
+                  library: default
+                  tool: success
+                  platform: warning
+                  sdk: info
+                  runtime: default
+                  infra: warning
+              - label: Stack
+                field: stack
+                render: badge
+                variants:
+                  TypeScript: info
+                  Go: success
+                  Rust: warning
+                  Python: default
+                  Java: danger
+              - label: Score
+                field: score
+                sortable: true
+              - label: LoC
+                field: loc
+                sortable: true
+              - label: Tags
+                field: tags
+            selection: multi
+            pagination:
+              pageSize: 20
+            hoverable: true
+            dense: true
+          actions:
+            rowClick:
+              type: navigate
+              page: se-repo-detail
+              params:
+                id: "{{row.id}}"

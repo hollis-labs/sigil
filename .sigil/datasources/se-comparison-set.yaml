@@ -1,0 +1,24 @@
+alias: ComparisonSet
+description: Gap analysis comparison groups — subjects vs references
+capabilities: [search, paginate, create, read, delete]
+fields:
+  - name: id
+    type: string
+    primary: true
+  - name: name
+    type: string
+    required: true
+    searchable: true
+    sortable: true
+  - name: subject_count
+    type: number
+  - name: reference_count
+    type: number
+endpoints:
+  list: "GET /api/comparison-sets"
+  create: "POST /api/comparison-sets"
+  read: "GET /api/comparison-sets/{id}"
+  delete: "DELETE /api/comparison-sets/{id}"
+defaults:
+  sort: { field: name, direction: asc }
+  pageSize: 25

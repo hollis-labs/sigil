@@ -1,0 +1,152 @@
+sigil: "1.0"
+kind: page
+id: se-patterns
+title: Architecture Patterns
+overlay: page
+module: se
+
+datasources:
+  - alias: Pattern
+    capabilities: [search, filter, sort, paginate, create]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 5
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: rows
+          props:
+            gap: 1
+          children:
+            - type: heading
+              props:
+                level: 1
+                text: Architecture Patterns
+            - type: text
+              props:
+                text: "26 patterns and anti-patterns observed across repos"
+                muted: true
+        - type: button
+          props:
+            label: Add Pattern
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: modal
+              title: Add Pattern
+              fields:
+                - name: name
+                  label: Name
+                  type: text
+                  required: true
+                  placeholder: "e.g., Plugin Architecture"
+                - name: type
+                  label: Type
+                  type: select
+                  options:
+                    - { value: pattern, label: Pattern }
+                    - { value: anti-pattern, label: Anti-Pattern }
+                - name: category
+                  label: Category
+                  type: select
+                  options:
+                    - { value: structural, label: Structural }
+                    - { value: behavioral, label: Behavioral }
+                    - { value: operational, label: Operational }
+                    - { value: security, label: Security }
+                    - { value: testing, label: Testing }
+                - name: description
+                  label: Description
+                  type: textarea
+                  rows: 3
+              submit:
+                datasource: Pattern
+                method: POST
+              refresh: patterns-table
+
+    # ── Search + Filters ────────────────────────
+    - type: columns
+      props:
+        gap: 3
+        align: center
+      children:
+        - id: search-patterns
+          type: search-bar
+          props:
+            placeholder: "Search patterns..."
+            datasource: Pattern
+            debounce: 300
+        - id: filter-type
+          type: select
+          props:
+            placeholder: All Types
+            options:
+              - { value: all, label: All Types }
+              - { value: pattern, label: Patterns }
+              - { value: anti-pattern, label: Anti-Patterns }
+          actions:
+            change:
+              type: emit
+              datasource: Pattern
+              field: type
+        - id: filter-category
+          type: select
+          props:
+            placeholder: All Categories
+            options:
+              - { value: all, label: All Categories }
+              - { value: structural, label: Structural }
+              - { value: behavioral, label: Behavioral }
+              - { value: operational, label: Operational }
+              - { value: security, label: Security }
+              - { value: testing, label: Testing }
+          actions:
+            change:
+              type: emit
+              datasource: Pattern
+              field: category
+
+    # ── Patterns Table ──────────────────────────
+    - type: card
+      props:
+        title: Pattern Catalog
+        description: "Architecture patterns and anti-patterns observed across repos"
+      children:
+        - id: patterns-table
+          type: data-table
+          props:
+            datasource: Pattern
+            columns:
+              - label: Name
+                field: name
+                sortable: true
+              - label: Type
+                field: type
+                render: badge
+                variants:
+                  pattern: info
+                  anti-pattern: danger
+              - label: Category
+                field: category
+                render: badge
+              - label: Linked Repos
+                field: repo_count
+                sortable: true
+              - label: Description
+                field: description
+            pagination:
+              pageSize: 20
+            hoverable: true
+          actions:
+            rowClick:
+              type: toast
+              message: Pattern detail coming soon

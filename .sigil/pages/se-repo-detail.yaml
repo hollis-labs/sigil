@@ -1,0 +1,308 @@
+sigil: "1.0"
+kind: page
+id: se-repo-detail
+title: Repo Detail
+overlay: page
+module: se
+
+datasources:
+  - alias: Repo
+    capabilities: [read]
+    params:
+      filter:
+        id: "{{param.id}}"
+  - alias: DimensionScore
+    capabilities: [filter]
+    params:
+      filter:
+        repo_id: "{{param.id}}"
+  - alias: Snapshot
+    capabilities: [filter, sort]
+    params:
+      filter:
+        repo_id: "{{param.id}}"
+  - alias: Pattern
+    capabilities: [filter]
+  - alias: Finding
+    capabilities: [filter]
+    params:
+      filter:
+        repo_id: "{{param.id}}"
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 5
+    padding: 6
+  children:
+    # ── Breadcrumb ──────────────────────────────
+    - type: breadcrumb
+      props:
+        items:
+          - label: Repos
+            page: se-repos
+          - label: "{{data.Repo.name}}"
+
+    # ── Header ──────────────────────────────────
+    - type: columns
+      props:
+        justify: between
+        align: start
+      children:
+        - type: rows
+          props:
+            gap: 2
+          children:
+            - type: columns
+              props:
+                gap: 3
+                align: center
+              children:
+                - type: heading
+                  props:
+                    level: 1
+                    text: "{{data.Repo.name}}"
+                - type: badge
+                  props:
+                    text: "{{data.Repo.category}}"
+                    variant: info
+                - type: badge
+                  props:
+                    text: "{{data.Repo.stack}}"
+                    variant: default
+            - type: text
+              props:
+                text: "{{data.Repo.description}}"
+                muted: true
+            - type: text
+              props:
+                text: "{{data.Repo.url}}"
+                muted: true
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: button
+              props:
+                label: Edit
+                variant: outline
+                icon: pencil
+              actions:
+                click:
+                  type: toast
+                  message: Edit coming soon
+            - type: button
+              props:
+                label: Score
+                variant: primary
+                icon: bar-chart-3
+              actions:
+                click:
+                  type: toast
+                  message: Scoring coming soon
+            - type: button
+              props:
+                label: Delete
+                variant: destructive
+                icon: trash-2
+              actions:
+                click:
+                  type: confirm
+                  title: Delete Repository?
+                  message: "This will remove the repo and all associated scores, findings, and patterns."
+                  onConfirm:
+                    type: toast
+                    message: Repo deleted
+
+    # ── Stat Row ────────────────────────────────
+    - type: grid
+      props:
+        columns: 4
+        columns_sm: 2
+        gap: 4
+      children:
+        - type: stat-card
+          props:
+            label: Overall Score
+            value: "7.4"
+            trend: up
+            icon: bar-chart-3
+        - type: stat-card
+          props:
+            label: Lines of Code
+            value: "45.2k"
+            icon: code
+        - type: stat-card
+          props:
+            label: Findings
+            value: "8"
+            icon: alert-triangle
+        - type: stat-card
+          props:
+            label: Patterns
+            value: "5"
+            icon: shapes
+
+    # ── Tabs ────────────────────────────────────
+    - type: tabs
+      props:
+        defaultTab: scores
+      children:
+        # Scores Tab
+        - type: tab
+          props:
+            label: Scores
+            value: scores
+            icon: bar-chart-3
+          children:
+            - type: rows
+              props:
+                gap: 4
+              children:
+                - id: scores-table
+                  type: data-table
+                  props:
+                    datasource: DimensionScore
+                    columns:
+                      - label: Dimension
+                        field: dimension_name
+                        sortable: true
+                      - label: Score
+                        field: score
+                        sortable: true
+                      - label: Evidence
+                        field: evidence
+                    dense: true
+                    pagination:
+                      pageSize: 20
+
+        # Snapshots Tab
+        - type: tab
+          props:
+            label: Snapshots
+            value: snapshots
+            icon: camera
+          children:
+            - type: rows
+              props:
+                gap: 4
+              children:
+                - type: card
+                  props:
+                    title: Metrics Over Time
+                  children:
+                    - type: chart
+                      props:
+                        type: line
+                        xKey: date
+                        showGrid: true
+                        showLegend: true
+                        series:
+                          - key: stars
+                            label: Stars
+                          - key: loc
+                            label: LoC (k)
+                          - key: commits
+                            label: Commits/30d
+                        data:
+                          - { date: "Jan", stars: 1200, loc: 38, commits: 45 }
+                          - { date: "Feb", stars: 1450, loc: 40, commits: 52 }
+                          - { date: "Mar", stars: 1680, loc: 42, commits: 38 }
+                          - { date: "Apr", stars: 1920, loc: 45, commits: 61 }
+
+                - id: snapshots-table
+                  type: data-table
+                  props:
+                    datasource: Snapshot
+                    columns:
+                      - label: Date
+                        field: captured_at
+                        sortable: true
+                      - label: Stars
+                        field: stars
+                        sortable: true
+                      - label: Forks
+                        field: forks
+                      - label: LoC
+                        field: loc
+                        sortable: true
+                      - label: Contributors
+                        field: contributors
+                      - label: Commits (30d)
+                        field: commits_30d
+                        sortable: true
+                    dense: true
+                    pagination:
+                      pageSize: 10
+
+        # Patterns Tab
+        - type: tab
+          props:
+            label: Patterns
+            value: patterns
+            icon: shapes
+          children:
+            - id: patterns-table
+              type: data-table
+              props:
+                datasource: Pattern
+                columns:
+                  - label: Pattern
+                    field: name
+                    sortable: true
+                  - label: Type
+                    field: type
+                    render: badge
+                    variants:
+                      pattern: info
+                      anti-pattern: danger
+                  - label: Category
+                    field: category
+                  - label: Repos
+                    field: repo_count
+                pagination:
+                  pageSize: 10
+                dense: true
+
+        # Findings Tab
+        - type: tab
+          props:
+            label: Findings
+            value: findings
+            icon: alert-triangle
+          children:
+            - id: findings-table
+              type: data-table
+              props:
+                datasource: Finding
+                columns:
+                  - label: Title
+                    field: title
+                    sortable: true
+                  - label: Category
+                    field: category
+                    render: badge
+                    variants:
+                      gap: danger
+                      strength: success
+                      opportunity: info
+                      risk: warning
+                  - label: Severity
+                    field: severity
+                    render: badge
+                    variants:
+                      critical: danger
+                      high: warning
+                      medium: default
+                      low: info
+                  - label: Status
+                    field: status
+                    render: badge
+                    variants:
+                      open: danger
+                      acknowledged: warning
+                      resolved: success
+                pagination:
+                  pageSize: 10
+                dense: true

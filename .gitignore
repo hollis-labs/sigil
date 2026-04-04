@@ -23,3 +23,10 @@ coverage.out
 demo/node_modules/
 demo/.next/
 demo/.turbo/
+
+# Stack Explorer demo
+stack-explorer-demo/node_modules/
+stack-explorer-demo/.next/
+
+# Build artifacts
+.next/

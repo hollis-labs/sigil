@@ -1,0 +1,199 @@
+sigil: "1.0"
+kind: page
+id: se-dimensions
+title: Dimensions & Lenses
+overlay: page
+module: se
+
+datasources:
+  - alias: Dimension
+    capabilities: [search, paginate, create]
+  - alias: Lens
+    capabilities: [search, paginate, create]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 5
+    padding: 6
+  children:
+    # ── Header ──────────────────────────────────
+    - type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: rows
+          props:
+            gap: 1
+          children:
+            - type: heading
+              props:
+                level: 1
+                text: Dimensions & Lenses
+            - type: text
+              props:
+                text: "Configure the scoring system — dimensions are axes, lenses reweight them"
+                muted: true
+
+    # ── Tabs ────────────────────────────────────
+    - type: tabs
+      props:
+        defaultTab: dimensions
+      children:
+        # Dimensions Tab
+        - type: tab
+          props:
+            label: Dimensions
+            value: dimensions
+            icon: layers
+          children:
+            - type: rows
+              props:
+                gap: 4
+              children:
+                - type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - id: search-dimensions
+                      type: search-bar
+                      props:
+                        placeholder: "Search dimensions..."
+                        datasource: Dimension
+                        debounce: 300
+                    - type: button
+                      props:
+                        label: Add Dimension
+                        variant: primary
+                        icon: plus
+                      actions:
+                        click:
+                          type: modal
+                          title: Add Dimension
+                          fields:
+                            - name: name
+                              label: Name
+                              type: text
+                              required: true
+                              placeholder: "e.g., Error Handling"
+                            - name: category
+                              label: Category
+                              type: select
+                              options:
+                                - { value: code-quality, label: Code Quality }
+                                - { value: architecture, label: Architecture }
+                                - { value: community, label: Community }
+                                - { value: operations, label: Operations }
+                                - { value: documentation, label: Documentation }
+                                - { value: security, label: Security }
+                            - name: weight
+                              label: Default Weight
+                              type: number
+                              default: 1.0
+                            - name: description
+                              label: Description
+                              type: textarea
+                              rows: 2
+                          submit:
+                            datasource: Dimension
+                            method: POST
+                          refresh: dimensions-table
+
+                - type: card
+                  props:
+                    title: Scoring Dimensions
+                    description: "18 axes across 6 categories — each dimension has a default weight"
+                  children:
+                    - id: dimensions-table
+                      type: data-table
+                      props:
+                        datasource: Dimension
+                        columns:
+                          - label: Name
+                            field: name
+                            sortable: true
+                          - label: Category
+                            field: category
+                            render: badge
+                          - label: Weight
+                            field: weight
+                            sortable: true
+                          - label: Description
+                            field: description
+                        pagination:
+                          pageSize: 20
+                        dense: true
+
+        # Lenses Tab
+        - type: tab
+          props:
+            label: Lenses
+            value: lenses
+            icon: eye
+          children:
+            - type: rows
+              props:
+                gap: 4
+              children:
+                - type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - id: search-lenses
+                      type: search-bar
+                      props:
+                        placeholder: "Search lenses..."
+                        datasource: Lens
+                        debounce: 300
+                    - type: button
+                      props:
+                        label: Create Lens
+                        variant: primary
+                        icon: plus
+                      actions:
+                        click:
+                          type: modal
+                          title: Create Lens
+                          fields:
+                            - name: name
+                              label: Name
+                              type: text
+                              required: true
+                              placeholder: "e.g., DevOps Focus"
+                            - name: description
+                              label: Description
+                              type: textarea
+                              rows: 2
+                          submit:
+                            datasource: Lens
+                            method: POST
+                          refresh: lenses-table
+
+                - type: card
+                  props:
+                    title: Scoring Lenses
+                    description: "Lenses reweight dimensions for different perspectives — same data, different views"
+                  children:
+                    - id: lenses-table
+                      type: data-table
+                      props:
+                        datasource: Lens
+                        columns:
+                          - label: Name
+                            field: name
+                            sortable: true
+                          - label: Dimensions
+                            field: dimension_count
+                          - label: Description
+                            field: description
+                        pagination:
+                          pageSize: 15
+                        hoverable: true
+                      actions:
+                        rowClick:
+                          type: toast
+                          message: Lens detail coming soon
