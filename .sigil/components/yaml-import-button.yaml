@@ -1,0 +1,16 @@
+type: yaml-import-button
+category: custom
+description: "Hidden file input + button that reads a YAML file and POSTs to an API endpoint"
+source:
+  component: components/yaml-import-button.tsx
+props:
+  endpoint:
+    type: string
+    required: true
+    description: "API endpoint to POST the YAML to"
+  label:
+    type: string
+    default: "Import YAML"
+  onSuccess:
+    type: string
+    description: "Callback name or refetch key on success"

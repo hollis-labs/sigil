@@ -1,0 +1,18 @@
+type: own-vs-reference-chart
+category: custom
+description: "Grouped bar chart comparing average dimension scores for own vs reference repos"
+source:
+  component: components/own-vs-reference-chart.tsx
+props:
+  repos:
+    type: array
+    required: true
+    description: "Array of repo objects with is_own field"
+  scorecards:
+    type: array
+    required: true
+    description: "Array of scorecard objects"
+  dimensionScores:
+    type: array
+    required: true
+    description: "Array of dimension score objects"

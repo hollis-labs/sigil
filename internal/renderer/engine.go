@@ -70,8 +70,29 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 		return nil, fmt.Errorf("loading project config: %w", err)
 	}
 
-	// 2. Load component registry
+	// 1.5. Load app config (optional — backward compatible)
+	appConfig, err := loadAppConfig(filepath.Join(sigilDir, "app.yaml"))
+	if err != nil {
+		return nil, fmt.Errorf("loading app config: %w", err)
+	}
+	if appConfig != nil {
+		result := config.ValidateAppConfig(appConfig)
+		if !result.Valid {
+			var msgs []string
+			for _, e := range result.Errors {
+				msgs = append(msgs, e.String())
+			}
+			return nil, fmt.Errorf("app config validation failed:\n  %s", strings.Join(msgs, "\n  "))
+		}
+	}
+
+	// 2. Load component registry (built-in + custom)
 	registry := components.NewDefaultRegistry()
+	if projConfig.Components.CustomDir != "" {
+		if loadErr := components.LoadCustomSchemas(registry, projConfig.Components.CustomDir); loadErr != nil {
+			return nil, fmt.Errorf("loading custom components: %w", loadErr)
+		}
+	}
 
 	// 3. Load and resolve theme
 	themeName := cfg.Theme
@@ -132,6 +153,7 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 			Registry:      registry,
 			ProjectConfig: projConfig,
 			GoModule:      goModule,
+			SigilDir:      sigilDir,
 		}
 		files, err := r.Render(ctx)
 		if err != nil {
@@ -154,6 +176,32 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 	}
 	allFiles = append(allFiles, sharedFiles...)
 
+	// 7.5. Copy custom component source files
+	for typeName := range usedTypes {
+		schema, ok := registry.Get(typeName)
+		if !ok || !schema.IsCustom() {
+			continue
+		}
+		src := schema.Source
+		// Copy main component file
+		srcPath := filepath.Join(sigilDir, src.Component)
+		srcData, srcErr := os.ReadFile(srcPath) //nolint:gosec // Path is from validated schema config
+		if srcErr != nil {
+			return nil, fmt.Errorf("reading custom component source %q: %w", src.Component, srcErr)
+		}
+		allFiles = append(allFiles, OutputFile{Path: src.Component, Content: srcData})
+
+		// Copy additional included files
+		for _, inc := range src.Includes {
+			incPath := filepath.Join(sigilDir, inc)
+			incData, incErr := os.ReadFile(incPath) //nolint:gosec // Path is from validated schema config
+			if incErr != nil {
+				return nil, fmt.Errorf("reading custom component include %q: %w", inc, incErr)
+			}
+			allFiles = append(allFiles, OutputFile{Path: inc, Content: incData})
+		}
+	}
+
 	// 8. Generate theme CSS (once)
 	themeFiles, err := r.RenderTheme(theme)
 	if err != nil {
@@ -168,6 +216,56 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 			return nil, fmt.Errorf("generating datasource stubs for %q: %w", ds.Alias, err)
 		}
 		allFiles = append(allFiles, stubFiles...)
+	}
+
+	// 10. Generate app layouts (once per module)
+	if appConfig != nil {
+		for i := range appConfig.Modules {
+			mod := &appConfig.Modules[i]
+			shellPage, err := loadShellPage(filepath.Join(sigilDir, "pages"), mod.Shell)
+			if err != nil {
+				return nil, fmt.Errorf("loading shell page %q for module %q: %w", mod.Shell, mod.ID, err)
+			}
+			// Collect module pages for nav extraction.
+			var modulePages []*config.Page
+			for _, p := range pages {
+				for _, mp := range mod.Pages {
+					if p.ID == mp {
+						modulePages = append(modulePages, p)
+					}
+				}
+			}
+			layoutCtx := &LayoutContext{
+				Module:    mod,
+				Shell:     shellPage,
+				AppConfig: appConfig,
+				Theme:     theme,
+				Pages:     modulePages,
+			}
+			layoutFiles, err := r.RenderLayout(layoutCtx)
+			if err != nil {
+				return nil, fmt.Errorf("rendering layout for module %q: %w", mod.ID, err)
+			}
+			allFiles = append(allFiles, layoutFiles...)
+		}
+
+		// 11. Generate API client
+		if appConfig.API != nil {
+			apiFiles, err := r.RenderAPIClient(appConfig.API)
+			if err != nil {
+				return nil, fmt.Errorf("generating API client: %w", err)
+			}
+			allFiles = append(allFiles, apiFiles...)
+		}
+
+		// 12. Generate context providers
+		if len(appConfig.Providers) > 0 {
+			providerFiles, err := r.RenderProviders(appConfig.Providers)
+			if err != nil {
+				return nil, fmt.Errorf("generating providers: %w", err)
+			}
+			allFiles = append(allFiles, providerFiles...)
+		}
 	}
 
 	result := &GenerateResult{
@@ -203,6 +301,26 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 	}
 
 	return result, nil
+}
+
+func loadAppConfig(path string) (*config.AppConfig, error) {
+	data, err := os.ReadFile(path) //nolint:gosec // Path is from CLI --config flag
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil // app.yaml is optional
+		}
+		return nil, err
+	}
+	var cfg config.AppConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+func loadShellPage(pagesDir, shellID string) (*config.Page, error) {
+	path := filepath.Join(pagesDir, shellID+".yaml")
+	return config.ParseFile(path)
 }
 
 func loadProjectConfig(path string) (*config.ProjectConfig, error) {

@@ -3,67 +3,19 @@
 
 "use client";
 
-import { useRef } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Camera, Database, Download, Eye, GitFork, Layers, Shapes, Upload } from "lucide-react";
+import { AlertTriangle, Camera, Eye, GitFork, Layers, Shapes, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Toaster } from "@/components/ui/sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const API_BASE = process.env.NEXT_PUBLIC_SE_API_URL ?? "http://localhost:8081";
-
-const triggerDownload = async (url: string, fallbackName: string) => {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error(errText || `Download failed (${res.status})`);
-    }
-    const disposition = res.headers.get("Content-Disposition");
-    const match = disposition?.match(/filename="?([^"]+)"?/);
-    const filename = match?.[1] ?? fallbackName;
-    const blob = await res.blob();
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    return filename;
-  } catch (err) {
-    throw err;
-  }
-};
+import { FileDownloadButton } from "@/components/file-download-button";
+import { YamlImportButton } from "@/components/yaml-import-button";
 
 export default function SeSettings() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImportYaml = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const res = await fetch(`${API_BASE}/api/repos/import`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-yaml" },
-        body: text,
-      });
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        throw new Error(errText || `Import failed (${res.status})`);
-      }
-      const result = await res.json();
-      toast.success(`Imported ${result.imported ?? ""} repos`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Import failed");
-    }
-    e.target.value = "";
-  };
-
   return (
     <>
-    <input ref={fileInputRef} type="file" accept=".yaml,.yml" className="hidden" onChange={handleImportYaml} />
     <div className="flex flex-col gap-5 p-6">
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
       <Tabs defaultValue="general">
@@ -149,10 +101,10 @@ export default function SeSettings() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-row gap-3">
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Import Repos YAML
-                  </Button>
+                  <YamlImportButton
+                    endpoint="/api/repos/import"
+                    label="Import Repos YAML"
+                  />
                   <Button variant="outline" onClick={() => toast("CSV import coming soon")}>
                     <Upload className="mr-2 h-4 w-4" />
                     Import Scores CSV
@@ -167,28 +119,18 @@ export default function SeSettings() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-row gap-3">
-                  <Button variant="outline" onClick={async () => {
-                    try {
-                      const filename = await triggerDownload(`${API_BASE}/api/repos/export`, "repos-export.yaml");
-                      toast.success(`Downloaded ${filename}`);
-                    } catch (err) {
-                      toast.error(err instanceof Error ? err.message : "Export failed");
-                    }
-                  }}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Repos YAML
-                  </Button>
-                  <Button variant="outline" onClick={async () => {
-                    try {
-                      const filename = await triggerDownload(`${API_BASE}/api/db/backup`, "stack-explorer-backup.db");
-                      toast.success(`Downloaded ${filename}`);
-                    } catch (err) {
-                      toast.error(err instanceof Error ? err.message : "Backup failed");
-                    }
-                  }}>
-                    <Database className="mr-2 h-4 w-4" />
-                    Backup Database
-                  </Button>
+                  <FileDownloadButton
+                    filename="repos-export.yaml"
+                    label="Export Repos YAML"
+                    icon="download"
+                    url="/api/repos/export"
+                  />
+                  <FileDownloadButton
+                    url="/api/db/backup"
+                    filename="stack-explorer-backup.db"
+                    label="Backup Database"
+                    icon="database"
+                  />
                 </div>
               </CardContent>
             </Card>

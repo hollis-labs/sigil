@@ -2,6 +2,7 @@
 package gotempl
 
 import (
+	"github.com/chrispian/sigil/internal/config"
 	"github.com/chrispian/sigil/internal/renderer"
 )
 
@@ -37,4 +38,19 @@ func (r *GoTemplRenderer) RenderDataSourceStubs(ds *renderer.DataSourceManifest)
 // SharedComponents returns shared component .templ files.
 func (r *GoTemplRenderer) SharedComponents(usedTypes []string) ([]renderer.OutputFile, error) {
 	return renderSharedComponents(usedTypes)
+}
+
+// RenderLayout is not yet implemented for Go/Templ.
+func (r *GoTemplRenderer) RenderLayout(_ *renderer.LayoutContext) ([]renderer.OutputFile, error) {
+	return nil, nil
+}
+
+// RenderAPIClient is not yet implemented for Go/Templ.
+func (r *GoTemplRenderer) RenderAPIClient(_ *config.APIConfig) ([]renderer.OutputFile, error) {
+	return nil, nil
+}
+
+// RenderProviders is not yet implemented for Go/Templ.
+func (r *GoTemplRenderer) RenderProviders(_ []config.ProviderConfig) ([]renderer.OutputFile, error) {
+	return nil, nil
 }

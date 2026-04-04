@@ -8,13 +8,25 @@ import (
 
 // Schema defines a component type's props, actions, and slots.
 type Schema struct {
-	Type        string                `yaml:"type"`
-	Category    string                `yaml:"category"`
-	Description string                `yaml:"description"`
-	Props       map[string]PropDef    `yaml:"props,omitempty"`
-	Actions     map[string]ActionDef  `yaml:"actions,omitempty"`
-	Slots       map[string]SlotDef    `yaml:"slots,omitempty"`
-	Shortcuts   []ShortcutDef         `yaml:"shortcuts,omitempty"`
+	Type        string               `yaml:"type"`
+	Category    string               `yaml:"category"`
+	Description string               `yaml:"description"`
+	Props       map[string]PropDef   `yaml:"props,omitempty"`
+	Actions     map[string]ActionDef `yaml:"actions,omitempty"`
+	Slots       map[string]SlotDef   `yaml:"slots,omitempty"`
+	Shortcuts   []ShortcutDef        `yaml:"shortcuts,omitempty"`
+	Source      *ComponentSource     `yaml:"source,omitempty"`
+}
+
+// ComponentSource defines the source files for a custom component.
+type ComponentSource struct {
+	Component string   `yaml:"component"`          // main .tsx file (required for custom)
+	Includes  []string `yaml:"includes,omitempty"` // additional files to copy (hooks, utils)
+}
+
+// IsCustom returns true if this schema has source files (custom component).
+func (s *Schema) IsCustom() bool {
+	return s.Source != nil && s.Source.Component != ""
 }
 
 // PropDef defines a single component prop.

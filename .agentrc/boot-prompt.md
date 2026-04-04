@@ -2,72 +2,90 @@
 
 ## Context
 
-The **Stack Explorer** is a 10-page analytics dashboard built with Sigil-generated React/shadcn pages. Frontend at `stack-explorer-demo/` (port 3334), backend Go REST API at `/Users/chrispian/Projects-apps/stack-explorer/` (port 8081). Both are fully functional with complete CRUD.
+The **Stack Explorer** is a 10-page analytics dashboard built with Sigil-generated React/shadcn pages. Frontend at `stack-explorer-demo/` (port 3334), backend Go REST API at `/Users/chrispian/Projects-apps/stack-explorer/` (port 8081). Both are fully functional.
 
-## Current state (2026-04-03)
+## Current state (2026-04-04)
 
-### Frontend — complete
-- 10 pages + shell layout, all reads wired to live API
-- 7 modal Create forms (POST to API, refetch on success)
-- 5 sheet overlays with Edit (PUT) and Delete (DELETE + AlertDialog confirm)
-- Repo Detail: edit modal, delete with redirect, scoring dialog (creates scorecard + dimension scores)
-- Dashboard: 5 live stat cards, 3 computed charts (repos by category, score distribution, own vs reference)
-- Scorecards: live chart from scorecard data, CSV export
-- Gap Analysis: computed advantage/gap charts from dimension scores
-- Quick actions: layout dropdown, command palette (Cmd+K), dashboard buttons all navigate with `?action=create` to auto-open modals
-- Pages using `useSearchParams` wrapped in `<Suspense>` (repos, reports, gap-analysis)
-- `next build` compiles 12 routes clean
+### Sigil Renderer — fully operational
+- **App-level config** (`.sigil/app.yaml`): modules, shell binding, API config, features, actions, providers
+- **Layout generation**: `RenderLayout` produces `layout.tsx` from `se-shell.yaml` (sidebar, nav, command palette, mobile, theme toggle, lens selector wrapped in LensProvider)
+- **API client generation**: `RenderAPIClient` produces `lib/api.ts` from app config
+- **Provider generation**: `RenderProviders` produces `lib/lens-context.tsx` from providers config
+- **Modal create**: Controlled form state + `postItem()` API call + SWR `mutate` refetch
+- **Sheet edit/delete**: `rowClick: type: sheet` with `datasource` + `fields` → Sheet overlay with read/edit (`updateItem`) + delete (`AlertDialog` + `deleteItem`)
+- **Custom component system**: `Source` field on Schema (`component` + `includes`), engine copies source files, renderer imports + renders with JSON-serialized props
+- **Template references**: `{{varName}}` in custom component props resolves to JS expressions at render time; validator allows template refs for any prop type
+- `go build`, `go test ./...` all pass, `next build` compiles cleanly
 
-### Backend — complete
-- Full CRUD for all 11 resources (repos, tags, snapshots, dimensions, lenses, scorecards, scores, patterns, findings, comparison-sets, reports)
-- YAML import/export: `POST /api/repos/import`, `GET /api/repos/export`
-- DB backup: `GET /api/db/backup`
+### Custom Components — 12 registered (2 pre-existing + 10 new)
+
+Pre-existing:
+- `sigil-chart` — Recharts wrapper (line, bar, area, pie, donut, radar)
+- `scorecard-heatmap` — Self-contained heatmap with lens filtering
+
+Extracted this session (all in `.sigil/components/`):
+- `repos-by-category-chart` — Donut chart, takes `repos` prop, buckets by category
+- `score-distribution-chart` — Bar chart, takes `scorecards` prop, buckets by score range
+- `own-vs-reference-chart` — Grouped bars, takes `repos` + `scorecards` + `dimensionScores`
+- `scan-runner` — Run Scan button + Promise.allSettled + polling + scan history table
+- `scorecard-compare` — DataTable with checkboxes (max 5) + Compare sheet (radar + delta table)
+- `csv-export-button` — Builds CSV from data array + columns, triggers Blob download
+- `yaml-import-button` — Hidden file input, reads YAML, POSTs to configurable endpoint
+- `file-download-button` — Fetches URL, parses Content-Disposition, triggers download
+- `repo-scoring-dialog` — Lens selection + dimension score inputs + batch postItem
+- `gap-advantage-charts` — Dual bar charts (advantages green, gaps red) from own-vs-ref deltas
+
+### Frontend — 100% generated
+- 10 pages + shell layout, all custom logic in custom components
+- `make se-demo-generate` produces a fully functional app with zero hand-edits
+- `next build` compiles with zero TypeScript errors
+- All custom component source files auto-synced via Makefile
+
+### Backend — complete, no changes needed
+- Full CRUD for all 11 resources, YAML import/export, DB backup, scan worker
 - `go build`, `go vet`, `go test` all clean
 
-### Sigil renderer — no changes needed
-- `go test ./...` all pass, no renderer modifications in recent waves
+### Renderer fixes applied this session
+- `mutate:` → `refetch:` in hook destructuring (hooks expose `refetch`, not `mutate`)
+- Sheet state declarations rendered before output (were missing from generated code)
+- Sheet imports (`deleteItem`, `updateItem`) collected before `imports.String()` call
+- `as Record<string, unknown>` → `as unknown as Record<string, unknown>` for strict TS
+- `pluralizeResource()` helper avoids double-s (`"lenss"` → `"lenses"`)
+- Lens context provider: `!""` → `!currentId` (was always-falsy)
+- Validator: `{{varName}}` template references pass type checking for any prop type
 
-## Remaining work
+## Potential next steps
 
-### Completed (2026-04-03)
-- Import YAML — wired on Repos page + Settings page (file picker → POST /api/repos/import)
-- Export YAML — wired on Settings page (GET /api/repos/export → browser download)
-- DB Backup — wired on Settings page (GET /api/db/backup → browser download)
-
-### Compare mode (Scorecards) — complete (2026-04-03)
-- Checkbox selection on DataTable (up to 5 repos)
-- "Compare (N)" button opens right-side Sheet (width scales with selection count)
-- Overall scores in color-coded solid boxes
-- Radar chart overlay of dimension scores (added `type="radar"` to SigilChart)
-- Delta table with green/red badges (when comparing exactly 2)
-- Files modified: `scorecards/page.tsx`, `sigil-chart.tsx`
-
-### Run Scan (Dashboard) — complete (2026-04-04)
-- Backend: POST/GET /api/scans endpoints, background scan worker goroutine
-- Scan worker: polls pending scans every 5s, fetches GitHub API stats (stars, forks, issues, last push), creates snapshots, transitions status
-- Worker file: `stack-explorer/internal/api/scan_worker.go`
-- Frontend: "Run Scan" queues one scan per repo (se-repo-scan blueprint), polls for completion, scan history table with status icons
-- New frontend files: `types/scan.ts`, `hooks/use-scan.ts`
-- Modified: `dashboard/page.tsx`
+1. **Dynamic stat cards** — Dashboard and repo-detail still have hardcoded stat values; could make stat-card accept datasource references
+2. **SWR compatibility** — Mock hooks work but real SWR would enable proper caching/revalidation (blocked on SWR 2.x + React 19 incompatibility)
+3. **Preview renderer** — Missing render cases for many newer components
+4. **Go/Templ renderer** — Hasn't kept pace with React/shadcn renderer additions
+5. **Additional custom components** — Any new computed/interactive widgets follow the same extraction pattern
 
 ## Key files
 
 | File | What |
 |---|---|
-| `stack-explorer-demo/src/lib/api.ts` | API client — fetchList, fetchItem, postItem, updateItem, deleteItem |
-| `stack-explorer-demo/src/hooks/use-*.ts` | 11 hooks with refetch support |
-| `stack-explorer-demo/src/app/(explorer)/*/page.tsx` | 10 page components |
-| `stack-explorer-demo/src/app/(explorer)/layout.tsx` | Shell layout, sidebar, command palette, lens selector |
-| `stack-explorer-demo/src/components/data-table.tsx` | Customized DataTable (don't overwrite) |
-| `stack-explorer-demo/src/components/sigil-chart.tsx` | Chart wrapper (don't overwrite) |
-| `stack-explorer-demo/src/components/scorecard-heatmap.tsx` | Custom heatmap (don't overwrite) |
-| `internal/renderer/reactshadcn/pages.go` | Sigil React renderer (modal actions at ~line 1864) |
+| `.sigil/app.yaml` | App config — modules, shell, API, features, providers, actions |
+| `.sigil/pages/se-shell.yaml` | Shell page — sidebar, nav, topbar structure |
+| `.sigil/pages/se-*.yaml` | All 10 SE page definitions |
+| `.sigil/components/*.yaml` | Custom component schemas (12 total) |
+| `.sigil/components/*.tsx` | Custom component source files |
+| `internal/renderer/reactshadcn/pages.go` | Page generation (modal create, sheet edit/delete, custom components) |
+| `internal/renderer/reactshadcn/providers.go` | Context provider generation |
+| `internal/renderer/engine.go` | Engine — loads app config, custom schemas, wires layout/API/provider generation |
+| `internal/config/validator.go` | Validation — allows `{{ref}}` template props for any type |
+| `internal/components/registry.go` | Schema struct with Source field for custom components |
+| `Makefile` | `se-demo-generate` target builds, generates, syncs including custom components |
+| `stack-explorer-demo/src/hooks/` | Mock hooks (use `--ignore-existing` to preserve) |
 
 ## Conventions
 
-- `make se-demo-generate` builds Sigil and syncs generated pages — hooks, data-table, sigil-chart protected by `--ignore-existing`
-- Don't run `make se-demo-generate` for page tweaks — it overwrites hand-edits
+- `make se-demo-generate` builds Sigil and syncs all generated files to `stack-explorer-demo/`
+- Custom component sources live in `.sigil/components/` alongside their schema YAMLs
+- `{{varName}}` in prop values references page datasource variables
+- Custom components import generated types from `@/types/` for proper TS compatibility
+- Complex props (arrays, objects) are JSON-serialized in generated JSX
 - SE demo on port 3334, API on port 8081
-- shadcn v4: `render={<Component />}` not `asChild`, Select `onValueChange` can be `null`, Tooltip uses `delay`
-- Generated types use `unknown` for numeric fields — cast with `Number()` or `String()`
 - Fix renderer gaps inline with sub-agents rather than deferring
+- Backup at `stack-explorer-demo-backup-20260404-102629/` (pre-extraction snapshot)

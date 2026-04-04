@@ -7,9 +7,9 @@ module: se
 
 datasources:
   - alias: Dimension
-    capabilities: [search, paginate, create]
+    capabilities: [search, paginate, create, update, delete]
   - alias: Lens
-    capabilities: [search, paginate, create]
+    capabilities: [search, paginate, create, update, delete]
 
 layout:
   id: root
@@ -195,5 +195,13 @@ layout:
                         hoverable: true
                       actions:
                         rowClick:
-                          type: toast
-                          message: Lens detail coming soon
+                          type: sheet
+                          datasource: Lens
+                          fields:
+                            - name: name
+                              label: Name
+                              type: text
+                            - name: description
+                              label: Description
+                              type: textarea
+                              rows: 3

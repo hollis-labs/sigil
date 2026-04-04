@@ -1,0 +1,5 @@
+type: scorecard-heatmap
+category: custom
+description: "Self-contained heatmap showing dimension scores per repo, with lens filtering"
+source:
+  component: components/scorecard-heatmap.tsx

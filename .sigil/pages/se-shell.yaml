@@ -1,0 +1,140 @@
+sigil: "1.0"
+kind: page
+id: se-shell
+title: Stack Explorer
+overlay: page
+module: se
+
+layout:
+  id: root
+  type: sidebar
+  props:
+    width: "220px"
+    collapsible: true
+  children:
+    # ── Sidebar ─────────────────────────────────
+    - id: sidebar-content
+      type: rows
+      props:
+        gap: 2
+        padding: 4
+      children:
+        - id: brand
+          type: columns
+          props:
+            gap: 2
+            align: center
+          children:
+            - type: icon
+              props:
+                name: compass
+                size: md
+            - type: heading
+              props:
+                level: 3
+                text: Stack Explorer
+
+        - type: separator
+
+        - id: main-nav
+          type: nav-menu
+          props:
+            items:
+              - label: Dashboard
+                page: se-dashboard
+                icon: layout-dashboard
+              - label: Repos
+                page: se-repos
+                icon: git-fork
+              - label: Scorecards
+                page: se-scorecards
+                icon: bar-chart-3
+              - label: Gap Analysis
+                page: se-gap-analysis
+                icon: git-compare
+              - label: Reports
+                page: se-reports
+                icon: file-text
+
+        - type: separator
+
+        - id: secondary-nav
+          type: nav-menu
+          props:
+            items:
+              - label: Patterns
+                page: se-patterns
+                icon: shapes
+              - label: Findings
+                page: se-findings
+                icon: alert-triangle
+              - label: Dimensions
+                page: se-dimensions
+                icon: layers
+              - label: Settings
+                page: se-settings
+                icon: settings
+
+        - type: spacer
+
+    # ── Main Content Area ───────────────────────
+    - id: main-content
+      type: rows
+      props:
+        gap: 0
+        padding: 0
+      children:
+        - id: topbar
+          type: columns
+          props:
+            justify: between
+            align: center
+            padding: 4
+          children:
+            - type: search-bar
+              props:
+                placeholder: "Search repos, patterns..."
+                debounce: 300
+                variant: ghost
+            - type: columns
+              props:
+                gap: 2
+                align: center
+              children:
+                - type: dropdown-menu
+                  props:
+                    trigger: "+"
+                    items:
+                      - label: Add Repo
+                      - label: Generate Report
+                      - label: New Comparison
+
+        - type: separator
+
+        - id: page-content
+          type: rows
+          props:
+            gap: 6
+            padding: 6
+          children:
+            - type: text
+              props:
+                text: "Select a page from the sidebar to get started."
+                muted: true
+
+shortcuts:
+  - key: "/"
+    action:
+      type: focus
+      target: search
+    description: Focus search
+  - key: "g d"
+    action:
+      type: navigate
+      page: se-dashboard
+    description: Go to dashboard
+  - key: "g r"
+    action:
+      type: navigate
+      page: se-repos
+    description: Go to repos

@@ -96,15 +96,10 @@ layout:
                       props:
                         gap: 3
                       children:
-                        - type: button
+                        - type: yaml-import-button
                           props:
-                            label: Import Repos YAML
-                            variant: outline
-                            icon: upload
-                          actions:
-                            click:
-                              type: toast
-                              message: YAML import coming soon
+                            endpoint: "/api/repos/import"
+                            label: "Import Repos YAML"
                         - type: button
                           props:
                             label: Import Scores CSV
@@ -124,24 +119,18 @@ layout:
                       props:
                         gap: 3
                       children:
-                        - type: button
+                        - type: file-download-button
                           props:
-                            label: Export Repos YAML
-                            variant: outline
-                            icon: download
-                          actions:
-                            click:
-                              type: toast
-                              message: YAML export coming soon
-                        - type: button
+                            url: "/api/repos/export"
+                            filename: "repos-export.yaml"
+                            label: "Export Repos YAML"
+                            icon: "download"
+                        - type: file-download-button
                           props:
-                            label: Backup Database
-                            variant: outline
-                            icon: database
-                          actions:
-                            click:
-                              type: toast
-                              message: Database backup coming soon
+                            url: "/api/db/backup"
+                            filename: "stack-explorer-backup.db"
+                            label: "Backup Database"
+                            icon: "database"
 
         # About Tab
         - type: tab

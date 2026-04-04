@@ -1,0 +1,10 @@
+type: repos-by-category-chart
+category: custom
+description: "Donut chart showing repo distribution by category, computed from repos data"
+source:
+  component: components/repos-by-category-chart.tsx
+props:
+  repos:
+    type: array
+    required: true
+    description: "Array of repo objects with category field"

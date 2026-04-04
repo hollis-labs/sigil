@@ -38,15 +38,10 @@ layout:
           props:
             gap: 2
           children:
-            - type: button
+            - type: yaml-import-button
               props:
-                label: Import YAML
-                variant: outline
-                icon: upload
-              actions:
-                click:
-                  type: toast
-                  message: YAML import coming soon
+                endpoint: "/api/repos/import"
+                label: "Import YAML"
             - type: button
               props:
                 label: Add Repo

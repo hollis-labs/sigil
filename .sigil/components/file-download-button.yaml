@@ -1,0 +1,21 @@
+type: file-download-button
+category: custom
+description: "Button that fetches a URL and triggers a file download with Content-Disposition support"
+source:
+  component: components/file-download-button.tsx
+props:
+  url:
+    type: string
+    required: true
+    description: "URL to fetch the file from"
+  filename:
+    type: string
+    required: true
+    description: "Fallback filename for the download"
+  label:
+    type: string
+    default: "Download"
+  icon:
+    type: string
+    default: "download"
+    description: "Lucide icon name (download or database)"

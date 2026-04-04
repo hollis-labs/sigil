@@ -1,0 +1,18 @@
+type: csv-export-button
+category: custom
+description: "Button that exports data array as CSV file download"
+source:
+  component: components/csv-export-button.tsx
+props:
+  data:
+    type: array
+    required: true
+    description: "Array of objects to export"
+  columns:
+    type: array
+    required: true
+    description: "Array of {key, header} column definitions"
+  filename:
+    type: string
+    default: "export.csv"
+    description: "Download filename"

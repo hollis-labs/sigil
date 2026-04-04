@@ -1,0 +1,37 @@
+type: sigil-chart
+category: custom
+description: "Recharts wrapper supporting line, bar, area, pie, donut, and radar chart types"
+source:
+  component: components/sigil-chart.tsx
+props:
+  type:
+    type: string
+    required: true
+    enum: [line, bar, area, pie, donut, radar]
+  data:
+    type: array
+    required: true
+    description: "Chart data array"
+  config:
+    type: object
+    required: true
+    description: "ChartConfig for colors and labels"
+  xKey:
+    type: string
+    description: "Key for X axis values"
+  dataKeys:
+    type: array
+    required: true
+    description: "Keys for data series"
+  height:
+    type: integer
+    default: 300
+  showGrid:
+    type: boolean
+    default: false
+  showLegend:
+    type: boolean
+    default: false
+  stacked:
+    type: boolean
+    default: false

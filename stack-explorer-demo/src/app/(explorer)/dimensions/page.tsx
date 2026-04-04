@@ -5,17 +5,14 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { postItem, updateItem, deleteItem } from "@/lib/api";
 import { Loader2, Plus, Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,127 +20,79 @@ import { Textarea } from "@/components/ui/textarea";
 import { DataTable } from "@/components/data-table";
 import { useDimension } from "@/hooks/use-dimension";
 import { useLens } from "@/hooks/use-lens";
-import type { Dimension } from "@/types/dimension";
-import type { Lens } from "@/types/lens";
+import { deleteItem, postItem } from "@/lib/api";
+import { Lens } from "@/types/lens";
 
 export default function SeDimensions() {
   const [searchDimension, setSearchDimension] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [sheetDim, setSheetDim] = useState<Dimension | null>(null);
-  const [searchLens, setSearchLens] = useState("");
-  const [modalOpen2, setModalOpen2] = useState(false);
-  const [sheetLens, setSheetLens] = useState<Lens | null>(null);
-  // Dimension form
-  const [dimName, setDimName] = useState("");
-  const [dimCategory, setDimCategory] = useState("");
-  const [dimWeight, setDimWeight] = useState("");
-  const [dimDescription, setDimDescription] = useState("");
-  // Lens form
-  const [lensName, setLensName] = useState("");
-  const [lensDescription, setLensDescription] = useState("");
-  // Dimension edit
-  const [editingDim, setEditingDim] = useState(false);
-  const [editDimName, setEditDimName] = useState("");
-  const [editDimCategory, setEditDimCategory] = useState("");
-  const [editDimWeight, setEditDimWeight] = useState("");
-  const [editDimDescription, setEditDimDescription] = useState("");
-  // Lens edit
-  const [editingLens, setEditingLens] = useState(false);
-  const [editLensName, setEditLensName] = useState("");
-  const [editLensDescription, setEditLensDescription] = useState("");
-
-  const { data: dimension, isLoading: dimensionLoading, refetch: refetchDimensions } = useDimension();
-  const { data: lens, isLoading: lensLoading, refetch: refetchLenses } = useLens();
-
-  const handleSaveDimension = async () => {
+  const [formName, setFormName] = useState("");
+  const [formCategory, setFormCategory] = useState("");
+  const [formWeight, setFormWeight] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+    const handleCreateDimension = async () => {
     try {
-      await postItem("dimensions", { name: dimName, category: dimCategory, weight: Number(dimWeight) || 1, description: dimDescription });
+      await postItem("dimensions", {
+        name: formName,
+        category: formCategory,
+        weight: formWeight,
+        description: formDescription,
+      });
       toast.success("Dimension created");
       setModalOpen(false);
-      setDimName(""); setDimCategory(""); setDimWeight(""); setDimDescription("");
-      refetchDimensions();
+      setFormName("");
+      setFormCategory("");
+      setFormWeight("");
+      setFormDescription("");
+      refetchDimension();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create dimension");
     }
   };
 
-  const handleSaveLens = async () => {
+
+  const [searchLens, setSearchLens] = useState("");
+  const [modalOpen2, setModalOpen2] = useState(false);
+  const [formName2, setFormName2] = useState("");
+  const [formDescription2, setFormDescription2] = useState("");
+    const handleCreateLens2 = async () => {
     try {
-      await postItem("lenses", { name: lensName, description: lensDescription });
+      await postItem("lenses", {
+        name: formName2,
+        description: formDescription2,
+      });
       toast.success("Lens created");
       setModalOpen2(false);
-      setLensName(""); setLensDescription("");
-      refetchLenses();
+      setFormName("");
+      setFormCategory("");
+      setFormWeight("");
+      setFormDescription("");
+      setFormName2("");
+      setFormDescription2("");
+      refetchLens();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create lens");
     }
   };
 
-  const startEditingDim = () => {
-    if (!sheetDim) return;
-    setEditDimName(sheetDim.name ?? "");
-    setEditDimCategory(String(sheetDim.category ?? ""));
-    setEditDimWeight(String(sheetDim.weight ?? ""));
-    setEditDimDescription(String(sheetDim.description ?? ""));
-    setEditingDim(true);
-  };
 
-  const handleUpdateDim = async () => {
-    if (!sheetDim) return;
+  const [sheetItem, setSheetItem] = useState<Lens | null>(null);
+    const handleDelete = async () => {
+    if (!sheetItem) return;
     try {
-      await updateItem("dimensions", (sheetDim as { id: string }).id, { name: editDimName, category: editDimCategory, weight: Number(editDimWeight) || 1, description: editDimDescription });
-      toast.success("Dimension updated");
-      setEditingDim(false);
-      setSheetDim(null);
-      refetchDimensions();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update dimension");
-    }
-  };
-
-  const handleDeleteDim = async () => {
-    if (!sheetDim) return;
-    try {
-      await deleteItem("dimensions", (sheetDim as { id: string }).id);
-      toast.success("Dimension deleted");
-      setSheetDim(null);
-      refetchDimensions();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete dimension");
-    }
-  };
-
-  const startEditingLens = () => {
-    if (!sheetLens) return;
-    setEditLensName(sheetLens.name ?? "");
-    setEditLensDescription(String(sheetLens.description ?? ""));
-    setEditingLens(true);
-  };
-
-  const handleUpdateLens = async () => {
-    if (!sheetLens) return;
-    try {
-      await updateItem("lenses", (sheetLens as { id: string }).id, { name: editLensName, description: editLensDescription });
-      toast.success("Lens updated");
-      setEditingLens(false);
-      setSheetLens(null);
-      refetchLenses();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update lens");
-    }
-  };
-
-  const handleDeleteLens = async () => {
-    if (!sheetLens) return;
-    try {
-      await deleteItem("lenses", (sheetLens as { id: string }).id);
+      await deleteItem("lenses", (sheetItem as { id: string }).id);
       toast.success("Lens deleted");
-      setSheetLens(null);
-      refetchLenses();
+      setSheetItem(null);
+      refetchLens();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to delete lens");
     }
   };
+
+
+
+  const { data: dimension, isLoading: dimensionLoading, refetch: refetchDimension } = useDimension();
+  const { data: lens, isLoading: lensLoading, refetch: refetchLens } = useLens();
 
   if (dimensionLoading || lensLoading) {
     return (
@@ -186,11 +135,11 @@ export default function SeDimensions() {
                   <div className="flex flex-col gap-4 py-4">
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor="name">Name</Label>
-                      <Input id="name" name="name" type="text" placeholder="e.g., Error Handling" required value={dimName} onChange={(e) => setDimName(e.target.value)} />
+                      <Input id="name" type="text" placeholder="e.g., Error Handling" value={formName} onChange={(e) => setFormName(e.target.value)} />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor="category">Category</Label>
-                      <Select name="category" value={dimCategory} onValueChange={(v) => v && setDimCategory(v)}>
+                      <Select value={formCategory} onValueChange={(v) => v && setFormCategory(v)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select..." />
                         </SelectTrigger>
@@ -206,16 +155,16 @@ export default function SeDimensions() {
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor="weight">Default Weight</Label>
-                      <Input id="weight" name="weight" type="number" placeholder="" value={dimWeight} onChange={(e) => setDimWeight(e.target.value)} />
+                      <Input id="weight" type="number" placeholder="" value={formWeight} onChange={(e) => setFormWeight(e.target.value)} />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" name="description" placeholder="" rows={2} value={dimDescription} onChange={(e) => setDimDescription(e.target.value)} />
+                      <Textarea id="description" placeholder="" rows={2} value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-                    <Button onClick={handleSaveDimension}>Save</Button>
+                    <Button onClick={handleCreateDimension}>Save</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -240,7 +189,6 @@ export default function SeDimensions() {
                     { accessorKey: "description", header: "Description" },
                   ]}
                   emptyMessage="No matching results found."
-                  onRowClick={(row) => setSheetDim(row as Dimension)}
                 />
               </CardContent>
             </Card>
@@ -265,16 +213,16 @@ export default function SeDimensions() {
                   <div className="flex flex-col gap-4 py-4">
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor="name">Name</Label>
-                      <Input id="name" name="name" type="text" placeholder="e.g., DevOps Focus" required value={lensName} onChange={(e) => setLensName(e.target.value)} />
+                      <Input id="name" type="text" placeholder="e.g., DevOps Focus" value={formName2} onChange={(e) => setFormName2(e.target.value)} />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" name="description" placeholder="" rows={2} value={lensDescription} onChange={(e) => setLensDescription(e.target.value)} />
+                      <Textarea id="description" placeholder="" rows={2} value={formDescription2} onChange={(e) => setFormDescription2(e.target.value)} />
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setModalOpen2(false)}>Cancel</Button>
-                    <Button onClick={handleSaveLens}>Save</Button>
+                    <Button onClick={handleCreateLens2}>Save</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -298,7 +246,7 @@ export default function SeDimensions() {
                     { accessorKey: "description", header: "Description" },
                   ]}
                   emptyMessage="No matching results found."
-                  onRowClick={(row) => setSheetLens(row as Lens)}
+                  onRowClick={(row) => setSheetItem(row as Lens)}
                 />
               </CardContent>
             </Card>
@@ -306,124 +254,35 @@ export default function SeDimensions() {
         </TabsContent>
       </Tabs>
     </div>
-    <Sheet open={!!sheetDim} onOpenChange={(open) => { if (!open) { setSheetDim(null); setEditingDim(false); } }}>
+    <Sheet open={!!sheetItem} onOpenChange={(open) => { if (!open) { setSheetItem(null); } }}>
       <SheetContent side="right">
         <SheetHeader>
-          <SheetTitle>{sheetDim?.name}</SheetTitle>
+          <SheetTitle>{(sheetItem as unknown as Record<string, unknown>)?.name as string}</SheetTitle>
         </SheetHeader>
-        {sheetDim && !editingDim && (
+        {sheetItem && (
           <div className="flex flex-col gap-4 px-4 pt-4">
             <div className="flex flex-row gap-2">
-              <Badge variant="secondary">{sheetDim.category}</Badge>
-              <Badge variant="outline">Weight: {String(sheetDim.weight ?? 1)}</Badge>
-            </div>
-            <Separator />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Description</span>
-              <p className="text-sm text-muted-foreground leading-relaxed">{sheetDim.description}</p>
-            </div>
-            <Separator />
-            <div className="flex flex-row gap-2">
-              <Button variant="outline" size="sm" onClick={startEditingDim}>Edit</Button>
-              <AlertDialog>
-                <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>Delete</AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete dimension?</AlertDialogTitle>
-                    <AlertDialogDescription>This action cannot be undone. This will permanently delete the dimension.</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteDim}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </div>
-        )}
-        {sheetDim && editingDim && (
-          <div className="flex flex-col gap-4 px-4 pt-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-dim-name">Name</Label>
-              <Input id="edit-dim-name" type="text" value={editDimName} onChange={(e) => setEditDimName(e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-dim-category">Category</Label>
-              <Select value={editDimCategory} onValueChange={(v) => v && setEditDimCategory(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="code-quality">Code Quality</SelectItem>
-                  <SelectItem value="architecture">Architecture</SelectItem>
-                  <SelectItem value="community">Community</SelectItem>
-                  <SelectItem value="operations">Operations</SelectItem>
-                  <SelectItem value="documentation">Documentation</SelectItem>
-                  <SelectItem value="security">Security</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-dim-weight">Weight</Label>
-              <Input id="edit-dim-weight" type="number" value={editDimWeight} onChange={(e) => setEditDimWeight(e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-dim-description">Description</Label>
-              <Textarea id="edit-dim-description" rows={2} value={editDimDescription} onChange={(e) => setEditDimDescription(e.target.value)} />
-            </div>
-            <div className="flex flex-row gap-2 justify-end">
-              <Button variant="outline" onClick={() => setEditingDim(false)}>Cancel</Button>
-              <Button onClick={handleUpdateDim}>Save</Button>
-            </div>
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
-    <Sheet open={!!sheetLens} onOpenChange={(open) => { if (!open) { setSheetLens(null); setEditingLens(false); } }}>
-      <SheetContent side="right">
-        <SheetHeader>
-          <SheetTitle>{sheetLens?.name}</SheetTitle>
-        </SheetHeader>
-        {sheetLens && !editingLens && (
-          <div className="flex flex-col gap-4 px-4 pt-4">
-            <Badge variant="outline">{String(sheetLens.dimension_count ?? 0)} dimensions</Badge>
-            <Separator />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Description</span>
-              <p className="text-sm text-muted-foreground leading-relaxed">{sheetLens.description}</p>
-            </div>
-            <Separator />
-            <div className="flex flex-row gap-2">
-              <Button variant="outline" size="sm" onClick={startEditingLens}>Edit</Button>
               <AlertDialog>
                 <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>Delete</AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete lens?</AlertDialogTitle>
-                    <AlertDialogDescription>This action cannot be undone. This will permanently delete the lens.</AlertDialogDescription>
+                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteLens}>Delete</AlertDialogAction>
+                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-          </div>
-        )}
-        {sheetLens && editingLens && (
-          <div className="flex flex-col gap-4 px-4 pt-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-lens-name">Name</Label>
-              <Input id="edit-lens-name" type="text" value={editLensName} onChange={(e) => setEditLensName(e.target.value)} />
+            <div>
+              <div className="text-xs text-muted-foreground">Name</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.name ?? "")}</div>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-lens-description">Description</Label>
-              <Textarea id="edit-lens-description" rows={2} value={editLensDescription} onChange={(e) => setEditLensDescription(e.target.value)} />
-            </div>
-            <div className="flex flex-row gap-2 justify-end">
-              <Button variant="outline" onClick={() => setEditingLens(false)}>Cancel</Button>
-              <Button onClick={handleUpdateLens}>Save</Button>
+            <div>
+              <div className="text-xs text-muted-foreground">Description</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.description ?? "")}</div>
             </div>
           </div>
         )}

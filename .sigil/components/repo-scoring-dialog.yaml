@@ -1,0 +1,21 @@
+type: repo-scoring-dialog
+category: custom
+description: "Dialog for scoring a repo across all dimensions for a selected lens"
+source:
+  component: components/repo-scoring-dialog.tsx
+props:
+  repoId:
+    type: string
+    required: true
+    description: "ID of the repo to score"
+  repoName:
+    type: string
+    description: "Name of the repo (for display)"
+  dimensions:
+    type: array
+    required: true
+    description: "Array of dimension objects with id, name, category"
+  lenses:
+    type: array
+    required: true
+    description: "Array of lens objects with id, name"

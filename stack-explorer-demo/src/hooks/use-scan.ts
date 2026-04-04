@@ -23,10 +23,14 @@ export function useScan() {
 export function useScanById(id: string) {
   const [data, setData] = useState<Scan | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
+    setIsLoading(true);
     fetchItem<Scan>("scans", id).then(setData).catch(() => setData(undefined)).finally(() => setIsLoading(false));
-  }, [id]);
+  }, [id, version]);
 
-  return { data, isLoading };
+  const refetch = useCallback(() => setVersion((v) => v + 1), []);
+
+  return { data, isLoading, refetch };
 }

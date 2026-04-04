@@ -1,0 +1,14 @@
+type: scorecard-compare
+category: custom
+description: "Multi-select compare mode for scorecards with radar chart overlay and delta table"
+source:
+  component: components/scorecard-compare.tsx
+props:
+  scorecards:
+    type: array
+    required: true
+    description: "Array of scorecard objects"
+  dimensionScores:
+    type: array
+    required: true
+    description: "Array of dimension score objects"

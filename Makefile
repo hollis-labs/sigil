@@ -59,6 +59,23 @@ se-demo-generate: build
 		[ -f "stack-explorer-demo/src/hooks/use-$$e.ts" ] || cp /tmp/sigil-se-gen/hooks/use-$$e.ts stack-explorer-demo/src/hooks/use-$$e.ts 2>/dev/null || true; \
 	done
 	rsync -a --ignore-existing /tmp/sigil-se-gen/components/data-table.tsx stack-explorer-demo/src/components/data-table.tsx
+	@# Sync all custom component source files (always overwrite)
+	@for f in /tmp/sigil-se-gen/components/*.tsx; do \
+		base=$$(basename "$$f"); \
+		[ "$$base" = "data-table.tsx" ] || [ "$$base" = "index.ts" ] || \
+		cp "$$f" "stack-explorer-demo/src/components/$$base"; \
+	done
+	@# Sync generated layout and API client
+	@if [ -f /tmp/sigil-se-gen/app/\(explorer\)/layout.tsx ]; then \
+		cp /tmp/sigil-se-gen/app/\(explorer\)/layout.tsx stack-explorer-demo/src/app/\(explorer\)/layout.tsx; \
+	fi
+	@if [ -f /tmp/sigil-se-gen/lib/api.ts ]; then \
+		mkdir -p stack-explorer-demo/src/lib; \
+		cp /tmp/sigil-se-gen/lib/api.ts stack-explorer-demo/src/lib/api.ts; \
+	fi
+	@for f in /tmp/sigil-se-gen/lib/*-context.tsx; do \
+		[ -f "$$f" ] && cp "$$f" stack-explorer-demo/src/lib/ || true; \
+	done
 	@for f in /tmp/sigil-se-gen/pages/*.tsx; do \
 		page=$$(basename "$$f" .tsx); \
 		route=$${page#se-}; \

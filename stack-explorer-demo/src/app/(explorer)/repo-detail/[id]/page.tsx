@@ -3,112 +3,35 @@
 
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
-import { toast } from "sonner";
-import { postItem, updateItem, deleteItem } from "@/lib/api";
+import { useParams } from "next/navigation";
 import { AlertTriangle, BarChart3, Code, Loader2, Pencil, Shapes, Trash2 } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Toaster } from "@/components/ui/sonner";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "@/components/data-table";
+import { RepoScoringDialog } from "@/components/repo-scoring-dialog";
 import { SigilChart } from "@/components/sigil-chart";
 import { useDimension } from "@/hooks/use-dimension";
 import { useDimensionScoreById } from "@/hooks/use-dimensionscore";
-import { useLens } from "@/hooks/use-lens";
 import { useFindingById } from "@/hooks/use-finding";
+import { useLens } from "@/hooks/use-lens";
 import { usePattern } from "@/hooks/use-pattern";
 import { useRepoById } from "@/hooks/use-repo";
 import { useSnapshotById } from "@/hooks/use-snapshot";
 
 export default function SeRepoDetail() {
   const params = useParams();
-  const router = useRouter();
-  const [editOpen, setEditOpen] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editUrl, setEditUrl] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editCategory, setEditCategory] = useState("");
-  const [editStack, setEditStack] = useState("");
-  const [editIsOwn, setEditIsOwn] = useState(false);
-  const [scoreOpen, setScoreOpen] = useState(false);
-  const [scoreLensId, setScoreLensId] = useState("");
-  const [scores, setScores] = useState<Record<string, string>>({});
-
-  const { data: repo, isLoading: repoLoading } = useRepoById(params.id as string);
+  const { data: repo, isLoading: repoLoading, refetch: refetchRepo } = useRepoById(params.id as string);
   const { data: dimensionScore, isLoading: dimensionScoreLoading } = useDimensionScoreById(params.id as string);
-  const { data: allDimensions, isLoading: dimensionsLoading } = useDimension();
-  const { data: allLenses, isLoading: lensesLoading } = useLens();
   const { data: snapshot, isLoading: snapshotLoading } = useSnapshotById(params.id as string);
   const { data: pattern, isLoading: patternLoading } = usePattern();
   const { data: finding, isLoading: findingLoading } = useFindingById(params.id as string);
+  const { data: dimension, isLoading: dimensionLoading } = useDimension();
+  const { data: lens, isLoading: lensLoading } = useLens();
 
-  const openEdit = () => {
-    if (!repo) return;
-    setEditName(repo.name ?? "");
-    setEditUrl(repo.url ?? "");
-    setEditDescription(String(repo.description ?? ""));
-    setEditCategory(String(repo.category ?? ""));
-    setEditStack(String(repo.stack ?? ""));
-    setEditIsOwn(!!repo.is_own);
-    setEditOpen(true);
-  };
-
-  const handleUpdate = async () => {
-    try {
-      await updateItem("repos", params.id as string, { name: editName, url: editUrl, description: editDescription, category: editCategory, stack: editStack, is_own: editIsOwn });
-      toast.success("Repository updated");
-      setEditOpen(false);
-      window.location.reload();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update repo");
-    }
-  };
-
-  const openScoring = () => {
-    const initial: Record<string, string> = {};
-    for (const dim of allDimensions ?? []) initial[dim.id] = "";
-    setScores(initial);
-    setScoreLensId((allLenses ?? [])[0]?.id ?? "");
-    setScoreOpen(true);
-  };
-
-  const handleScore = async () => {
-    try {
-      const sc = await postItem<{ id: string }>("scorecards", { repo_id: params.id, lens_id: scoreLensId });
-      const scoreEntries = Object.entries(scores).filter(([, v]) => v !== "");
-      for (const [dimId, val] of scoreEntries) {
-        await postItem("scores", { scorecard_id: sc.id, dimension_id: dimId, score: Number(val) });
-      }
-      toast.success(`Scorecard created with ${scoreEntries.length} scores`);
-      setScoreOpen(false);
-      window.location.reload();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create scorecard");
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await deleteItem("repos", params.id as string);
-      toast.success("Repository deleted");
-      router.push("/repos");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete repo");
-    }
-  };
-
-  if (repoLoading || dimensionScoreLoading || snapshotLoading || patternLoading || findingLoading || dimensionsLoading || lensesLoading) {
+  if (repoLoading || dimensionScoreLoading || snapshotLoading || patternLoading || findingLoading || dimensionLoading || lensLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -141,30 +64,20 @@ export default function SeRepoDetail() {
           <p className="text-sm text-muted-foreground">{repo?.url}</p>
         </div>
         <div className="flex flex-row gap-2">
-          <Button variant="outline" onClick={openEdit}>
+          <Button variant="outline">
             <Pencil className="mr-2 h-4 w-4" />
             Edit
           </Button>
-          <Button variant="default" onClick={openScoring}>
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Score
+          <RepoScoringDialog
+            dimensions={dimension}
+            lenses={lens}
+            repoId={params.id as string}
+            repoName={repo?.name}
+          />
+          <Button variant="destructive" onClick={() => { if (window.confirm("This will remove the repo and all associated scores, findings, and patterns. This action cannot be undone.")) { /* action */ } }}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
           </Button>
-          <AlertDialog>
-            <AlertDialogTrigger render={<Button variant="destructive" />}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete repository?</AlertDialogTitle>
-                <AlertDialogDescription>This will remove the repo and all associated scores, findings, and patterns. This action cannot be undone.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -331,7 +244,7 @@ export default function SeRepoDetail() {
                 header: "Status",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("status") ?? "");
-                  const variants: Record<string, string> = { "open": "danger", "acknowledged": "warning", "resolved": "success" };
+                  const variants: Record<string, string> = { "acknowledged": "warning", "resolved": "success", "open": "danger" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -346,108 +259,6 @@ export default function SeRepoDetail() {
         </TabsContent>
       </Tabs>
     </div>
-    <Dialog open={editOpen} onOpenChange={setEditOpen}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Edit Repository</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 py-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-name">Name</Label>
-            <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-url">URL</Label>
-            <Input id="edit-url" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-description">Description</Label>
-            <Textarea id="edit-description" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={2} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-category">Category</Label>
-            <Select value={editCategory} onValueChange={(v) => v && setEditCategory(v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="framework">Framework</SelectItem>
-                <SelectItem value="library">Library</SelectItem>
-                <SelectItem value="tool">Tool</SelectItem>
-                <SelectItem value="platform">Platform</SelectItem>
-                <SelectItem value="sdk">SDK</SelectItem>
-                <SelectItem value="runtime">Runtime</SelectItem>
-                <SelectItem value="infra">Infrastructure</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-stack">Primary Stack</Label>
-            <Select value={editStack} onValueChange={(v) => v && setEditStack(v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TypeScript">TypeScript</SelectItem>
-                <SelectItem value="Go">Go</SelectItem>
-                <SelectItem value="Rust">Rust</SelectItem>
-                <SelectItem value="Python">Python</SelectItem>
-                <SelectItem value="Java">Java</SelectItem>
-                <SelectItem value="Ruby">Ruby</SelectItem>
-                <SelectItem value="C#">C#</SelectItem>
-                <SelectItem value="Multi">Multi-language</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-is-own">Own Project</Label>
-            <Switch id="edit-is-own" checked={editIsOwn} onCheckedChange={setEditIsOwn} />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-          <Button onClick={handleUpdate}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    <Dialog open={scoreOpen} onOpenChange={setScoreOpen}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Score {repo?.name}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 py-4">
-          <div className="flex flex-col gap-1.5">
-            <Label>Lens</Label>
-            <Select value={scoreLensId} onValueChange={(v) => v && setScoreLensId(v)}>
-              <SelectTrigger><SelectValue placeholder="Select lens..." /></SelectTrigger>
-              <SelectContent>
-                {(allLenses ?? []).map((l) => (
-                  <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="text-xs text-muted-foreground uppercase tracking-wider">Dimension Scores (0-10)</div>
-          {(allDimensions ?? []).map((dim) => (
-            <div key={dim.id} className="flex flex-row items-center gap-3">
-              <Label className="w-40 text-sm shrink-0">{dim.name}</Label>
-              <Input
-                type="number"
-                min={0}
-                max={10}
-                step={0.1}
-                placeholder="—"
-                className="w-20"
-                value={scores[dim.id] ?? ""}
-                onChange={(e) => setScores((prev) => ({ ...prev, [dim.id]: e.target.value }))}
-              />
-              <span className="text-xs text-muted-foreground">{dim.category}</span>
-            </div>
-          ))}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setScoreOpen(false)}>Cancel</Button>
-          <Button onClick={handleScore}>Create Scorecard</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    <Toaster />
     </>
   );
 }

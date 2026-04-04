@@ -278,7 +278,51 @@ func validateProps(props map[string]interface{}, schema *ComponentSchemaInfo, pa
 	}
 }
 
+// ValidateAppConfig checks an AppConfig for structural correctness.
+func ValidateAppConfig(app *AppConfig) *ValidationResult {
+	result := &ValidationResult{Valid: true}
+
+	if app.Sigil == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: "sigil", Message: "required field 'sigil' is missing"})
+	}
+	if app.Name == "" {
+		result.Warnings = append(result.Warnings, ValidationWarning{Path: "name", Message: "app name is empty"})
+	}
+	if len(app.Modules) == 0 {
+		result.Errors = append(result.Errors, ValidationError{Path: "modules", Message: "at least one module is required"})
+	}
+
+	seenIDs := map[string]bool{}
+	for i, mod := range app.Modules {
+		path := fmt.Sprintf("modules[%d]", i)
+		if mod.ID == "" {
+			result.Errors = append(result.Errors, ValidationError{Path: path + ".id", Message: "module id is required"})
+		} else if seenIDs[mod.ID] {
+			result.Errors = append(result.Errors, ValidationError{Path: path + ".id", Message: fmt.Sprintf("duplicate module id %q", mod.ID)})
+		}
+		seenIDs[mod.ID] = true
+		if mod.Shell == "" {
+			result.Errors = append(result.Errors, ValidationError{Path: path + ".shell", Message: "module shell page is required"})
+		}
+		if len(mod.Pages) == 0 {
+			result.Warnings = append(result.Warnings, ValidationWarning{Path: path + ".pages", Message: "module has no pages"})
+		}
+	}
+
+	if app.API != nil && app.API.BaseURLEnv == "" {
+		result.Errors = append(result.Errors, ValidationError{Path: "api.base_url_env", Message: "API base_url_env is required"})
+	}
+
+	result.Valid = len(result.Errors) == 0
+	return result
+}
+
 func checkPropType(value interface{}, expectedType string) bool {
+	// Allow {{varName}} template references for any prop type — resolved at render time
+	if s, ok := value.(string); ok && len(s) > 4 && s[:2] == "{{" && s[len(s)-2:] == "}}" {
+		return true
+	}
+
 	switch expectedType {
 	case "string":
 		_, ok := value.(string)

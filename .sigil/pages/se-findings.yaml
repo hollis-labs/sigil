@@ -7,7 +7,7 @@ module: se
 
 datasources:
   - alias: Finding
-    capabilities: [search, filter, sort, paginate, create]
+    capabilities: [search, filter, sort, paginate, create, update, delete]
 
 layout:
   id: root
@@ -177,5 +177,36 @@ layout:
             dense: true
           actions:
             rowClick:
-              type: toast
-              message: Finding detail coming soon
+              type: sheet
+              datasource: Finding
+              fields:
+                - name: title
+                  label: Title
+                  type: text
+                - name: category
+                  label: Category
+                  type: select
+                  options:
+                    - { value: gap, label: Gap }
+                    - { value: strength, label: Strength }
+                    - { value: opportunity, label: Opportunity }
+                    - { value: risk, label: Risk }
+                - name: severity
+                  label: Severity
+                  type: select
+                  options:
+                    - { value: critical, label: Critical }
+                    - { value: high, label: High }
+                    - { value: medium, label: Medium }
+                    - { value: low, label: Low }
+                - name: status
+                  label: Status
+                  type: select
+                  options:
+                    - { value: open, label: Open }
+                    - { value: acknowledged, label: Acknowledged }
+                    - { value: resolved, label: Resolved }
+                - name: description
+                  label: Description
+                  type: textarea
+                  rows: 4

@@ -7,7 +7,7 @@ module: se
 
 datasources:
   - alias: Repo
-    capabilities: [read]
+    capabilities: [read, update, delete]
     params:
       filter:
         id: "{{param.id}}"
@@ -28,6 +28,10 @@ datasources:
     params:
       filter:
         repo_id: "{{param.id}}"
+  - alias: Dimension
+    capabilities: [list]
+  - alias: Lens
+    capabilities: [list]
 
 layout:
   id: root
@@ -90,17 +94,52 @@ layout:
                 icon: pencil
               actions:
                 click:
-                  type: toast
-                  message: Edit coming soon
-            - type: button
+                  type: sheet
+                  title: Edit Repository
+                  datasource: Repo
+                  mode: edit
+                  fields:
+                    - name: name
+                      label: Name
+                      type: text
+                    - name: url
+                      label: URL
+                      type: text
+                    - name: description
+                      label: Description
+                      type: textarea
+                    - name: category
+                      label: Category
+                      type: select
+                      options:
+                        - { value: framework, label: Framework }
+                        - { value: library, label: Library }
+                        - { value: tool, label: Tool }
+                        - { value: platform, label: Platform }
+                        - { value: sdk, label: SDK }
+                        - { value: runtime, label: Runtime }
+                        - { value: infra, label: Infrastructure }
+                    - name: stack
+                      label: Primary Stack
+                      type: select
+                      options:
+                        - { value: TypeScript, label: TypeScript }
+                        - { value: Go, label: Go }
+                        - { value: Rust, label: Rust }
+                        - { value: Python, label: Python }
+                        - { value: Java, label: Java }
+                        - { value: Ruby, label: Ruby }
+                        - { value: "C#", label: "C#" }
+                        - { value: Multi, label: Multi-language }
+                    - name: is_own
+                      label: Own Project
+                      type: switch
+            - type: repo-scoring-dialog
               props:
-                label: Score
-                variant: primary
-                icon: bar-chart-3
-              actions:
-                click:
-                  type: toast
-                  message: Scoring coming soon
+                repoId: "{{params.id as string}}"
+                repoName: "{{repo?.name}}"
+                dimensions: "{{dimension}}"
+                lenses: "{{lens}}"
             - type: button
               props:
                 label: Delete
@@ -110,10 +149,10 @@ layout:
                 click:
                   type: confirm
                   title: Delete Repository?
-                  message: "This will remove the repo and all associated scores, findings, and patterns."
+                  message: "This will remove the repo and all associated scores, findings, and patterns. This action cannot be undone."
                   onConfirm:
                     type: toast
-                    message: Repo deleted
+                    message: Repository deleted
 
     # ── Stat Row ────────────────────────────────
     - type: grid

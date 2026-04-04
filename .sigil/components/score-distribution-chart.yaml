@@ -1,0 +1,10 @@
+type: score-distribution-chart
+category: custom
+description: "Bar chart showing scorecard distribution across score ranges (0-10)"
+source:
+  component: components/score-distribution-chart.tsx
+props:
+  scorecards:
+    type: array
+    required: true
+    description: "Array of scorecard objects with overall field"

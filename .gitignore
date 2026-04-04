@@ -30,3 +30,4 @@ stack-explorer-demo/.next/
 
 # Build artifacts
 .next/
+stack-explorer-demo-backup-*/

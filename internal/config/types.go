@@ -144,6 +144,61 @@ type ComponentSchemaProvider interface {
 	GetSchema(componentType string) (*ComponentSchemaInfo, bool)
 }
 
+// AppConfig represents the .sigil/app.yaml application configuration.
+type AppConfig struct {
+	Sigil       string           `yaml:"sigil" json:"sigil"`
+	Kind        string           `yaml:"kind" json:"kind"`
+	Name        string           `yaml:"name" json:"name"`
+	Description string           `yaml:"description,omitempty" json:"description,omitempty"`
+	API         *APIConfig       `yaml:"api,omitempty" json:"api,omitempty"`
+	Modules     []ModuleConfig   `yaml:"modules" json:"modules"`
+	Features    *AppFeatures     `yaml:"features,omitempty" json:"features,omitempty"`
+	Actions     []AppAction      `yaml:"actions,omitempty" json:"actions,omitempty"`
+	Providers   []ProviderConfig `yaml:"providers,omitempty" json:"providers,omitempty"`
+}
+
+// APIConfig defines the API client generation settings.
+type APIConfig struct {
+	BaseURLEnv     string `yaml:"base_url_env" json:"base_url_env"`
+	BaseURLDefault string `yaml:"base_url_default" json:"base_url_default"`
+	Prefix         string `yaml:"prefix" json:"prefix"`
+}
+
+// ModuleConfig defines a module within an app.
+type ModuleConfig struct {
+	ID         string   `yaml:"id" json:"id"`
+	Shell      string   `yaml:"shell" json:"shell"`
+	RouteGroup string   `yaml:"route_group" json:"route_group"`
+	Pages      []string `yaml:"pages" json:"pages"`
+}
+
+// AppFeatures controls app-wide feature flags.
+type AppFeatures struct {
+	ThemeToggle    bool `yaml:"theme_toggle" json:"theme_toggle"`
+	CommandPalette bool `yaml:"command_palette" json:"command_palette"`
+	MobileSidebar  bool `yaml:"mobile_sidebar" json:"mobile_sidebar"`
+}
+
+// ProviderConfig defines a context provider to generate and wire into the layout.
+type ProviderConfig struct {
+	ID          string `yaml:"id" json:"id"`
+	Datasource  string `yaml:"datasource" json:"datasource"`
+	TrackField  string `yaml:"track_field" json:"track_field"`
+	LabelField  string `yaml:"label_field" json:"label_field"`
+	Default     string `yaml:"default,omitempty" json:"default,omitempty"`
+	Placeholder string `yaml:"placeholder,omitempty" json:"placeholder,omitempty"`
+	Position    string `yaml:"position,omitempty" json:"position,omitempty"` // "topbar" or ""
+	UIType      string `yaml:"ui_type,omitempty" json:"ui_type,omitempty"`   // "select" or ""
+}
+
+// AppAction defines a quick action available in command palette and menus.
+type AppAction struct {
+	Label string `yaml:"label" json:"label"`
+	Icon  string `yaml:"icon" json:"icon"`
+	Page  string `yaml:"page" json:"page"`
+	Query string `yaml:"query,omitempty" json:"query,omitempty"`
+}
+
 // ProjectConfig represents the .sigil/sigil.yaml project configuration.
 type ProjectConfig struct {
 	Version  string `yaml:"version" json:"version"`

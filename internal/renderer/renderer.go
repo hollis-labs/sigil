@@ -24,6 +24,15 @@ type Renderer interface {
 
 	// SharedComponents returns shared/reusable component files.
 	SharedComponents(usedTypes []string) ([]OutputFile, error)
+
+	// RenderLayout generates the layout wrapper for a module (shell + nav + chrome).
+	RenderLayout(ctx *LayoutContext) ([]OutputFile, error)
+
+	// RenderAPIClient generates a typed API client from app config.
+	RenderAPIClient(api *config.APIConfig) ([]OutputFile, error)
+
+	// RenderProviders generates React Context providers from app config.
+	RenderProviders(providers []config.ProviderConfig) ([]OutputFile, error)
 }
 
 // RenderContext provides everything a renderer needs to generate code for a page.
@@ -34,6 +43,16 @@ type RenderContext struct {
 	Registry      *components.Registry
 	ProjectConfig *config.ProjectConfig
 	GoModule      string
+	SigilDir      string // path to .sigil directory (for locating custom component sources)
+}
+
+// LayoutContext provides everything a renderer needs to generate a module layout.
+type LayoutContext struct {
+	Module    *config.ModuleConfig
+	Shell     *config.Page
+	AppConfig *config.AppConfig
+	Theme     *ThemeConfig
+	Pages     []*config.Page // All pages in this module (for nav extraction)
 }
 
 // OutputFile represents a file to be written to disk.

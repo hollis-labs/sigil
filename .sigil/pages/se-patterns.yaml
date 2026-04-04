@@ -7,7 +7,7 @@ module: se
 
 datasources:
   - alias: Pattern
-    capabilities: [search, filter, sort, paginate, create]
+    capabilities: [search, filter, sort, paginate, create, update, delete]
 
 layout:
   id: root
@@ -148,5 +148,23 @@ layout:
             hoverable: true
           actions:
             rowClick:
-              type: toast
-              message: Pattern detail coming soon
+              type: sheet
+              datasource: Pattern
+              fields:
+                - name: name
+                  label: Name
+                  type: text
+                - name: type
+                  label: Type
+                  type: select
+                  options:
+                    - { value: architectural, label: Architectural }
+                    - { value: structural, label: Structural }
+                    - { value: behavioral, label: Behavioral }
+                - name: category
+                  label: Category
+                  type: text
+                - name: description
+                  label: Description
+                  type: textarea
+                  rows: 4

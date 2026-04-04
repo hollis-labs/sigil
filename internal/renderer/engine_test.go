@@ -276,3 +276,12 @@ func (m *mockRenderer) RenderDataSourceStubs(ds *DataSourceManifest) ([]OutputFi
 func (m *mockRenderer) SharedComponents(usedTypes []string) ([]OutputFile, error) {
 	return nil, nil
 }
+func (m *mockRenderer) RenderLayout(_ *LayoutContext) ([]OutputFile, error) {
+	return nil, nil
+}
+func (m *mockRenderer) RenderAPIClient(_ *config.APIConfig) ([]OutputFile, error) {
+	return nil, nil
+}
+func (m *mockRenderer) RenderProviders(_ []config.ProviderConfig) ([]OutputFile, error) {
+	return nil, nil
+}

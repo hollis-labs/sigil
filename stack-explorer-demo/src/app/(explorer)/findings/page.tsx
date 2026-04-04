@@ -5,9 +5,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { postItem, updateItem, deleteItem } from "@/lib/api";
 import { Loader2, Plus, Search } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,82 +13,85 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable } from "@/components/data-table";
 import { useFinding } from "@/hooks/use-finding";
-import type { Finding } from "@/types/finding";
+import { postItem, updateItem } from "@/lib/api";
+import { Finding } from "@/types/finding";
 
 export default function SeFindings() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [sheetItem, setSheetItem] = useState<Finding | null>(null);
-  const [searchFinding, setSearchFinding] = useState("");
-  const [filterFindingCategory, setFilterFindingCategory] = useState("all");
-  const [filterFindingSeverity, setFilterFindingSeverity] = useState("all");
-  const [filterFindingStatus, setFilterFindingStatus] = useState("all");
   const [formTitle, setFormTitle] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [formSeverity, setFormSeverity] = useState("");
   const [formDescription, setFormDescription] = useState("");
+    const handleCreateFinding = async () => {
+    try {
+      await postItem("findings", {
+        title: formTitle,
+        category: formCategory,
+        severity: formSeverity,
+        description: formDescription,
+      });
+      toast.success("Finding created");
+      setModalOpen(false);
+      setFormTitle("");
+      setFormCategory("");
+      setFormSeverity("");
+      setFormDescription("");
+      refetchFinding();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to create finding");
+    }
+  };
+
+
+  const [searchFinding, setSearchFinding] = useState("");
+  const [filterFindingCategory, setFilterFindingCategory] = useState("all");
+  const [filterFindingSeverity, setFilterFindingSeverity] = useState("all");
+  const [filterFindingStatus, setFilterFindingStatus] = useState("all");
+  const [sheetItem, setSheetItem] = useState<Finding | null>(null);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editSeverity, setEditSeverity] = useState("");
   const [editStatus, setEditStatus] = useState("");
   const [editDescription, setEditDescription] = useState("");
-
-  const { data: finding, isLoading: findingLoading, refetch } = useFinding();
-
-  const resetForm = () => { setFormTitle(""); setFormCategory(""); setFormSeverity(""); setFormDescription(""); };
-
-  const handleSave = async () => {
-    try {
-      await postItem("findings", { title: formTitle, category: formCategory, severity: formSeverity, description: formDescription });
-      toast.success("Finding created");
-      setModalOpen(false);
-      resetForm();
-      refetch();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create finding");
-    }
-  };
-
-  const startEditing = () => {
+    const startEditing = () => {
     if (!sheetItem) return;
-    setEditTitle(sheetItem.title ?? "");
-    setEditCategory(String(sheetItem.category ?? ""));
-    setEditSeverity(String(sheetItem.severity ?? ""));
-    setEditStatus(String(sheetItem.status ?? ""));
-    setEditDescription(String(sheetItem.description ?? ""));
+    setEditTitle(String((sheetItem as unknown as Record<string, unknown>).title ?? ""));
+    setEditCategory(String((sheetItem as unknown as Record<string, unknown>).category ?? ""));
+    setEditSeverity(String((sheetItem as unknown as Record<string, unknown>).severity ?? ""));
+    setEditStatus(String((sheetItem as unknown as Record<string, unknown>).status ?? ""));
+    setEditDescription(String((sheetItem as unknown as Record<string, unknown>).description ?? ""));
     setEditing(true);
   };
 
-  const handleUpdate = async () => {
+
+    const handleUpdate = async () => {
     if (!sheetItem) return;
     try {
-      await updateItem("findings", (sheetItem as { id: string }).id, { title: editTitle, category: editCategory, severity: editSeverity, status: editStatus, description: editDescription });
+      await updateItem("findings", (sheetItem as { id: string }).id, {
+        title: editTitle,
+        category: editCategory,
+        severity: editSeverity,
+        status: editStatus,
+        description: editDescription,
+      });
       toast.success("Finding updated");
       setEditing(false);
       setSheetItem(null);
-      refetch();
+      refetchFinding();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to update finding");
     }
   };
 
-  const handleDelete = async () => {
-    if (!sheetItem) return;
-    try {
-      await deleteItem("findings", (sheetItem as { id: string }).id);
-      toast.success("Finding deleted");
-      setSheetItem(null);
-      refetch();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete finding");
-    }
-  };
+
+
+  const { data: finding, isLoading: findingLoading, refetch: refetchFinding } = useFinding();
 
   if (findingLoading) {
     return (
@@ -120,11 +121,11 @@ export default function SeFindings() {
             <div className="flex flex-col gap-4 py-4">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="title">Title</Label>
-                <Input id="title" name="title" type="text" placeholder="e.g., Missing retry logic in error handling" required value={formTitle} onChange={(e) => setFormTitle(e.target.value)} />
+                <Input id="title" type="text" placeholder="e.g., Missing retry logic in error handling" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="category">Category</Label>
-                <Select name="category" value={formCategory} onValueChange={(v) => v && setFormCategory(v)}>
+                <Select value={formCategory} onValueChange={(v) => v && setFormCategory(v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
@@ -138,7 +139,7 @@ export default function SeFindings() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="severity">Severity</Label>
-                <Select name="severity" value={formSeverity} onValueChange={(v) => v && setFormSeverity(v)}>
+                <Select value={formSeverity} onValueChange={(v) => v && setFormSeverity(v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
@@ -152,12 +153,12 @@ export default function SeFindings() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" placeholder="" rows={4} value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
+                <Textarea id="description" placeholder="" rows={4} value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave}>Save</Button>
+              <Button onClick={handleCreateFinding}>Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -227,7 +228,7 @@ export default function SeFindings() {
                 header: "Category",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("category") ?? "");
-                  const variants: Record<string, string> = { "risk": "warning", "gap": "danger", "strength": "success", "opportunity": "info" };
+                  const variants: Record<string, string> = { "opportunity": "info", "risk": "warning", "gap": "danger", "strength": "success" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -242,7 +243,7 @@ export default function SeFindings() {
                 header: "Severity",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("severity") ?? "");
-                  const variants: Record<string, string> = { "high": "warning", "medium": "default", "low": "info", "critical": "danger" };
+                  const variants: Record<string, string> = { "low": "info", "critical": "danger", "high": "warning", "medium": "default" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -277,40 +278,32 @@ export default function SeFindings() {
     <Sheet open={!!sheetItem} onOpenChange={(open) => { if (!open) { setSheetItem(null); setEditing(false); } }}>
       <SheetContent side="right">
         <SheetHeader>
-          <SheetTitle>{sheetItem?.title}</SheetTitle>
+          <SheetTitle>{(sheetItem as unknown as Record<string, unknown>)?.title as string}</SheetTitle>
         </SheetHeader>
         {sheetItem && !editing && (
           <div className="flex flex-col gap-4 px-4 pt-4">
             <div className="flex flex-row gap-2">
-              <Badge variant="outline">{sheetItem.category}</Badge>
-              <Badge variant="outline">{sheetItem.severity}</Badge>
-              <Badge variant="secondary">{sheetItem.status}</Badge>
-            </div>
-            <Separator />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Repo</span>
-              <span className="text-sm">{sheetItem.repo_name}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Description</span>
-              <p className="text-sm text-muted-foreground leading-relaxed">{sheetItem.description}</p>
-            </div>
-            <Separator />
-            <div className="flex flex-row gap-2">
               <Button variant="outline" size="sm" onClick={startEditing}>Edit</Button>
-              <AlertDialog>
-                <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>Delete</AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete finding?</AlertDialogTitle>
-                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Title</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.title ?? "")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Category</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.category ?? "")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Severity</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.severity ?? "")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Status</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.status ?? "")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Description</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.description ?? "")}</div>
             </div>
           </div>
         )}
@@ -318,12 +311,14 @@ export default function SeFindings() {
           <div className="flex flex-col gap-4 px-4 pt-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-title">Title</Label>
-              <Input id="edit-title" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+              <Input id="edit-title" type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-category">Category</Label>
               <Select value={editCategory} onValueChange={(v) => v && setEditCategory(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="gap">Gap</SelectItem>
                   <SelectItem value="strength">Strength</SelectItem>
@@ -335,7 +330,9 @@ export default function SeFindings() {
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-severity">Severity</Label>
               <Select value={editSeverity} onValueChange={(v) => v && setEditSeverity(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="critical">Critical</SelectItem>
                   <SelectItem value="high">High</SelectItem>
@@ -347,7 +344,9 @@ export default function SeFindings() {
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-status">Status</Label>
               <Select value={editStatus} onValueChange={(v) => v && setEditStatus(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="open">Open</SelectItem>
                   <SelectItem value="acknowledged">Acknowledged</SelectItem>
@@ -357,7 +356,7 @@ export default function SeFindings() {
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-description">Description</Label>
-              <Textarea id="edit-description" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={4} />
+              <Textarea id="edit-description" rows={4} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
             </div>
             <div className="flex flex-row gap-2">
               <Button variant="outline" size="sm" onClick={() => setEditing(false)}>Cancel</Button>

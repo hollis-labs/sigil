@@ -7,7 +7,7 @@ module: se
 
 datasources:
   - alias: ReportConfig
-    capabilities: [search, paginate, create, delete]
+    capabilities: [search, paginate, create, update, delete]
 
 layout:
   id: root
@@ -114,5 +114,16 @@ layout:
             hoverable: true
           actions:
             rowClick:
-              type: toast
-              message: Report detail coming soon
+              type: sheet
+              datasource: ReportConfig
+              fields:
+                - name: name
+                  label: Name
+                  type: text
+                - name: audience
+                  label: Audience
+                  type: select
+                  options:
+                    - { value: engineer, label: Engineer }
+                    - { value: product, label: Product }
+                    - { value: leadership, label: Leadership }

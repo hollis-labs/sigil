@@ -5,9 +5,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { postItem, updateItem, deleteItem } from "@/lib/api";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Loader2, Plus, Search } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,79 +14,94 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable } from "@/components/data-table";
 import { usePattern } from "@/hooks/use-pattern";
-import type { Pattern } from "@/types/pattern";
+import { deleteItem, postItem, updateItem } from "@/lib/api";
+import { Pattern } from "@/types/pattern";
 
 export default function SePatterns() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [sheetItem, setSheetItem] = useState<Pattern | null>(null);
-  const [searchPattern, setSearchPattern] = useState("");
-  const [filterPatternType, setFilterPatternType] = useState("all");
-  const [filterPatternCategory, setFilterPatternCategory] = useState("all");
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [formDescription, setFormDescription] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editType, setEditType] = useState("");
-  const [editCategory, setEditCategory] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-
-  const { data: pattern, isLoading: patternLoading, refetch } = usePattern();
-
-  const resetForm = () => { setFormName(""); setFormType(""); setFormCategory(""); setFormDescription(""); };
-
-  const handleSave = async () => {
+    const handleCreatePattern = async () => {
     try {
-      await postItem("patterns", { name: formName, type: formType, category: formCategory, description: formDescription });
+      await postItem("patterns", {
+        name: formName,
+        type: formType,
+        category: formCategory,
+        description: formDescription,
+      });
       toast.success("Pattern created");
       setModalOpen(false);
-      resetForm();
-      refetch();
+      setFormName("");
+      setFormType("");
+      setFormCategory("");
+      setFormDescription("");
+      refetchPattern();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create pattern");
     }
   };
 
-  const startEditing = () => {
+
+  const [searchPattern, setSearchPattern] = useState("");
+  const [filterPatternType, setFilterPatternType] = useState("all");
+  const [filterPatternCategory, setFilterPatternCategory] = useState("all");
+  const [sheetItem, setSheetItem] = useState<Pattern | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editType, setEditType] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+    const startEditing = () => {
     if (!sheetItem) return;
-    setEditName(sheetItem.name ?? "");
-    setEditType(String(sheetItem.type ?? ""));
-    setEditCategory(String(sheetItem.category ?? ""));
-    setEditDescription(String(sheetItem.description ?? ""));
+    setEditName(String((sheetItem as unknown as Record<string, unknown>).name ?? ""));
+    setEditType(String((sheetItem as unknown as Record<string, unknown>).type ?? ""));
+    setEditCategory(String((sheetItem as unknown as Record<string, unknown>).category ?? ""));
+    setEditDescription(String((sheetItem as unknown as Record<string, unknown>).description ?? ""));
     setEditing(true);
   };
 
-  const handleUpdate = async () => {
+
+    const handleUpdate = async () => {
     if (!sheetItem) return;
     try {
-      await updateItem("patterns", (sheetItem as { id: string }).id, { name: editName, type: editType, category: editCategory, description: editDescription });
+      await updateItem("patterns", (sheetItem as { id: string }).id, {
+        name: editName,
+        type: editType,
+        category: editCategory,
+        description: editDescription,
+      });
       toast.success("Pattern updated");
       setEditing(false);
       setSheetItem(null);
-      refetch();
+      refetchPattern();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to update pattern");
     }
   };
 
-  const handleDelete = async () => {
+
+    const handleDelete = async () => {
     if (!sheetItem) return;
     try {
       await deleteItem("patterns", (sheetItem as { id: string }).id);
       toast.success("Pattern deleted");
       setSheetItem(null);
-      refetch();
+      refetchPattern();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to delete pattern");
     }
   };
+
+
+
+  const { data: pattern, isLoading: patternLoading, refetch: refetchPattern } = usePattern();
 
   if (patternLoading) {
     return (
@@ -117,11 +131,11 @@ export default function SePatterns() {
             <div className="flex flex-col gap-4 py-4">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" name="name" type="text" placeholder="e.g., Plugin Architecture" required value={formName} onChange={(e) => setFormName(e.target.value)} />
+                <Input id="name" type="text" placeholder="e.g., Plugin Architecture" value={formName} onChange={(e) => setFormName(e.target.value)} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="type">Type</Label>
-                <Select name="type" value={formType} onValueChange={(v) => v && setFormType(v)}>
+                <Select value={formType} onValueChange={(v) => v && setFormType(v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
@@ -133,7 +147,7 @@ export default function SePatterns() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="category">Category</Label>
-                <Select name="category" value={formCategory} onValueChange={(v) => v && setFormCategory(v)}>
+                <Select value={formCategory} onValueChange={(v) => v && setFormCategory(v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
@@ -148,12 +162,12 @@ export default function SePatterns() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" placeholder="" rows={3} value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
+                <Textarea id="description" placeholder="" rows={3} value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave}>Save</Button>
+              <Button onClick={handleCreatePattern}>Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -232,24 +246,10 @@ export default function SePatterns() {
     <Sheet open={!!sheetItem} onOpenChange={(open) => { if (!open) { setSheetItem(null); setEditing(false); } }}>
       <SheetContent side="right">
         <SheetHeader>
-          <SheetTitle>{sheetItem?.name}</SheetTitle>
+          <SheetTitle>{(sheetItem as unknown as Record<string, unknown>)?.name as string}</SheetTitle>
         </SheetHeader>
         {sheetItem && !editing && (
           <div className="flex flex-col gap-4 px-4 pt-4">
-            <div className="flex flex-row gap-2">
-              <Badge variant={sheetItem.type === "anti-pattern" ? "destructive" : "outline"} className={sheetItem.type !== "anti-pattern" ? "border-blue-500/30 bg-blue-500/10 text-blue-400" : ""}>{sheetItem.type}</Badge>
-              <Badge variant="secondary">{sheetItem.category}</Badge>
-            </div>
-            <Separator />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Linked Repos</span>
-              <span className="text-sm">{String(sheetItem.repo_count ?? 0)} repos</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Description</span>
-              <p className="text-sm text-muted-foreground leading-relaxed">{sheetItem.description}</p>
-            </div>
-            <Separator />
             <div className="flex flex-row gap-2">
               <Button variant="outline" size="sm" onClick={startEditing}>Edit</Button>
               <AlertDialog>
@@ -266,9 +266,25 @@ export default function SePatterns() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Name</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.name ?? "")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Type</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.type ?? "")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Category</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.category ?? "")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Description</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.description ?? "")}</div>
+            </div>
           </div>
         )}
-        {editing && sheetItem && (
+        {sheetItem && editing && (
           <div className="flex flex-col gap-4 px-4 pt-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-name">Name</Label>
@@ -278,36 +294,26 @@ export default function SePatterns() {
               <Label htmlFor="edit-type">Type</Label>
               <Select value={editType} onValueChange={(v) => v && setEditType(v)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pattern">Pattern</SelectItem>
-                  <SelectItem value="anti-pattern">Anti-Pattern</SelectItem>
+                  <SelectItem value="architectural">Architectural</SelectItem>
+                  <SelectItem value="structural">Structural</SelectItem>
+                  <SelectItem value="behavioral">Behavioral</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-category">Category</Label>
-              <Select value={editCategory} onValueChange={(v) => v && setEditCategory(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="structural">Structural</SelectItem>
-                  <SelectItem value="behavioral">Behavioral</SelectItem>
-                  <SelectItem value="operational">Operational</SelectItem>
-                  <SelectItem value="security">Security</SelectItem>
-                  <SelectItem value="testing">Testing</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input id="edit-category" type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-description">Description</Label>
-              <Textarea id="edit-description" rows={3} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+              <Textarea id="edit-description" rows={4} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
             </div>
-            <div className="flex flex-row gap-2 justify-end">
-              <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
-              <Button onClick={handleUpdate}>Save</Button>
+            <div className="flex flex-row gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
+              <Button size="sm" onClick={handleUpdate}>Save</Button>
             </div>
           </div>
         )}

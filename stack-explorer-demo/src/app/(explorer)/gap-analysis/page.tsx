@@ -3,12 +3,8 @@
 
 "use client";
 
-import { Suspense } from "react";
-
-import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { postItem } from "@/lib/api";
 import { Loader2, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,82 +13,79 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { DataTable } from "@/components/data-table";
-import { SigilChart } from "@/components/sigil-chart";
+import { GapAdvantageCharts } from "@/components/gap-advantage-charts";
 import { useComparisonSet } from "@/hooks/use-comparisonset";
 import { useDimensionScore } from "@/hooks/use-dimensionscore";
 import { useFinding } from "@/hooks/use-finding";
 import { useRepo } from "@/hooks/use-repo";
 import { useScorecard } from "@/hooks/use-scorecard";
-import type { Finding } from "@/types/finding";
+import { postItem, updateItem } from "@/lib/api";
+import { Finding } from "@/types/finding";
 
-export default function SeGapAnalysisPage() {
-  return (
-    <Suspense>
-      <SeGapAnalysis />
-    </Suspense>
-  );
-}
-
-function SeGapAnalysis() {
-  const searchParams = useSearchParams();
+export default function SeGapAnalysis() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [sheetItem, setSheetItem] = useState<Finding | null>(null);
   const [formName, setFormName] = useState("");
-
-  useEffect(() => {
-    if (searchParams.get("action") === "create") setModalOpen(true);
-  }, [searchParams]);
-
-  const { data: comparisonSet, isLoading: comparisonSetLoading, refetch: refetchComparisons } = useComparisonSet();
-  const { data: finding, isLoading: findingLoading } = useFinding();
-  const { data: repo, isLoading: repoLoading } = useRepo();
-  const { data: scorecard, isLoading: scorecardLoading } = useScorecard();
-  const { data: dimensionScore, isLoading: dimensionScoreLoading } = useDimensionScore();
-
-  const handleSave = async () => {
+    const handleCreateComparisonSet = async () => {
     try {
-      await postItem("comparison-sets", { name: formName });
-      toast.success("Comparison set created");
+      await postItem("comparisonsets", {
+        name: formName,
+      });
+      toast.success("ComparisonSet created");
       setModalOpen(false);
       setFormName("");
-      refetchComparisons();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create comparison set");
+      toast.error(e instanceof Error ? e.message : "Failed to create comparisonset");
     }
   };
 
-  // Compute advantages and gaps from dimension scores (own vs reference)
-  const { advantages, gaps } = (() => {
-    const ownRepoIds = new Set((repo ?? []).filter((r) => r.is_own).map((r) => r.id));
-    const scorecardRepoMap = new Map((scorecard ?? []).map((sc) => [sc.id, sc.repo_id]));
-    const dimAccum: Record<string, { ownSum: number; ownCount: number; refSum: number; refCount: number }> = {};
-    for (const ds of dimensionScore ?? []) {
-      const dimName = ds.dimension_name ?? "Unknown";
-      const repoId = scorecardRepoMap.get(ds.scorecard_id ?? "");
-      const score = Number(ds.score ?? 0);
-      if (!dimAccum[dimName]) dimAccum[dimName] = { ownSum: 0, ownCount: 0, refSum: 0, refCount: 0 };
-      if (repoId && ownRepoIds.has(repoId)) {
-        dimAccum[dimName].ownSum += score;
-        dimAccum[dimName].ownCount++;
-      } else {
-        dimAccum[dimName].refSum += score;
-        dimAccum[dimName].refCount++;
-      }
+
+  const [sheetItem, setSheetItem] = useState<Finding | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editCategory, setEditCategory] = useState("");
+  const [editSeverity, setEditSeverity] = useState("");
+  const [editStatus, setEditStatus] = useState("");
+  const [editRepoName, setEditRepoName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+    const startEditing = () => {
+    if (!sheetItem) return;
+    setEditCategory(String((sheetItem as unknown as Record<string, unknown>).category ?? ""));
+    setEditSeverity(String((sheetItem as unknown as Record<string, unknown>).severity ?? ""));
+    setEditStatus(String((sheetItem as unknown as Record<string, unknown>).status ?? ""));
+    setEditRepoName(String((sheetItem as unknown as Record<string, unknown>).repo_name ?? ""));
+    setEditDescription(String((sheetItem as unknown as Record<string, unknown>).description ?? ""));
+    setEditing(true);
+  };
+
+
+    const handleUpdate = async () => {
+    if (!sheetItem) return;
+    try {
+      await updateItem("findings", (sheetItem as { id: string }).id, {
+        category: editCategory,
+        severity: editSeverity,
+        status: editStatus,
+        repo_name: editRepoName,
+        description: editDescription,
+      });
+      toast.success("Finding updated");
+      setEditing(false);
+      setSheetItem(null);
+      refetchFinding();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update finding");
     }
-    const deltas = Object.entries(dimAccum).map(([dimension, v]) => {
-      const ownAvg = v.ownCount ? v.ownSum / v.ownCount : 0;
-      const refAvg = v.refCount ? v.refSum / v.refCount : 0;
-      return { dimension, delta: Math.round((ownAvg - refAvg) * 10) / 10 };
-    });
-    return {
-      advantages: deltas.filter((d) => d.delta > 0).sort((a, b) => b.delta - a.delta).map((d) => ({ dimension: d.dimension, delta: d.delta })),
-      gaps: deltas.filter((d) => d.delta < 0).sort((a, b) => a.delta - b.delta).map((d) => ({ dimension: d.dimension, gap: Math.abs(d.delta) })),
-    };
-  })();
+  };
+
+
+
+  const { data: comparisonSet, isLoading: comparisonSetLoading, refetch: refetchComparisonSet } = useComparisonSet();
+  const { data: finding, isLoading: findingLoading, refetch: refetchFinding } = useFinding();
+  const { data: repo, isLoading: repoLoading } = useRepo();
+  const { data: scorecard, isLoading: scorecardLoading } = useScorecard();
+  const { data: dimensionScore, isLoading: dimensionScoreLoading } = useDimensionScore();
 
   if (comparisonSetLoading || findingLoading || repoLoading || scorecardLoading || dimensionScoreLoading) {
     return (
@@ -133,57 +126,22 @@ function SeGapAnalysis() {
               <div className="flex flex-col gap-4 py-4">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="name">Name</Label>
-                  <Input id="name" name="name" type="text" placeholder="e.g., Own vs Top 10" required value={formName} onChange={(e) => setFormName(e.target.value)} />
+                  <Input id="name" type="text" placeholder="e.g., Own vs Top 10" value={formName} onChange={(e) => setFormName(e.target.value)} />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleSave}>Save</Button>
+                <Button onClick={handleCreateComparisonSet}>Save</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Advantages</CardTitle>
-            <CardDescription>Dimensions where own projects outperform references</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SigilChart
-              type="bar"
-              xKey="dimension"
-              height={250}
-              showGrid
-              dataKeys={["delta"]}
-              config={{
-                delta: { label: "Advantage", color: "oklch(0.75 0.18 155)" },
-              }}
-              data={advantages.length > 0 ? advantages : [{ dimension: "No data", delta: 0 }]}
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Gaps</CardTitle>
-            <CardDescription>Dimensions where own projects trail references</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SigilChart
-              type="bar"
-              xKey="dimension"
-              height={250}
-              showGrid
-              dataKeys={["gap"]}
-              config={{
-                gap: { label: "Gap", color: "oklch(0.65 0.2 25)" },
-              }}
-              data={gaps.length > 0 ? gaps : [{ dimension: "No data", gap: 0 }]}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <GapAdvantageCharts
+        repos={repo}
+        scorecards={scorecard}
+        dimensionScores={dimensionScore}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Dimension Breakdown</CardTitle>
@@ -230,7 +188,7 @@ function SeGapAnalysis() {
                 header: "Severity",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("severity") ?? "");
-                  const variants: Record<string, string> = { "high": "warning", "medium": "default", "low": "info", "critical": "danger" };
+                  const variants: Record<string, string> = { "critical": "danger", "high": "warning", "medium": "default", "low": "info" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -247,26 +205,63 @@ function SeGapAnalysis() {
         </CardContent>
       </Card>
     </div>
-    <Sheet open={!!sheetItem} onOpenChange={(open) => !open && setSheetItem(null)}>
+    <Sheet open={!!sheetItem} onOpenChange={(open) => { if (!open) { setSheetItem(null); setEditing(false); } }}>
       <SheetContent side="right">
         <SheetHeader>
-          <SheetTitle>{sheetItem?.title}</SheetTitle>
+          <SheetTitle>{(sheetItem as unknown as Record<string, unknown>)?.category as string}</SheetTitle>
         </SheetHeader>
-        {sheetItem && (
+        {sheetItem && !editing && (
           <div className="flex flex-col gap-4 px-4 pt-4">
             <div className="flex flex-row gap-2">
-              <Badge variant="outline">{sheetItem.category}</Badge>
-              <Badge variant="outline">{sheetItem.severity}</Badge>
-              <Badge variant="secondary">{sheetItem.status}</Badge>
+              <Button variant="outline" size="sm" onClick={startEditing}>Edit</Button>
             </div>
-            <Separator />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Repo</span>
-              <span className="text-sm">{sheetItem.repo_name}</span>
+            <div>
+              <div className="text-xs text-muted-foreground">Category</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.category ?? "")}</div>
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Description</span>
-              <p className="text-sm text-muted-foreground leading-relaxed">{sheetItem.description}</p>
+            <div>
+              <div className="text-xs text-muted-foreground">Severity</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.severity ?? "")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Status</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.status ?? "")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Repo</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.repo_name ?? "")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Description</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.description ?? "")}</div>
+            </div>
+          </div>
+        )}
+        {sheetItem && editing && (
+          <div className="flex flex-col gap-4 px-4 pt-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-category">Category</Label>
+              <Input id="edit-category" type="text" value={editCategory} onChange={(e) => setEditCategory(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-severity">Severity</Label>
+              <Input id="edit-severity" type="text" value={editSeverity} onChange={(e) => setEditSeverity(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-status">Status</Label>
+              <Input id="edit-status" type="text" value={editStatus} onChange={(e) => setEditStatus(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-repo_name">Repo</Label>
+              <Input id="edit-repo_name" type="text" value={editRepoName} onChange={(e) => setEditRepoName(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="edit-description">Description</Label>
+              <Input id="edit-description" type="text" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+            </div>
+            <div className="flex flex-row gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
+              <Button size="sm" onClick={handleUpdate}>Save</Button>
             </div>
           </div>
         )}

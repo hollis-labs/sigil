@@ -2,6 +2,7 @@
 package reactshadcn
 
 import (
+	"github.com/chrispian/sigil/internal/config"
 	"github.com/chrispian/sigil/internal/renderer"
 )
 
@@ -37,4 +38,19 @@ func (r *ReactShadcnRenderer) RenderDataSourceStubs(ds *renderer.DataSourceManif
 // SharedComponents returns shared component and utility files.
 func (r *ReactShadcnRenderer) SharedComponents(usedTypes []string) ([]renderer.OutputFile, error) {
 	return renderSharedComponents(usedTypes)
+}
+
+// RenderLayout generates a layout.tsx for a module shell.
+func (r *ReactShadcnRenderer) RenderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
+	return renderLayout(ctx)
+}
+
+// RenderAPIClient generates lib/api.ts from API config.
+func (r *ReactShadcnRenderer) RenderAPIClient(api *config.APIConfig) ([]renderer.OutputFile, error) {
+	return renderAPIClient(api)
+}
+
+// RenderProviders generates React Context provider files.
+func (r *ReactShadcnRenderer) RenderProviders(providers []config.ProviderConfig) ([]renderer.OutputFile, error) {
+	return renderProviders(providers)
 }

@@ -3,11 +3,10 @@
 
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
-import { postItem } from "@/lib/api";
-import { Loader2, Plus, Search, Upload } from "lucide-react";
+import { Loader2, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,73 +18,49 @@ import { Toaster } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable } from "@/components/data-table";
+import { YamlImportButton } from "@/components/yaml-import-button";
 import { useRepo } from "@/hooks/use-repo";
+import { postItem } from "@/lib/api";
 
-export default function SeReposPage() {
-  return (
-    <Suspense>
-      <SeRepos />
-    </Suspense>
-  );
-}
-
-function SeRepos() {
+export default function SeRepos() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [modalOpen, setModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get("action") === "create") setModalOpen(true);
-  }, [searchParams]);
-  const [searchRepo, setSearchRepo] = useState("");
-  const [filterRepoCategory, setFilterRepoCategory] = useState("all");
-  const [filterRepoStack, setFilterRepoStack] = useState("all");
   const [formName, setFormName] = useState("");
   const [formUrl, setFormUrl] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [formStack, setFormStack] = useState("");
   const [formIsOwn, setFormIsOwn] = useState(false);
-
-  const { data: repo, isLoading: repoLoading, refetch } = useRepo();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImportYaml = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const handleCreateRepo = async () => {
     try {
-      const text = await file.text();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SE_API_URL ?? "http://localhost:8081"}/api/repos/import`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-yaml" },
-        body: text,
+      await postItem("repos", {
+        name: formName,
+        url: formUrl,
+        description: formDescription,
+        category: formCategory,
+        stack: formStack,
+        is_own: formIsOwn,
       });
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        throw new Error(errText || `Import failed (${res.status})`);
-      }
-      const result = await res.json();
-      toast.success(`Imported ${result.imported ?? ""} repos`);
-      refetch();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Import failed");
-    }
-    e.target.value = "";
-  };
-
-  const resetForm = () => { setFormName(""); setFormUrl(""); setFormDescription(""); setFormCategory(""); setFormStack(""); setFormIsOwn(false); };
-
-  const handleSave = async () => {
-    try {
-      await postItem("repos", { name: formName, url: formUrl, description: formDescription, category: formCategory, stack: formStack, is_own: formIsOwn });
-      toast.success("Repository created");
+      toast.success("Repo created");
       setModalOpen(false);
-      resetForm();
-      refetch();
+      setFormName("");
+      setFormUrl("");
+      setFormDescription("");
+      setFormCategory("");
+      setFormStack("");
+      setFormIsOwn(false);
+      refetchRepo();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create repo");
     }
   };
+
+
+  const [searchRepo, setSearchRepo] = useState("");
+  const [filterRepoCategory, setFilterRepoCategory] = useState("all");
+  const [filterRepoStack, setFilterRepoStack] = useState("all");
+
+  const { data: repo, isLoading: repoLoading, refetch: refetchRepo } = useRepo();
 
   if (repoLoading) {
     return (
@@ -104,11 +79,10 @@ function SeRepos() {
           <p className="text-sm text-muted-foreground">112 repos tracked across the AI agent landscape</p>
         </div>
         <div className="flex flex-row gap-2">
-          <input ref={fileInputRef} type="file" accept=".yaml,.yml" className="hidden" onChange={handleImportYaml} />
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="mr-2 h-4 w-4" />
-            Import YAML
-          </Button>
+          <YamlImportButton
+            endpoint="/api/repos/import"
+            label="Import YAML"
+          />
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
             <DialogTrigger render={<Button variant="default" />}>
               <Plus className="mr-2 h-4 w-4" />
@@ -121,19 +95,19 @@ function SeRepos() {
               <div className="flex flex-col gap-4 py-4">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="name">Name</Label>
-                  <Input id="name" name="name" type="text" placeholder="e.g., langchain" required value={formName} onChange={(e) => setFormName(e.target.value)} />
+                  <Input id="name" type="text" placeholder="e.g., langchain" value={formName} onChange={(e) => setFormName(e.target.value)} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="url">URL</Label>
-                  <Input id="url" name="url" type="text" placeholder="https://github.com/org/repo" required value={formUrl} onChange={(e) => setFormUrl(e.target.value)} />
+                  <Input id="url" type="text" placeholder="https://github.com/org/repo" value={formUrl} onChange={(e) => setFormUrl(e.target.value)} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="description">Description</Label>
-                  <Textarea id="description" name="description" placeholder="" rows={2} value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
+                  <Textarea id="description" placeholder="" rows={2} value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="category">Category</Label>
-                  <Select name="category" value={formCategory} onValueChange={(v) => v && setFormCategory(v)}>
+                  <Select value={formCategory} onValueChange={(v) => v && setFormCategory(v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select..." />
                     </SelectTrigger>
@@ -150,7 +124,7 @@ function SeRepos() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="stack">Primary Stack</Label>
-                  <Select name="stack" value={formStack} onValueChange={(v) => v && setFormStack(v)}>
+                  <Select value={formStack} onValueChange={(v) => v && setFormStack(v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select..." />
                     </SelectTrigger>
@@ -168,12 +142,12 @@ function SeRepos() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="is_own">Own Project</Label>
-                  <Switch id="is_own" name="is_own" checked={formIsOwn} onCheckedChange={setFormIsOwn} />
+                  <Switch id="is_own" checked={formIsOwn} onCheckedChange={(v) => setFormIsOwn(v)} />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleSave}>Save</Button>
+                <Button onClick={handleCreateRepo}>Save</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

@@ -3,10 +3,8 @@
 
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { Suspense, useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { postItem, updateItem, deleteItem } from "@/lib/api";
 import { Loader2, Plus, Search } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -16,92 +14,54 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { DataTable } from "@/components/data-table";
 import { useReportConfig } from "@/hooks/use-reportconfig";
-import { useLensContext } from "@/lib/lens-context";
-import type { ReportConfig } from "@/types/reportconfig";
+import { deleteItem, postItem } from "@/lib/api";
+import { ReportConfig } from "@/types/reportconfig";
 
-export default function SeReportsPage() {
-  return (
-    <Suspense>
-      <SeReports />
-    </Suspense>
-  );
-}
-
-function SeReports() {
-  const searchParams = useSearchParams();
-  const { currentLensId, currentLensName } = useLensContext();
+export default function SeReports() {
   const [modalOpen, setModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get("action") === "create") setModalOpen(true);
-  }, [searchParams]);
-  const [sheetItem, setSheetItem] = useState<ReportConfig | null>(null);
-  const [searchReportConfig, setSearchReportConfig] = useState("");
   const [formName, setFormName] = useState("");
   const [formAudience, setFormAudience] = useState("");
   const [formLensId, setFormLensId] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editAudience, setEditAudience] = useState("");
-  const [editLensId, setEditLensId] = useState("");
-
-  const { data: reportConfig, isLoading: reportConfigLoading, refetch } = useReportConfig();
-
-  const resetForm = () => { setFormName(""); setFormAudience(""); setFormLensId(""); };
-
-  const handleSave = async () => {
+    const handleCreateReportConfig = async () => {
     try {
-      await postItem("reports", { name: formName, audience: formAudience, lens_id: formLensId });
-      toast.success("Report created");
+      await postItem("reportconfigs", {
+        name: formName,
+        audience: formAudience,
+        lens_id: formLensId,
+      });
+      toast.success("ReportConfig created");
       setModalOpen(false);
-      resetForm();
-      refetch();
+      setFormName("");
+      setFormAudience("");
+      setFormLensId("");
+      refetchReportConfig();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create report");
+      toast.error(e instanceof Error ? e.message : "Failed to create reportconfig");
     }
   };
 
-  const startEditing = () => {
-    if (!sheetItem) return;
-    setEditName(sheetItem.name ?? "");
-    setEditAudience(String(sheetItem.audience ?? ""));
-    setEditLensId(String(sheetItem.lens_id ?? ""));
-    setEditing(true);
-  };
 
-  const handleUpdate = async () => {
+  const [searchReportConfig, setSearchReportConfig] = useState("");
+  const [sheetItem, setSheetItem] = useState<ReportConfig | null>(null);
+    const handleDelete = async () => {
     if (!sheetItem) return;
     try {
-      await updateItem("reports", (sheetItem as { id: string }).id, { name: editName, audience: editAudience, lens_id: editLensId });
-      toast.success("Report updated");
-      setEditing(false);
+      await deleteItem("reportconfigs", (sheetItem as { id: string }).id);
+      toast.success("ReportConfig deleted");
       setSheetItem(null);
-      refetch();
+      refetchReportConfig();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update report");
+      toast.error(e instanceof Error ? e.message : "Failed to delete reportconfig");
     }
   };
 
-  const handleDelete = async () => {
-    if (!sheetItem) return;
-    try {
-      await deleteItem("reports", (sheetItem as { id: string }).id);
-      toast.success("Report deleted");
-      setSheetItem(null);
-      refetch();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete report");
-    }
-  };
 
-  const lensFilteredReports = (reportConfig ?? []).filter(
-    (rc) => !currentLensId || rc.lens_id === currentLensId,
-  );
+
+  const { data: reportConfig, isLoading: reportConfigLoading, refetch: refetchReportConfig } = useReportConfig();
 
   if (reportConfigLoading) {
     return (
@@ -131,11 +91,11 @@ function SeReports() {
             <div className="flex flex-col gap-4 py-4">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="name">Report Name</Label>
-                <Input id="name" name="name" type="text" placeholder="e.g., Q1 Agent Framework Review" required value={formName} onChange={(e) => setFormName(e.target.value)} />
+                <Input id="name" type="text" placeholder="e.g., Q1 Agent Framework Review" value={formName} onChange={(e) => setFormName(e.target.value)} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="audience">Audience</Label>
-                <Select name="audience" value={formAudience} onValueChange={(v) => v && setFormAudience(v)}>
+                <Select value={formAudience} onValueChange={(v) => v && setFormAudience(v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
@@ -148,7 +108,7 @@ function SeReports() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="lens_id">Lens</Label>
-                <Select name="lens_id" value={formLensId} onValueChange={(v) => v && setFormLensId(v)}>
+                <Select value={formLensId} onValueChange={(v) => v && setFormLensId(v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select..." />
                   </SelectTrigger>
@@ -164,7 +124,7 @@ function SeReports() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave}>Save</Button>
+              <Button onClick={handleCreateReportConfig}>Save</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -176,11 +136,11 @@ function SeReports() {
       <Card>
         <CardHeader>
           <CardTitle>Report Configs</CardTitle>
-          <CardDescription>Reports in {currentLensName || "selected"} lens — change lens in topbar to filter</CardDescription>
+          <CardDescription>Each report combines a lens with filtered repos for a curated view</CardDescription>
         </CardHeader>
         <CardContent>
           <DataTable
-            data={lensFilteredReports
+            data={(reportConfig ?? [])
               .filter((item) => {
                 if (!searchReportConfig) return true;
                 const q = searchReportConfig.toLowerCase();
@@ -226,38 +186,19 @@ function SeReports() {
         </CardContent>
       </Card>
     </div>
-    <Sheet open={!!sheetItem} onOpenChange={(open) => { if (!open) { setSheetItem(null); setEditing(false); } }}>
+    <Sheet open={!!sheetItem} onOpenChange={(open) => { if (!open) { setSheetItem(null); } }}>
       <SheetContent side="right">
         <SheetHeader>
-          <SheetTitle>{sheetItem?.name}</SheetTitle>
+          <SheetTitle>{(sheetItem as unknown as Record<string, unknown>)?.name as string}</SheetTitle>
         </SheetHeader>
-        {sheetItem && !editing && (
+        {sheetItem && (
           <div className="flex flex-col gap-4 px-4 pt-4">
             <div className="flex flex-row gap-2">
-              <Badge variant="outline">{sheetItem.audience}</Badge>
-              <Badge variant="secondary">{sheetItem.lens_name}</Badge>
-            </div>
-            <Separator />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Lens</span>
-              <span className="text-sm">{sheetItem.lens_name}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Repos Included</span>
-              <span className="text-sm">{String(sheetItem.repo_count ?? 0)}</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Audience</span>
-              <span className="text-sm capitalize">{sheetItem.audience}</span>
-            </div>
-            <Separator />
-            <div className="flex flex-row gap-2">
-              <Button variant="outline" size="sm" onClick={startEditing}>Edit</Button>
               <AlertDialog>
                 <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>Delete</AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Delete report?</AlertDialogTitle>
+                    <AlertDialogTitle>Delete reportconfig?</AlertDialogTitle>
                     <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -267,45 +208,13 @@ function SeReports() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-          </div>
-        )}
-        {sheetItem && editing && (
-          <div className="flex flex-col gap-4 px-4 pt-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-name">Report Name</Label>
-              <Input id="edit-name" type="text" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            <div>
+              <div className="text-xs text-muted-foreground">Name</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.name ?? "")}</div>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-audience">Audience</Label>
-              <Select value={editAudience} onValueChange={(v) => v && setEditAudience(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="engineer">Engineer</SelectItem>
-                  <SelectItem value="product">Product</SelectItem>
-                  <SelectItem value="leadership">Leadership</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="edit-lens">Lens</Label>
-              <Select value={editLensId} onValueChange={(v) => v && setEditLensId(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="engineering">Engineering</SelectItem>
-                  <SelectItem value="product">Product</SelectItem>
-                  <SelectItem value="leadership">Leadership</SelectItem>
-                  <SelectItem value="security">Security</SelectItem>
-                  <SelectItem value="overall">Overall</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-row gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleUpdate}>Save</Button>
+            <div>
+              <div className="text-xs text-muted-foreground">Audience</div>
+              <div className="text-sm">{String((sheetItem as unknown as Record<string, unknown>)?.audience ?? "")}</div>
             </div>
           </div>
         )}

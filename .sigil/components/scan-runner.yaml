@@ -1,0 +1,10 @@
+type: scan-runner
+category: custom
+description: "Self-contained scan runner with Run Scan button, polling, and scan history table"
+source:
+  component: components/scan-runner.tsx
+props:
+  repos:
+    type: array
+    required: true
+    description: "Array of repo objects to scan"
