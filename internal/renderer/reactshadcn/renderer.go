@@ -45,9 +45,15 @@ func (r *ReactShadcnRenderer) RenderLayout(ctx *renderer.LayoutContext) ([]rende
 	return renderLayout(ctx)
 }
 
-// RenderAPIClient generates lib/api.ts from API config.
-func (r *ReactShadcnRenderer) RenderAPIClient(api *config.APIConfig) ([]renderer.OutputFile, error) {
-	return renderAPIClient(api)
+// RenderAPIClient generates lib/api.ts from API config. The env-var access
+// pattern branches on app.EffectiveTargetMode():
+//   - "app-router" → process.env.<NAME>            (Next.js)
+//   - "spa"        → import.meta.env.<NAME>        (Vite)
+func (r *ReactShadcnRenderer) RenderAPIClient(app *config.AppConfig) ([]renderer.OutputFile, error) {
+	if app == nil {
+		return nil, nil
+	}
+	return renderAPIClient(app.API, app.EffectiveTargetMode())
 }
 
 // RenderProviders generates React Context provider files.

@@ -313,6 +313,16 @@ func ValidateAppConfig(app *AppConfig) *ValidationResult {
 		result.Errors = append(result.Errors, ValidationError{Path: "api.base_url_env", Message: "API base_url_env is required"})
 	}
 
+	switch app.TargetMode {
+	case "", "spa", "app-router":
+		// valid
+	default:
+		result.Errors = append(result.Errors, ValidationError{
+			Path:    "target_mode",
+			Message: fmt.Sprintf("invalid target_mode %q (valid: spa, app-router)", app.TargetMode),
+		})
+	}
+
 	result.Valid = len(result.Errors) == 0
 	return result
 }

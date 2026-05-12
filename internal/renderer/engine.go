@@ -145,6 +145,8 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 	var allFiles []OutputFile
 	usedTypes := map[string]bool{}
 
+	targetMode := appConfig.EffectiveTargetMode() // safe on nil
+
 	for _, page := range pages {
 		ctx := &RenderContext{
 			Page:          page,
@@ -154,6 +156,7 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 			ProjectConfig: projConfig,
 			GoModule:      goModule,
 			SigilDir:      sigilDir,
+			TargetMode:    targetMode,
 		}
 		files, err := r.Render(ctx)
 		if err != nil {
@@ -251,7 +254,7 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 
 		// 11. Generate API client
 		if appConfig.API != nil {
-			apiFiles, err := r.RenderAPIClient(appConfig.API)
+			apiFiles, err := r.RenderAPIClient(appConfig)
 			if err != nil {
 				return nil, fmt.Errorf("generating API client: %w", err)
 			}

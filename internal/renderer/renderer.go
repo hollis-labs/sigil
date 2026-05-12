@@ -29,7 +29,10 @@ type Renderer interface {
 	RenderLayout(ctx *LayoutContext) ([]OutputFile, error)
 
 	// RenderAPIClient generates a typed API client from app config.
-	RenderAPIClient(api *config.APIConfig) ([]OutputFile, error)
+	// Receives the full *AppConfig so renderers can branch on target mode
+	// (e.g., env var access pattern). app.API may still be nil — callers
+	// already short-circuit in that case, but implementations should handle it.
+	RenderAPIClient(app *config.AppConfig) ([]OutputFile, error)
 
 	// RenderProviders generates React Context providers from app config.
 	RenderProviders(providers []config.ProviderConfig) ([]OutputFile, error)
@@ -44,6 +47,10 @@ type RenderContext struct {
 	ProjectConfig *config.ProjectConfig
 	GoModule      string
 	SigilDir      string // path to .sigil directory (for locating custom component sources)
+	// TargetMode is the AppConfig.EffectiveTargetMode() at generation time
+	// (e.g., "app-router" or "spa"). Renderers that emit framework-specific
+	// imports/calls branch on this. Empty means "app-router" for safety.
+	TargetMode string
 }
 
 // LayoutContext provides everything a renderer needs to generate a module layout.

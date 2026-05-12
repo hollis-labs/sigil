@@ -46,7 +46,7 @@ func (r *GoTemplRenderer) RenderLayout(_ *renderer.LayoutContext) ([]renderer.Ou
 }
 
 // RenderAPIClient is not yet implemented for Go/Templ.
-func (r *GoTemplRenderer) RenderAPIClient(_ *config.APIConfig) ([]renderer.OutputFile, error) {
+func (r *GoTemplRenderer) RenderAPIClient(_ *config.AppConfig) ([]renderer.OutputFile, error) {
 	return nil, nil
 }
 

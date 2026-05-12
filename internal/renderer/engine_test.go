@@ -279,7 +279,7 @@ func (m *mockRenderer) SharedComponents(usedTypes []string) ([]OutputFile, error
 func (m *mockRenderer) RenderLayout(_ *LayoutContext) ([]OutputFile, error) {
 	return nil, nil
 }
-func (m *mockRenderer) RenderAPIClient(_ *config.APIConfig) ([]OutputFile, error) {
+func (m *mockRenderer) RenderAPIClient(_ *config.AppConfig) ([]OutputFile, error) {
 	return nil, nil
 }
 func (m *mockRenderer) RenderProviders(_ []config.ProviderConfig) ([]OutputFile, error) {

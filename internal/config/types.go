@@ -146,15 +146,30 @@ type ComponentSchemaProvider interface {
 
 // AppConfig represents the .sigil/app.yaml application configuration.
 type AppConfig struct {
-	Sigil       string           `yaml:"sigil" json:"sigil"`
-	Kind        string           `yaml:"kind" json:"kind"`
-	Name        string           `yaml:"name" json:"name"`
-	Description string           `yaml:"description,omitempty" json:"description,omitempty"`
-	API         *APIConfig       `yaml:"api,omitempty" json:"api,omitempty"`
-	Modules     []ModuleConfig   `yaml:"modules" json:"modules"`
-	Features    *AppFeatures     `yaml:"features,omitempty" json:"features,omitempty"`
-	Actions     []AppAction      `yaml:"actions,omitempty" json:"actions,omitempty"`
-	Providers   []ProviderConfig `yaml:"providers,omitempty" json:"providers,omitempty"`
+	Sigil       string `yaml:"sigil" json:"sigil"`
+	Kind        string `yaml:"kind" json:"kind"`
+	Name        string `yaml:"name" json:"name"`
+	Description string `yaml:"description,omitempty" json:"description,omitempty"`
+	// TargetMode selects the output shape for renderers that support multiple
+	// frontend targets (currently react-shadcn). Valid values: "spa", "app-router".
+	// Empty / unset is treated as "app-router" (the original shape) so existing
+	// configs regenerate byte-identically.
+	TargetMode string           `yaml:"target_mode,omitempty" json:"target_mode,omitempty"`
+	API        *APIConfig       `yaml:"api,omitempty" json:"api,omitempty"`
+	Modules    []ModuleConfig   `yaml:"modules" json:"modules"`
+	Features   *AppFeatures     `yaml:"features,omitempty" json:"features,omitempty"`
+	Actions    []AppAction      `yaml:"actions,omitempty" json:"actions,omitempty"`
+	Providers  []ProviderConfig `yaml:"providers,omitempty" json:"providers,omitempty"`
+}
+
+// EffectiveTargetMode returns the AppConfig's target mode, defaulting to
+// "app-router" when unset. Callers should use this rather than reading
+// TargetMode directly so an absent flag stays equivalent to today's output.
+func (a *AppConfig) EffectiveTargetMode() string {
+	if a == nil || a.TargetMode == "" {
+		return "app-router"
+	}
+	return a.TargetMode
 }
 
 // APIConfig defines the API client generation settings.

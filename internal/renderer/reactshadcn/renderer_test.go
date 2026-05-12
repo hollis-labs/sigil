@@ -1063,3 +1063,313 @@ func TestHelperFunctions(t *testing.T) {
 		t.Error("destructive should stay destructive")
 	}
 }
+
+// pageWithNavigate builds a page whose row-click action navigates to another
+// page. This exercises both the framework router import and the push call.
+func pageWithNavigate() *config.Page {
+	return testPage(config.Component{
+		ID:   "root",
+		Type: "rows",
+		Children: []config.Component{
+			{
+				ID:   "table",
+				Type: "data-table",
+				Props: map[string]interface{}{
+					"datasource": "Repo",
+					"columns": []interface{}{
+						map[string]interface{}{"field": "name", "label": "Name"},
+					},
+				},
+				Actions: map[string]config.Action{
+					"rowClick": {
+						Type: "navigate",
+						Page: "test-page-detail",
+					},
+				},
+			},
+		},
+	})
+}
+
+func TestRenderPageTargetModeBranching(t *testing.T) {
+	cases := []struct {
+		name        string
+		targetMode  string
+		mustContain []string
+		mustNotHave []string
+	}{
+		{
+			name:       "default (empty) treated as app-router",
+			targetMode: "",
+			mustContain: []string{
+				`"use client";`,
+				`from "next/navigation"`,
+				`useRouter`,
+				`router.push`,
+			},
+			mustNotHave: []string{
+				`react-router-dom`,
+				`useNavigate`,
+				`navigate(`,
+			},
+		},
+		{
+			name:       "explicit app-router",
+			targetMode: "app-router",
+			mustContain: []string{
+				`"use client";`,
+				`from "next/navigation"`,
+				`useRouter`,
+				`router.push`,
+			},
+			mustNotHave: []string{
+				`react-router-dom`,
+			},
+		},
+		{
+			name:       "spa",
+			targetMode: "spa",
+			mustContain: []string{
+				`from "react-router-dom"`,
+				`useNavigate`,
+				`navigate(`,
+			},
+			mustNotHave: []string{
+				`"use client";`,
+				`next/navigation`,
+				`useRouter`,
+				`router.push`,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			page := pageWithNavigate()
+			ctx := testCtx(page)
+			ctx.TargetMode = tc.targetMode
+
+			files, err := renderPage(ctx)
+			if err != nil {
+				t.Fatalf("renderPage: %v", err)
+			}
+			content := string(files[0].Content)
+
+			for _, want := range tc.mustContain {
+				if !strings.Contains(content, want) {
+					t.Errorf("expected %q in output:\n%s", want, content)
+				}
+			}
+			for _, banned := range tc.mustNotHave {
+				if strings.Contains(content, banned) {
+					t.Errorf("did not expect %q in output:\n%s", banned, content)
+				}
+			}
+		})
+	}
+}
+
+func TestRenderAPIClientTargetMode(t *testing.T) {
+	apiCfg := &config.APIConfig{
+		BaseURLEnv:     "NEXT_PUBLIC_X_URL",
+		BaseURLDefault: "http://localhost:8080",
+		Prefix:         "/api",
+	}
+
+	cases := []struct {
+		name        string
+		targetMode  string
+		mustContain []string
+		mustNotHave []string
+	}{
+		{
+			name:       "default → process.env + use-client",
+			targetMode: "app-router",
+			mustContain: []string{
+				`"use client";`,
+				`process.env.NEXT_PUBLIC_X_URL`,
+			},
+			mustNotHave: []string{
+				`import.meta.env`,
+			},
+		},
+		{
+			name:       "spa → import.meta.env, no use-client",
+			targetMode: "spa",
+			mustContain: []string{
+				`import.meta.env.NEXT_PUBLIC_X_URL`,
+			},
+			mustNotHave: []string{
+				`"use client";`,
+				`process.env.`,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			files, err := renderAPIClient(apiCfg, tc.targetMode)
+			if err != nil {
+				t.Fatalf("renderAPIClient: %v", err)
+			}
+			if len(files) != 1 {
+				t.Fatalf("expected 1 file, got %d", len(files))
+			}
+			content := string(files[0].Content)
+			for _, want := range tc.mustContain {
+				if !strings.Contains(content, want) {
+					t.Errorf("expected %q in output:\n%s", want, content)
+				}
+			}
+			for _, banned := range tc.mustNotHave {
+				if strings.Contains(content, banned) {
+					t.Errorf("did not expect %q in output:\n%s", banned, content)
+				}
+			}
+		})
+	}
+}
+
+func TestRenderRoutesEmitsLazyImportsAndRouteJSX(t *testing.T) {
+	pages := []*config.Page{
+		{
+			Sigil:   "1.0",
+			Kind:    "page",
+			ID:      "se-repos",
+			Title:   "Repos",
+			Overlay: "page",
+			Module:  "se",
+			Layout:  config.Component{Type: "rows"},
+		},
+		{
+			Sigil:   "1.0",
+			Kind:    "page",
+			ID:      "se-repo-detail",
+			Title:   "Repo Detail",
+			Overlay: "page",
+			Module:  "se",
+			Layout:  config.Component{Type: "rows"},
+			DataSources: []config.DataSourceRef{{
+				Alias:  "Repo",
+				Params: map[string]interface{}{"id": "{{param.id}}"},
+			}},
+		},
+	}
+
+	files, err := renderRoutes(pages)
+	if err != nil {
+		t.Fatalf("renderRoutes: %v", err)
+	}
+	if len(files) != 1 || files[0].Path != "routes.tsx" {
+		t.Fatalf("expected routes.tsx, got %+v", files)
+	}
+
+	content := string(files[0].Content)
+	checks := []string{
+		`import { lazy } from "react";`,
+		`import { Route } from "react-router-dom";`,
+		`const SeReposPage = lazy(() => import("@/pages/se-repos"));`,
+		`const SeRepoDetailPage = lazy(() => import("@/pages/se-repo-detail"));`,
+		`<Route path="/repos" element={<SeReposPage />} />`,
+		`<Route path="/repo-detail/:id" element={<SeRepoDetailPage />} />`,
+		`<Route path="/repo-detail" element={<SeRepoDetailPage />} />`,
+	}
+	for _, check := range checks {
+		if !strings.Contains(content, check) {
+			t.Errorf("expected %q in routes.tsx:\n%s", check, content)
+		}
+	}
+}
+
+func TestRenderLayoutTargetModeSelectsOutputShape(t *testing.T) {
+	shell := &config.Page{
+		Sigil:   "1.0",
+		Kind:    "page",
+		ID:      "x-shell",
+		Title:   "Shell",
+		Overlay: "page",
+		Layout: config.Component{
+			Type: "rows",
+			Children: []config.Component{
+				{
+					Type: "nav-menu",
+					Props: map[string]interface{}{
+						"items": []interface{}{
+							map[string]interface{}{"label": "Home", "page": "x-home", "icon": "home"},
+						},
+					},
+				},
+			},
+		},
+	}
+	mod := &config.ModuleConfig{ID: "x", Shell: "x-shell", RouteGroup: "(x)", Pages: []string{"x-home"}}
+
+	cases := []struct {
+		name       string
+		targetMode string
+		wantPath   string
+		wantExtra  string // additional file path expected (empty if none)
+	}{
+		{"app-router default", "", "app/(x)/layout.tsx", ""},
+		{"app-router explicit", "app-router", "app/(x)/layout.tsx", ""},
+		{"spa", "spa", "App.tsx", "routes.tsx"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := &renderer.LayoutContext{
+				Module:    mod,
+				Shell:     shell,
+				AppConfig: &config.AppConfig{Name: "X", TargetMode: tc.targetMode},
+				Pages:     []*config.Page{},
+			}
+			files, err := renderLayout(ctx)
+			if err != nil {
+				t.Fatalf("renderLayout: %v", err)
+			}
+			paths := map[string]bool{}
+			for _, f := range files {
+				paths[f.Path] = true
+			}
+			if !paths[tc.wantPath] {
+				t.Errorf("expected output path %q, got files %+v", tc.wantPath, paths)
+			}
+			if tc.wantExtra != "" && !paths[tc.wantExtra] {
+				t.Errorf("expected extra path %q, got files %+v", tc.wantExtra, paths)
+			}
+			// SPA mode must NOT produce an app/.../layout.tsx; app-router must NOT produce App.tsx.
+			if tc.targetMode == "spa" {
+				for path := range paths {
+					if strings.HasPrefix(path, "app/") {
+						t.Errorf("spa mode produced unexpected app-router path %q", path)
+					}
+				}
+			} else {
+				if paths["App.tsx"] {
+					t.Error("app-router mode produced unexpected SPA App.tsx")
+				}
+			}
+		})
+	}
+}
+
+func TestEffectiveTargetModeDefaults(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"", "app-router"},
+		{"spa", "spa"},
+		{"app-router", "app-router"},
+	}
+	for _, c := range cases {
+		got := (&config.AppConfig{TargetMode: c.in}).EffectiveTargetMode()
+		if got != c.want {
+			t.Errorf("EffectiveTargetMode(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+	var nilCfg *config.AppConfig
+	if got := nilCfg.EffectiveTargetMode(); got != "app-router" {
+		t.Errorf("nil AppConfig.EffectiveTargetMode() = %q, want app-router", got)
+	}
+}
