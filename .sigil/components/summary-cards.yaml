@@ -1,0 +1,17 @@
+type: summary-cards
+category: custom
+description: "Horizontal row of metric summary cards with trend indicators and icons"
+source:
+  component: components/summary-cards.tsx
+props:
+  datasource:
+    type: string
+    description: "DataSource alias to query (builtin compat)"
+  cards:
+    type: array
+    required: true
+    description: "Array of {label, value, trend?, trendLabel?, variant?, icon?} card definitions"
+  compact:
+    type: boolean
+    default: false
+    description: "Compact card size"

@@ -1258,10 +1258,7 @@ func TestRenderRoutesEmitsLazyImportsAndRouteJSX(t *testing.T) {
 		},
 	}
 
-	files, err := renderRoutes(pages)
-	if err != nil {
-		t.Fatalf("renderRoutes: %v", err)
-	}
+	files := renderRoutes(pages, nil)
 	if len(files) != 1 || files[0].Path != "routes.tsx" {
 		t.Fatalf("expected routes.tsx, got %+v", files)
 	}
@@ -1280,6 +1277,93 @@ func TestRenderRoutesEmitsLazyImportsAndRouteJSX(t *testing.T) {
 		if !strings.Contains(content, check) {
 			t.Errorf("expected %q in routes.tsx:\n%s", check, content)
 		}
+	}
+}
+
+// TestRenderRoutesMultiModulePrefixing covers the SPA multi-module case:
+// when two modules each declare a route_group, their pages must mount under
+// distinct URL prefixes so they don't collide silently. Single-module
+// configs keep flat paths (unchanged from Phase 1).
+func TestRenderRoutesMultiModulePrefixing(t *testing.T) {
+	pages := []*config.Page{
+		{
+			Sigil: "1.0", Kind: "page", ID: "se-dashboard",
+			Title: "SE Dashboard", Overlay: "page", Module: "se",
+			Layout: config.Component{Type: "rows"},
+		},
+		{
+			Sigil: "1.0", Kind: "page", ID: "clockwork-dashboard",
+			Title: "CW Dashboard", Overlay: "page", Module: "clockwork",
+			Layout: config.Component{Type: "rows"},
+		},
+		{
+			Sigil: "1.0", Kind: "page", ID: "clockwork-task-detail",
+			Title: "Task Detail", Overlay: "page", Module: "clockwork",
+			Layout: config.Component{Type: "rows"},
+			DataSources: []config.DataSourceRef{{
+				Alias:  "Task",
+				Params: map[string]interface{}{"id": "{{param.id}}"},
+			}},
+		},
+	}
+
+	modules := []*config.ModuleConfig{
+		{ID: "se", RouteGroup: "(explorer)", Pages: []string{"se-dashboard"}},
+		{ID: "clockwork", RouteGroup: "(clockwork)", Pages: []string{"clockwork-dashboard", "clockwork-task-detail"}},
+	}
+
+	files := renderRoutes(pages, modules)
+	if len(files) != 1 || files[0].Path != "routes.tsx" {
+		t.Fatalf("expected routes.tsx, got %+v", files)
+	}
+	content := string(files[0].Content)
+	want := []string{
+		`<Route path="/explorer/dashboard" element={<SeDashboardPage />} />`,
+		`<Route path="/clockwork/dashboard" element={<ClockworkDashboardPage />} />`,
+		`<Route path="/clockwork/task-detail/:id" element={<ClockworkTaskDetailPage />} />`,
+		`<Route path="/clockwork/task-detail" element={<ClockworkTaskDetailPage />} />`,
+	}
+	for _, w := range want {
+		if !strings.Contains(content, w) {
+			t.Errorf("missing %q in routes.tsx:\n%s", w, content)
+		}
+	}
+	// And the un-prefixed single-module paths must NOT appear; otherwise the
+	// two modules would collide on /dashboard.
+	bad := []string{
+		`<Route path="/dashboard" element={<SeDashboardPage />} />`,
+		`<Route path="/dashboard" element={<ClockworkDashboardPage />} />`,
+	}
+	for _, b := range bad {
+		if strings.Contains(content, b) {
+			t.Errorf("unexpected unprefixed route %q in multi-module output:\n%s", b, content)
+		}
+	}
+}
+
+// TestPageRouteSPASingleModuleBackCompat confirms a single-module SPA config
+// keeps flat (un-prefixed) URLs — Phase 1 SPA output is preserved.
+func TestPageRouteSPASingleModuleBackCompat(t *testing.T) {
+	modules := []*config.ModuleConfig{
+		{ID: "clockwork", RouteGroup: "(clockwork)", Pages: []string{"clockwork-board"}},
+	}
+	got := pageRouteSPA("clockwork-board", "clockwork", modules)
+	if got != "/board" {
+		t.Errorf("single-module SPA: pageRouteSPA = %q, want /board", got)
+	}
+}
+
+// TestPageRouteSPACrossModule covers the cross-module navigation case: a
+// page in module "se" linking to a page owned by module "clockwork" picks
+// up clockwork's route prefix (not se's).
+func TestPageRouteSPACrossModule(t *testing.T) {
+	modules := []*config.ModuleConfig{
+		{ID: "se", RouteGroup: "(explorer)", Pages: []string{"se-dashboard"}},
+		{ID: "clockwork", RouteGroup: "(clockwork)", Pages: []string{"clockwork-board"}},
+	}
+	got := pageRouteSPA("clockwork-board", "se", modules)
+	if got != "/clockwork/board" {
+		t.Errorf("cross-module SPA: pageRouteSPA = %q, want /clockwork/board", got)
 	}
 }
 
@@ -1355,6 +1439,104 @@ func TestRenderLayoutTargetModeSelectsOutputShape(t *testing.T) {
 	}
 }
 
+// TestRenderLayoutSPAMultiModuleEmitsOnceAndMergesNav exercises the SPA
+// multi-module short-circuit: the first module's call emits a unified
+// App.tsx with both modules' nav items, prefix-namespaced; the second
+// module's call returns no files (avoiding overwrite).
+func TestRenderLayoutSPAMultiModuleEmitsOnceAndMergesNav(t *testing.T) {
+	seShell := &config.Page{
+		Sigil: "1.0", Kind: "page", ID: "se-shell", Title: "SE", Overlay: "page",
+		Layout: config.Component{Type: "rows", Children: []config.Component{
+			{Type: "nav-menu", Props: map[string]interface{}{
+				"items": []interface{}{
+					map[string]interface{}{"label": "Dashboard", "page": "se-dashboard", "icon": "home"},
+				},
+			}},
+		}},
+	}
+	cwShell := &config.Page{
+		Sigil: "1.0", Kind: "page", ID: "clockwork-shell", Title: "CW", Overlay: "page",
+		Layout: config.Component{Type: "rows", Children: []config.Component{
+			{Type: "nav-menu", Props: map[string]interface{}{
+				"items": []interface{}{
+					map[string]interface{}{"label": "Board", "page": "clockwork-board", "icon": "list"},
+				},
+			}},
+		}},
+	}
+	seMod := &config.ModuleConfig{ID: "se", Shell: "se-shell", RouteGroup: "(explorer)", Pages: []string{"se-dashboard"}}
+	cwMod := &config.ModuleConfig{ID: "clockwork", Shell: "clockwork-shell", RouteGroup: "(clockwork)", Pages: []string{"clockwork-board"}}
+	modules := []*config.ModuleConfig{seMod, cwMod}
+	shells := map[string]*config.Page{"se": seShell, "clockwork": cwShell}
+
+	app := &config.AppConfig{
+		Name:       "Multi",
+		TargetMode: "spa",
+		Modules:    []config.ModuleConfig{*seMod, *cwMod},
+	}
+
+	pages := []*config.Page{
+		{Sigil: "1.0", Kind: "page", ID: "se-dashboard", Title: "SE Home", Overlay: "page", Module: "se", Layout: config.Component{Type: "rows"}},
+		{Sigil: "1.0", Kind: "page", ID: "clockwork-board", Title: "Board", Overlay: "page", Module: "clockwork", Layout: config.Component{Type: "rows"}},
+	}
+
+	// First module: must emit App.tsx + routes.tsx with both modules' nav + routes.
+	primary := &renderer.LayoutContext{
+		Module: seMod, Shell: seShell, AppConfig: app,
+		Pages: []*config.Page{pages[0]}, AllModules: modules, AllPages: pages, AllShells: shells,
+	}
+	files, err := renderLayout(primary)
+	if err != nil {
+		t.Fatalf("renderLayout(primary): %v", err)
+	}
+	paths := map[string]string{}
+	for _, f := range files {
+		paths[f.Path] = string(f.Content)
+	}
+	pathKeys := func(m map[string]string) []string {
+		var out []string
+		for k := range m {
+			out = append(out, k)
+		}
+		return out
+	}
+	if _, ok := paths["App.tsx"]; !ok {
+		t.Fatalf("primary call must emit App.tsx, got %v", pathKeys(paths))
+	}
+	if _, ok := paths["routes.tsx"]; !ok {
+		t.Fatalf("primary call must emit routes.tsx, got %v", pathKeys(paths))
+	}
+	// Nav merges items from BOTH modules with their own prefixes.
+	appTsx := paths["App.tsx"]
+	for _, want := range []string{
+		`"/explorer/dashboard"`,
+		`"/clockwork/board"`,
+		`"Dashboard"`,
+		`"Board"`,
+	} {
+		if !strings.Contains(appTsx, want) {
+			t.Errorf("App.tsx missing %q\n--- output ---\n%s", want, appTsx)
+		}
+	}
+
+	// Second module: must NOT emit App.tsx again (would overwrite the unified one).
+	secondary := &renderer.LayoutContext{
+		Module: cwMod, Shell: cwShell, AppConfig: app,
+		Pages: []*config.Page{pages[1]}, AllModules: modules, AllPages: pages, AllShells: shells,
+	}
+	files2, err := renderLayout(secondary)
+	if err != nil {
+		t.Fatalf("renderLayout(secondary): %v", err)
+	}
+	if len(files2) != 0 {
+		var p []string
+		for _, f := range files2 {
+			p = append(p, f.Path)
+		}
+		t.Errorf("secondary SPA module must emit no layout files (App.tsx already emitted by primary); got %v", p)
+	}
+}
+
 func TestEffectiveTargetModeDefaults(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -1418,7 +1600,7 @@ func TestRenderProvidersBuiltinShortFormUnchanged(t *testing.T) {
 			UIType:     "select",
 		},
 	}
-	files, err := renderProviders(providers, "" /* no sigil dir needed for built-ins */)
+	files, err := renderProvidersForTests(providers, "" /* no sigil dir needed for built-ins */)
 	if err != nil {
 		t.Fatalf("renderProviders: %v", err)
 	}
@@ -1465,7 +1647,7 @@ func TestRenderProvidersCustomCopiesSourceFiles(t *testing.T) {
 			Mounts: []string{"SSEActiveRunsBridge"},
 		},
 	}
-	files, err := renderProviders(providers, dir)
+	files, err := renderProvidersForTests(providers, dir)
 	if err != nil {
 		t.Fatalf("renderProviders: %v", err)
 	}
@@ -1502,7 +1684,7 @@ func TestRenderProvidersCustomBackwardCompatMixed(t *testing.T) {
 		{ID: "lens", Datasource: "Lens", TrackField: "id", LabelField: "name"},
 		{ID: "active-runs", Source: &config.ProviderSource{Component: "providers/active-runs-context.tsx"}},
 	}
-	files, err := renderProviders(providers, dir)
+	files, err := renderProvidersForTests(providers, dir)
 	if err != nil {
 		t.Fatalf("renderProviders: %v", err)
 	}
@@ -1526,7 +1708,7 @@ func TestRenderProvidersCustomMissingSourceErrors(t *testing.T) {
 		},
 	}
 	dir := t.TempDir()
-	_, err := renderProviders(providers, dir)
+	_, err := renderProvidersForTests(providers, dir)
 	if err == nil {
 		t.Fatal("expected error for missing source file, got nil")
 	}
@@ -1537,7 +1719,21 @@ func TestRenderProvidersCustomMissingSourceErrors(t *testing.T) {
 
 func TestRenderLayoutCustomProviderWrapsWithMounts(t *testing.T) {
 	shell := shellWithNav()
-	mod := &config.ModuleConfig{ID: "x", Shell: "x-shell", RouteGroup: "(x)", Pages: []string{"x-home"}}
+	// Phase 3.5: providers live on ModuleConfig.
+	mod := &config.ModuleConfig{
+		ID: "x", Shell: "x-shell", RouteGroup: "(x)", Pages: []string{"x-home"},
+		Providers: []config.ProviderConfig{
+			{
+				ID: "active-runs",
+				Source: &config.ProviderSource{
+					Component: "providers/active-runs-context.tsx",
+					Export:    "ActiveRunsProvider",
+					Includes:  []string{"providers/sse-active-runs-bridge.tsx"},
+				},
+				Mounts: []string{"SSEActiveRunsBridge"},
+			},
+		},
+	}
 
 	cases := []struct {
 		name        string
@@ -1581,17 +1777,7 @@ func TestRenderLayoutCustomProviderWrapsWithMounts(t *testing.T) {
 				AppConfig: &config.AppConfig{
 					Name:       "X",
 					TargetMode: tc.targetMode,
-					Providers: []config.ProviderConfig{
-						{
-							ID: "active-runs",
-							Source: &config.ProviderSource{
-								Component: "providers/active-runs-context.tsx",
-								Export:    "ActiveRunsProvider",
-								Includes:  []string{"providers/sse-active-runs-bridge.tsx"},
-							},
-							Mounts: []string{"SSEActiveRunsBridge"},
-						},
-					},
+					Modules:    []config.ModuleConfig{*mod},
 				},
 				Pages: []*config.Page{},
 			}
@@ -1628,22 +1814,26 @@ func TestRenderLayoutBuiltinProviderShortFormStillWorks(t *testing.T) {
 	// Backward-compat: a providers: list with only the original lens
 	// short-form must continue to import + wrap with LensProvider + the
 	// useLensContext hook (the topbar select uses it).
+	// Phase 3.5: providers live per-module.
 	shell := shellWithNav()
-	mod := &config.ModuleConfig{ID: "x", Shell: "x-shell", RouteGroup: "(x)", Pages: []string{"x-home"}}
+	mod := &config.ModuleConfig{
+		ID: "x", Shell: "x-shell", RouteGroup: "(x)", Pages: []string{"x-home"},
+		Providers: []config.ProviderConfig{{
+			ID:         "lens",
+			Datasource: "Lens",
+			TrackField: "id",
+			LabelField: "name",
+			Position:   "topbar",
+			UIType:     "select",
+		}},
+	}
 
 	ctx := &renderer.LayoutContext{
 		Module: mod,
 		Shell:  shell,
 		AppConfig: &config.AppConfig{
-			Name: "X",
-			Providers: []config.ProviderConfig{{
-				ID:         "lens",
-				Datasource: "Lens",
-				TrackField: "id",
-				LabelField: "name",
-				Position:   "topbar",
-				UIType:     "select",
-			}},
+			Name:    "X",
+			Modules: []config.ModuleConfig{*mod},
 		},
 		Pages: []*config.Page{},
 	}
@@ -1701,6 +1891,139 @@ func TestProviderWrapNameAndImportPath(t *testing.T) {
 	}
 }
 
+// --- Phase 3.5 per-module providers tests -----------------------------------
+
+// TestRenderProvidersDedupAcrossModules confirms that two modules declaring
+// the same provider id produce only one set of `lib/` files. This is the
+// core dedup contract: shared providers (e.g. `lens` in both `se` and
+// `clockwork` modules) get one source-file copy per app.
+func TestRenderProvidersDedupAcrossModules(t *testing.T) {
+	dir := t.TempDir()
+	if err := writeTestFile(dir, "providers/active-runs-context.tsx",
+		"export function ActiveRunsProvider() { return null; }\n"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Two modules, each declaring the same `lens` builtin AND the same
+	// custom `active-runs` provider. Expected output: one lens-context file
+	// and one active-runs-context file — no duplicates.
+	modules := []config.ModuleConfig{
+		{
+			ID: "se", Shell: "se-shell", Pages: []string{"p"},
+			Providers: []config.ProviderConfig{
+				{ID: "lens", Datasource: "Lens", TrackField: "id", LabelField: "name"},
+			},
+		},
+		{
+			ID: "cw", Shell: "cw-shell", Pages: []string{"p"},
+			Providers: []config.ProviderConfig{
+				{ID: "lens", Datasource: "Lens", TrackField: "id", LabelField: "name"},
+				{ID: "active-runs", Source: &config.ProviderSource{
+					Component: "providers/active-runs-context.tsx",
+					Export:    "ActiveRunsProvider",
+				}},
+			},
+		},
+	}
+
+	files, err := renderProviders(modules, dir)
+	if err != nil {
+		t.Fatalf("renderProviders: %v", err)
+	}
+	paths := map[string]int{}
+	for _, f := range files {
+		paths[f.Path]++
+	}
+	if paths["lib/lens-context.tsx"] != 1 {
+		t.Errorf("expected lib/lens-context.tsx emitted exactly once across modules; got %d (all paths: %v)", paths["lib/lens-context.tsx"], paths)
+	}
+	if paths["lib/active-runs-context.tsx"] != 1 {
+		t.Errorf("expected lib/active-runs-context.tsx emitted exactly once; got %d (all paths: %v)", paths["lib/active-runs-context.tsx"], paths)
+	}
+}
+
+// TestRenderLayoutPerModuleProviders confirms that in App Router mode each
+// module's layout.tsx wraps its OWN providers — and only its own. A second
+// module's providers must not leak into the first module's layout.
+func TestRenderLayoutPerModuleProviders(t *testing.T) {
+	shell := shellWithNav()
+	cwMod := config.ModuleConfig{
+		ID: "cw", Shell: "cw-shell", RouteGroup: "(cw)", Pages: []string{"cw-home"},
+		Providers: []config.ProviderConfig{
+			{ID: "active-runs", Source: &config.ProviderSource{
+				Component: "providers/active-runs-context.tsx",
+				Export:    "ActiveRunsProvider",
+			}},
+		},
+	}
+	seMod := config.ModuleConfig{
+		ID: "se", Shell: "se-shell", RouteGroup: "(se)", Pages: []string{"se-home"},
+		// Intentionally NO providers — SE module should not get
+		// active-runs even though clockwork has it.
+	}
+
+	app := &config.AppConfig{
+		Name:    "Multi",
+		Modules: []config.ModuleConfig{seMod, cwMod},
+	}
+
+	// SE module's layout: must NOT wrap with ActiveRunsProvider.
+	seCtx := &renderer.LayoutContext{
+		Module: &app.Modules[0], Shell: shell, AppConfig: app, Pages: []*config.Page{},
+	}
+	seFiles, err := renderLayout(seCtx)
+	if err != nil {
+		t.Fatalf("renderLayout(se): %v", err)
+	}
+	var seBuf strings.Builder
+	for _, f := range seFiles {
+		seBuf.Write(f.Content)
+	}
+	seOut := seBuf.String()
+	if strings.Contains(seOut, "ActiveRunsProvider") {
+		t.Errorf("SE module layout must NOT contain ActiveRunsProvider (per-module providers leak):\n%s", seOut)
+	}
+
+	// CW module's layout: must wrap with ActiveRunsProvider.
+	cwCtx := &renderer.LayoutContext{
+		Module: &app.Modules[1], Shell: shell, AppConfig: app, Pages: []*config.Page{},
+	}
+	cwFiles, err := renderLayout(cwCtx)
+	if err != nil {
+		t.Fatalf("renderLayout(cw): %v", err)
+	}
+	var cwBuf strings.Builder
+	for _, f := range cwFiles {
+		cwBuf.Write(f.Content)
+	}
+	cwOut := cwBuf.String()
+	if !strings.Contains(cwOut, "<ActiveRunsProvider>") {
+		t.Errorf("CW module layout must contain <ActiveRunsProvider>:\n%s", cwOut)
+	}
+}
+
+// TestValidatorRejectsDuplicateProviderIDsWithinModule was added with the
+// validator changes; this just confirms the renderer accepts a single ID
+// declared per-module across modules.
+func TestProviderConfigFromModuleSurface(t *testing.T) {
+	// Per-module Providers on ModuleConfig should round-trip through
+	// renderProviders without complaint.
+	mods := []config.ModuleConfig{
+		{ID: "m1", Shell: "m1-shell", Pages: []string{"p"},
+			Providers: []config.ProviderConfig{
+				{ID: "lens", Datasource: "Lens", TrackField: "id", LabelField: "name"},
+			},
+		},
+	}
+	files, err := renderProviders(mods, "")
+	if err != nil {
+		t.Fatalf("renderProviders: %v", err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("expected 1 file from a single builtin provider, got %d", len(files))
+	}
+}
+
 func TestProviderMountsMapsKebabFileNames(t *testing.T) {
 	p := config.ProviderConfig{
 		ID: "active-runs",
@@ -1734,8 +2057,8 @@ func keys(m map[string]string) []string {
 
 func writeTestFile(rootDir, relPath, content string) error {
 	full := filepath.Join(rootDir, relPath)
-	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
 		return err
 	}
-	return os.WriteFile(full, []byte(content), 0o644)
+	return os.WriteFile(full, []byte(content), 0o600)
 }

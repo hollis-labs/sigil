@@ -1,0 +1,146 @@
+sigil: "1.0"
+kind: page
+id: clockwork-runs
+title: Runs
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Run
+    capabilities: [list, search, filter, sort, paginate]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Runs
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: button
+              props:
+                label: Running
+                variant: outline
+                size: sm
+              actions:
+                click:
+                  type: emit
+                  datasource: Run
+                  field: status
+                  value: running
+            - type: button
+              props:
+                label: Completed
+                variant: outline
+                size: sm
+              actions:
+                click:
+                  type: emit
+                  datasource: Run
+                  field: status
+                  value: completed
+            - type: button
+              props:
+                label: Failed
+                variant: outline
+                size: sm
+              actions:
+                click:
+                  type: emit
+                  datasource: Run
+                  field: status
+                  value: failed
+            - type: button
+              props:
+                label: All
+                variant: ghost
+                size: sm
+              actions:
+                click:
+                  type: emit
+                  datasource: Run
+                  field: status
+                  value: ""
+
+    - id: filter-bar
+      type: filter-bar
+      props:
+        datasource: Run
+        filters:
+          - type: select
+            field: status
+            label: Status
+            options:
+              - label: All
+                value: ""
+              - label: Queued
+                value: queued
+              - label: Running
+                value: running
+              - label: Completed
+                value: completed
+              - label: Failed
+                value: failed
+              - label: Cancelled
+                value: cancelled
+          - type: select
+            field: agent
+            label: Agent
+            options:
+              - label: All Agents
+                value: ""
+              - label: Orchestrator
+                value: orchestrator
+              - label: Worker
+                value: worker
+              - label: Planner
+                value: planner
+              - label: Reviewer
+                value: reviewer
+          - type: date-range
+            field: created_at
+            label: Date Range
+
+    - id: search
+      type: search-bar
+      props:
+        placeholder: Search runs by task ID, agent, or status...
+        datasource: Run
+        debounce: 300
+
+    - id: run-list
+      type: list
+      props:
+        datasource: Run
+        pagination:
+          pageSize: 20
+        emptyMessage: No runs found
+      children:
+        - type: run-card
+          props:
+            task_id: "{{item.task_id}}"
+            agent: "{{item.agent}}"
+            status: "{{item.status}}"
+            duration: "{{item.duration}}"
+            tokens: "{{item.tokens}}"
+            cost: "{{item.cost}}"
+            timestamp: "{{item.created_at}}"
+            priority: "{{item.priority}}"
+
+shortcuts:
+  - key: Escape
+    action:
+      type: close

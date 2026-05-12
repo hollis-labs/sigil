@@ -60,9 +60,14 @@ func (r *ReactShadcnRenderer) RenderAPIClient(app *config.AppConfig) ([]renderer
 // (datasource-driven) providers are synthesized; custom providers (those
 // declaring source: { component: ... }) have their .tsx files copied from
 // .sigil/ into the output's lib/ directory.
+//
+// Since sprint 10 phase 3.5, providers live per-module on
+// ModuleConfig.Providers. This implementation walks every module and
+// de-duplicates by provider ID so two modules sharing the same custom
+// provider produce a single set of `lib/<basename>` files.
 func (r *ReactShadcnRenderer) RenderProviders(app *config.AppConfig, sigilDir string) ([]renderer.OutputFile, error) {
 	if app == nil {
 		return nil, nil
 	}
-	return renderProviders(app.Providers, sigilDir)
+	return renderProviders(app.Modules, sigilDir)
 }

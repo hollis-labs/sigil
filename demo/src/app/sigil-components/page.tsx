@@ -28,7 +28,7 @@ export default function SigilComponents() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Components</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Components</h1>
         <Badge variant="default">49 types</Badge>
       </div>
       <div className="relative">
@@ -37,7 +37,7 @@ export default function SigilComponents() {
       </div>
       <div className="flex flex-row gap-6">
         <div className="flex flex-col gap-2">
-          <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">Categories</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">Categories</h3>
           <Button variant="ghost" onClick={() => window.dispatchEvent(new CustomEvent("filter-category"))}>Primitives</Button>
           <Button variant="ghost" onClick={() => window.dispatchEvent(new CustomEvent("filter-category"))}>Layouts</Button>
           <Button variant="ghost" onClick={() => window.dispatchEvent(new CustomEvent("filter-category"))}>Navigation</Button>

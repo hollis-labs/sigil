@@ -1,0 +1,276 @@
+sigil: "1.0"
+kind: page
+id: clockwork-plan-detail
+title: Plan Detail
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Plan
+    capabilities: [get, update]
+  - alias: Task
+    capabilities: [list, filter]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: columns
+          props:
+            gap: 4
+            align: center
+          children:
+            - type: heading
+              props:
+                level: 1
+                text: "{{plan.name}}"
+            - type: text
+              props:
+                text: "{{plan.description}}"
+                muted: true
+        - type: button
+          props:
+            label: Edit Plan
+            variant: secondary
+            icon: edit
+          actions:
+            click:
+              type: navigate
+              page: clockwork-plan-editor
+              params:
+                id: "{{plan.id}}"
+
+    - id: phase-stats
+      type: columns
+      props:
+        gap: 4
+      children:
+        - type: stat-card
+          props:
+            label: Total Tasks
+            value: "{{plan.stats.total}}"
+            datasource: Plan
+            icon: list
+        - type: stat-card
+          props:
+            label: Completed
+            value: "{{plan.stats.completed}}"
+            trend: up
+            datasource: Plan
+            icon: check-circle
+        - type: stat-card
+          props:
+            label: In Progress
+            value: "{{plan.stats.in_progress}}"
+            datasource: Plan
+            icon: play
+        - type: stat-card
+          props:
+            label: Progress
+            value: "{{plan.stats.progress}}%"
+            datasource: Plan
+            icon: bar-chart-3
+
+    - id: phases-section
+      type: rows
+      props:
+        gap: 4
+      children:
+        - type: heading
+          props:
+            level: 2
+            text: Phases
+        - type: tabs
+          props:
+            defaultTab: "0"
+            variant: underline
+          children:
+            - type: tab
+              props:
+                label: Phase 1
+                value: "0"
+                badge: "{{plan.phases.0.task_count}}"
+              children:
+                - type: rows
+                  props:
+                    gap: 4
+                  children:
+                    - type: card
+                      props:
+                        padding: 4
+                      children:
+                        - type: text
+                          props:
+                            text: "{{plan.phases.0.description}}"
+                            muted: true
+                        - type: columns
+                          props:
+                            gap: 4
+                          children:
+                            - type: stat-card
+                              props:
+                                label: Tasks
+                                value: "{{plan.phases.0.task_count}}"
+                                datasource: Plan
+                            - type: stat-card
+                              props:
+                                label: Done
+                                value: "{{plan.phases.0.done_count}}"
+                                trend: up
+                                datasource: Plan
+                            - type: stat-card
+                              props:
+                                label: Blocked
+                                value: "{{plan.phases.0.blocked_count}}"
+                                datasource: Plan
+                                variant: destructive
+                        - type: progress
+                          props:
+                            value: "{{plan.phases.0.progress}}"
+            - type: tab
+              props:
+                label: Phase 2
+                value: "1"
+                badge: "{{plan.phases.1.task_count}}"
+              children:
+                - type: rows
+                  props:
+                    gap: 4
+                  children:
+                    - type: text
+                      props:
+                        text: "{{plan.phases.1.description}}"
+                        muted: true
+                    - type: columns
+                      props:
+                        gap: 4
+                      children:
+                        - type: stat-card
+                          props:
+                            label: Tasks
+                            value: "{{plan.phases.1.task_count}}"
+                            datasource: Plan
+                        - type: stat-card
+                          props:
+                            label: Done
+                            value: "{{plan.phases.1.done_count}}"
+                            trend: up
+                            datasource: Plan
+                        - type: stat-card
+                          props:
+                            label: Blocked
+                            value: "{{plan.phases.1.blocked_count}}"
+                            datasource: Plan
+                            variant: destructive
+                    - type: progress
+                      props:
+                        value: "{{plan.phases.1.progress}}"
+
+    - id: task-list-header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 2
+            text: "Phase Tasks"
+        - type: select
+          props:
+            placeholder: Filter by status
+            options:
+              - value: all
+                label: All
+              - value: open
+                label: Open
+              - value: in_progress
+                label: In Progress
+              - value: in_review
+                label: In Review
+              - value: done
+                label: Done
+
+    - id: task-table
+      type: data-table
+      props:
+        datasource: Task
+        pagination:
+          pageSize: 20
+        columns:
+          - label: ID
+            field: id
+            sortable: true
+            width: 80
+          - label: Title
+            field: title
+            sortable: true
+            width: 1
+          - label: Status
+            field: status
+            sortable: true
+            width: 120
+          - label: Priority
+            field: priority
+            sortable: true
+            width: 100
+          - label: Assignee
+            field: assignee
+            width: 150
+          - label: Phase
+            field: phase
+            width: 120
+          - label: Updated
+            field: updated_at
+            sortable: true
+            width: 160
+      actions:
+        rowClick:
+          type: navigate
+          page: clockwork-task-detail
+
+    - id: plan-actions
+      type: columns
+      props:
+        gap: 3
+      children:
+        - type: button
+          props:
+            label: Transition Phase
+            variant: primary
+            icon: arrow-right
+          actions:
+            click:
+              type: http
+              url: /api/clockwork/plans/{{plan.id}}/transition
+              method: POST
+        - type: button
+          props:
+            label: Cancel Plan
+            variant: destructive
+            icon: x-circle
+          actions:
+            click:
+              type: confirm
+              title: Cancel Plan
+              message: Are you sure you want to cancel this plan?
+              confirmLabel: Cancel Plan
+              action:
+                type: http
+                url: /api/clockwork/plans/{{plan.id}}/cancel
+                method: POST
+
+shortcuts:
+  - key: Escape
+    action:
+      type: navigate
+      page: clockwork-plans

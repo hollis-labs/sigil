@@ -1,0 +1,37 @@
+type: artifact-card
+category: custom
+description: "Card showing a file artifact with preview/download/delete actions"
+source:
+  component: components/artifact-card.tsx
+props:
+  datasource:
+    type: string
+    description: "DataSource alias to query (builtin compat)"
+  artifact:
+    type: object
+    description: "Artifact object with id, filename, path, mime_type, size_bytes, content?"
+  showPreview:
+    type: boolean
+    default: true
+    description: "Show preview button"
+  showDownload:
+    type: boolean
+    default: true
+    description: "Show download button"
+  showDelete:
+    type: boolean
+    default: false
+    description: "Show delete button"
+  variant:
+    type: string
+    default: "default"
+    description: "Card variant: default, compact, detailed"
+  onPreview:
+    type: function
+    description: "Callback when preview is clicked"
+  onDownload:
+    type: function
+    description: "Callback when download is clicked"
+  onDelete:
+    type: function
+    description: "Callback when delete is clicked"

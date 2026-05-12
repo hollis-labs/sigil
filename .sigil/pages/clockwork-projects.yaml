@@ -1,0 +1,248 @@
+sigil: "1.0"
+kind: page
+id: clockwork-projects
+title: Projects
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Project
+    capabilities: [list, get, create, update, delete, transition]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Projects
+        - type: button
+          props:
+            label: New Project
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: modal
+              title: New Project
+              size: lg
+              fields:
+                - name: name
+                  label: Name
+                  type: text
+                  required: true
+                  placeholder: My Project
+                - name: description
+                  label: Description
+                  type: text
+                  placeholder: Project description
+                - name: repo_path
+                  label: Repository Path
+                  type: text
+                  placeholder: /path/to/repo
+                - name: status
+                  label: Status
+                  type: select
+                  options:
+                    - value: active
+                      label: Active
+                    - value: paused
+                      label: Paused
+                    - value: archived
+                      label: Archived
+                    - value: completed
+                      label: Completed
+              submit:
+                label: Create Project
+                datasource: Project
+                method: POST
+
+    - id: search
+      type: search-bar
+      props:
+        placeholder: Search projects...
+        datasource: Project
+        debounce: 300
+
+    - id: project-table
+      type: data-table
+      props:
+        datasource: Project
+        pagination:
+          pageSize: 25
+        selection: single
+        columns:
+          - label: Name
+            field: name
+            sortable: true
+            width: 1
+          - label: Description
+            field: description
+            width: 2
+          - label: Status
+            field: status
+            sortable: true
+            width: 120
+            render:
+              type: badge
+              variants:
+                active: success
+                paused: warning
+                archived: default
+                completed: info
+          - label: Repository
+            field: repo_path
+            width: 200
+          - label: Created
+            field: created_at
+            sortable: true
+            width: 160
+        toolbar:
+          - type: button
+            props:
+              label: Edit
+              variant: secondary
+              icon: edit
+              disabled: true
+            actions:
+              click:
+                type: modal
+                title: Edit Project
+                size: lg
+                fields:
+                  - name: name
+                    label: Name
+                    type: text
+                    required: true
+                    value: "{{selection.name}}"
+                  - name: description
+                    label: Description
+                    type: text
+                    value: "{{selection.description}}"
+                  - name: repo_path
+                    label: Repository Path
+                    type: text
+                    value: "{{selection.repo_path}}"
+                  - name: status
+                    label: Status
+                    type: select
+                    value: "{{selection.status}}"
+                    options:
+                      - value: active
+                        label: Active
+                      - value: paused
+                        label: Paused
+                      - value: archived
+                        label: Archived
+                      - value: completed
+                        label: Completed
+                submit:
+                  label: Save
+                  datasource: Project
+                  method: PUT
+                  url: /api/clockwork/projects/{{selection.id}}
+          - type: button
+            props:
+              label: Delete
+              variant: destructive
+              icon: trash-2
+              disabled: true
+            actions:
+              click:
+                type: confirm
+                title: Delete Project
+                message: Delete "{{selection.name}}"? This cannot be undone.
+                confirmLabel: Delete
+                variant: destructive
+                action:
+                  type: http
+                  url: /api/clockwork/projects/{{selection.id}}
+                  method: DELETE
+      actions:
+        rowClick:
+          type: modal
+          title: Edit Project
+          size: lg
+          fields:
+            - name: name
+              label: Name
+              type: text
+              required: true
+              value: "{{row.name}}"
+            - name: description
+              label: Description
+              type: text
+              value: "{{row.description}}"
+            - name: repo_path
+              label: Repository Path
+              type: text
+              value: "{{row.repo_path}}"
+            - name: status
+              label: Status
+              type: select
+              value: "{{row.status}}"
+              options:
+                - value: active
+                  label: Active
+                - value: paused
+                  label: Paused
+                - value: archived
+                  label: Archived
+                - value: completed
+                  label: Completed
+          submit:
+            label: Save
+            datasource: Project
+            method: PUT
+            url: /api/clockwork/projects/{{row.id}}
+
+shortcuts:
+  - key: "n"
+    action:
+      type: modal
+      title: New Project
+      size: lg
+      fields:
+        - name: name
+          label: Name
+          type: text
+          required: true
+          placeholder: My Project
+        - name: description
+          label: Description
+          type: text
+          placeholder: Project description
+        - name: repo_path
+          label: Repository Path
+          type: text
+          placeholder: /path/to/repo
+        - name: status
+          label: Status
+          type: select
+          options:
+            - value: active
+              label: Active
+            - value: paused
+              label: Paused
+            - value: archived
+              label: Archived
+            - value: completed
+              label: Completed
+      submit:
+        label: Create Project
+        datasource: Project
+        method: POST
+    description: Create new project
+  - key: Escape
+    action:
+      type: close

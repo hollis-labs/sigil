@@ -23,7 +23,7 @@ export default function SigilPreview() {
     <>
     <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">Preview</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">Preview</h2>
         <div className="flex flex-row gap-2">
           <Select>
             <SelectTrigger>
@@ -51,7 +51,7 @@ export default function SigilPreview() {
         </div>
       </div>
       <div className="flex flex-col gap-0">
-        <p className="text-base text-muted-foreground">Preview renders here. Select a page and click Refresh.</p>
+        <p className="text-sm text-muted-foreground">Preview renders here. Select a page and click Refresh.</p>
       </div>
     </div>
     </>

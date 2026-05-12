@@ -1,0 +1,307 @@
+sigil: "1.0"
+kind: page
+id: clockwork-sprints
+title: Sprints
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Sprint
+    capabilities: [list, get, create, update, delete]
+  - alias: Project
+    capabilities: [list]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Sprints
+        - type: button
+          props:
+            label: New Sprint
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: modal
+              title: New Sprint
+              size: lg
+              fields:
+                - name: name
+                  label: Name
+                  type: text
+                  required: true
+                  placeholder: Sprint 1
+                - name: goal
+                  label: Goal
+                  type: text
+                  placeholder: Sprint goal description
+                - name: status
+                  label: Status
+                  type: select
+                  options:
+                    - value: planning
+                      label: Planning
+                    - value: active
+                      label: Active
+                    - value: completed
+                      label: Completed
+                    - value: cancelled
+                      label: Cancelled
+                - name: project_id
+                  label: Project
+                  type: select
+                  datasource: Project
+                  optionField: name
+                - name: start_date
+                  label: Start Date
+                  type: date
+                - name: end_date
+                  label: End Date
+                  type: date
+                - name: cost_budget
+                  label: Cost Budget
+                  type: number
+                  placeholder: "0.00"
+              submit:
+                label: Create Sprint
+                datasource: Sprint
+                method: POST
+
+    - id: search
+      type: search-bar
+      props:
+        placeholder: Search sprints...
+        datasource: Sprint
+        debounce: 300
+
+    - id: sprint-table
+      type: data-table
+      props:
+        datasource: Sprint
+        pagination:
+          pageSize: 25
+        selection: single
+        columns:
+          - label: Name
+            field: name
+            sortable: true
+            width: 1
+          - label: Goal
+            field: goal
+            width: 2
+          - label: Status
+            field: status
+            sortable: true
+            width: 110
+            render:
+              type: badge
+              variants:
+                planning: default
+                active: success
+                completed: info
+                cancelled: warning
+          - label: Project
+            field: project_name
+            sortable: true
+            width: 150
+          - label: Dates
+            field: date_range
+            width: 200
+          - label: Cost Budget
+            field: cost_budget
+            sortable: true
+            width: 120
+          - label: Spent
+            field: cost_spent
+            width: 100
+        toolbar:
+          - type: button
+            props:
+              label: Edit
+              variant: secondary
+              icon: edit
+              disabled: true
+            actions:
+              click:
+                type: modal
+                title: Edit Sprint
+                size: lg
+                fields:
+                  - name: name
+                    label: Name
+                    type: text
+                    required: true
+                    value: "{{selection.name}}"
+                  - name: goal
+                    label: Goal
+                    type: text
+                    value: "{{selection.goal}}"
+                  - name: status
+                    label: Status
+                    type: select
+                    value: "{{selection.status}}"
+                    options:
+                      - value: planning
+                        label: Planning
+                      - value: active
+                        label: Active
+                      - value: completed
+                        label: Completed
+                      - value: cancelled
+                        label: Cancelled
+                  - name: project_id
+                    label: Project
+                    type: select
+                    datasource: Project
+                    optionField: name
+                    value: "{{selection.project_id}}"
+                  - name: start_date
+                    label: Start Date
+                    type: date
+                    value: "{{selection.start_date}}"
+                  - name: end_date
+                    label: End Date
+                    type: date
+                    value: "{{selection.end_date}}"
+                  - name: cost_budget
+                    label: Cost Budget
+                    type: number
+                    value: "{{selection.cost_budget}}"
+                submit:
+                  label: Save
+                  datasource: Sprint
+                  method: PUT
+                  url: /api/clockwork/sprints/{{selection.id}}
+          - type: button
+            props:
+              label: Delete
+              variant: destructive
+              icon: trash-2
+              disabled: true
+            actions:
+              click:
+                type: confirm
+                title: Delete Sprint
+                message: Delete "{{selection.name}}"? This cannot be undone.
+                confirmLabel: Delete
+                variant: destructive
+                action:
+                  type: http
+                  url: /api/clockwork/sprints/{{selection.id}}
+                  method: DELETE
+      actions:
+        rowClick:
+          type: modal
+          title: Edit Sprint
+          size: lg
+          fields:
+            - name: name
+              label: Name
+              type: text
+              required: true
+              value: "{{row.name}}"
+            - name: goal
+              label: Goal
+              type: text
+              value: "{{row.goal}}"
+            - name: status
+              label: Status
+              type: select
+              value: "{{row.status}}"
+              options:
+                - value: planning
+                  label: Planning
+                - value: active
+                  label: Active
+                - value: completed
+                  label: Completed
+                - value: cancelled
+                  label: Cancelled
+            - name: project_id
+              label: Project
+              type: select
+              datasource: Project
+              optionField: name
+              value: "{{row.project_id}}"
+            - name: start_date
+              label: Start Date
+              type: date
+              value: "{{row.start_date}}"
+            - name: end_date
+              label: End Date
+              type: date
+              value: "{{row.end_date}}"
+            - name: cost_budget
+              label: Cost Budget
+              type: number
+              value: "{{row.cost_budget}}"
+          submit:
+            label: Save
+            datasource: Sprint
+            method: PUT
+            url: /api/clockwork/sprints/{{row.id}}
+
+shortcuts:
+  - key: "n"
+    action:
+      type: modal
+      title: New Sprint
+      size: lg
+      fields:
+        - name: name
+          label: Name
+          type: text
+          required: true
+          placeholder: Sprint 1
+        - name: goal
+          label: Goal
+          type: text
+          placeholder: Sprint goal description
+        - name: status
+          label: Status
+          type: select
+          options:
+            - value: planning
+              label: Planning
+            - value: active
+              label: Active
+            - value: completed
+              label: Completed
+            - value: cancelled
+              label: Cancelled
+        - name: project_id
+          label: Project
+          type: select
+          datasource: Project
+          optionField: name
+        - name: start_date
+          label: Start Date
+          type: date
+        - name: end_date
+          label: End Date
+          type: date
+        - name: cost_budget
+          label: Cost Budget
+          type: number
+          placeholder: "0.00"
+      submit:
+        label: Create Sprint
+        datasource: Sprint
+        method: POST
+    description: Create new sprint
+  - key: Escape
+    action:
+      type: close

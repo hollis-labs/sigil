@@ -18,7 +18,7 @@ export default function ForgeSettings() {
   return (
     <>
     <div className="flex flex-col gap-6 p-6">
-      <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Settings</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
@@ -33,19 +33,19 @@ export default function ForgeSettings() {
             <CardContent>
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
-                  <p className="text-base text-muted-foreground">Workspace Name</p>
+                  <p className="text-sm text-muted-foreground">Workspace Name</p>
                   <div className="flex flex-col gap-1.5">
                     <Input id="input-my workspace" type="text" placeholder="My Workspace" />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <p className="text-base text-muted-foreground">Workspace Slug</p>
+                  <p className="text-sm text-muted-foreground">Workspace Slug</p>
                   <div className="flex flex-col gap-1.5">
                     <Input id="input-my-workspace" type="text" placeholder="my-workspace" />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <p className="text-base text-muted-foreground">Default Environment</p>
+                  <p className="text-sm text-muted-foreground">Default Environment</p>
                   <Select>
                     <SelectTrigger>
                       <SelectValue placeholder="Select environment" />
@@ -65,19 +65,19 @@ export default function ForgeSettings() {
             <AccordionItem value="faq-slug">
               <AccordionTrigger>What happens when I change the workspace slug?</AccordionTrigger>
               <AccordionContent>
-                <p className="text-base text-muted-foreground">Changing the workspace slug will update all URLs. Existing links will redirect for 30 days.</p>
+                <p className="text-sm text-muted-foreground">Changing the workspace slug will update all URLs. Existing links will redirect for 30 days.</p>
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="faq-env">
               <AccordionTrigger>Can I switch environments after deploying?</AccordionTrigger>
               <AccordionContent>
-                <p className="text-base text-muted-foreground">Yes, you can promote deployments between environments from the deployment detail page.</p>
+                <p className="text-sm text-muted-foreground">Yes, you can promote deployments between environments from the deployment detail page.</p>
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="faq-keys">
               <AccordionTrigger>How do I reset my API keys?</AccordionTrigger>
               <AccordionContent>
-                <p className="text-base text-muted-foreground">Go to Settings → Integrations and regenerate the API key. The old key is revoked immediately.</p>
+                <p className="text-sm text-muted-foreground">Go to Settings → Integrations and regenerate the API key. The old key is revoked immediately.</p>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -121,7 +121,7 @@ export default function ForgeSettings() {
                 <div className="flex flex-row gap-4 justify-between items-center">
                   <div className="flex flex-col gap-0">
                     <p className="text-base">Delete Workspace</p>
-                    <p className="text-base text-muted-foreground">Permanently delete this workspace and all data</p>
+                    <p className="text-sm text-muted-foreground">Permanently delete this workspace and all data</p>
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger render={<Button variant="destructive" />}>
@@ -143,7 +143,7 @@ export default function ForgeSettings() {
                 <div className="flex flex-row gap-4 justify-between items-center">
                   <div className="flex flex-col gap-0">
                     <p className="text-base">Transfer Ownership</p>
-                    <p className="text-base text-muted-foreground">Transfer workspace to another user</p>
+                    <p className="text-sm text-muted-foreground">Transfer workspace to another user</p>
                   </div>
                   <Button variant="outline">Transfer</Button>
                 </div>

@@ -1,0 +1,28 @@
+type: activity-panel
+category: custom
+description: "Live-scrolling activity feed panel with timestamps, token counts, and cost"
+source:
+  component: components/activity-panel.tsx
+props:
+  datasource:
+    type: string
+    description: "DataSource alias to query (builtin compat)"
+  items:
+    type: array
+    description: "Array of {id, timestamp, type, summary, tokens?, cost?, status?} activity items"
+  maxItems:
+    type: integer
+    default: 50
+    description: "Maximum number of items to display"
+  showTokens:
+    type: boolean
+    default: false
+    description: "Show token counts per item"
+  showCost:
+    type: boolean
+    default: false
+    description: "Show cost per item"
+  autoScroll:
+    type: boolean
+    default: true
+    description: "Auto-scroll to latest activity"

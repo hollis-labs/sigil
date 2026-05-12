@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import { CalendarIcon, ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +36,7 @@ export default function ForgeLogs() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Logs</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Logs</h1>
         <div className="flex flex-row gap-2 items-center">
           <Popover>
             <PopoverTrigger render={<Button variant="outline" className="w-[240px] justify-start text-left font-normal" />}>
@@ -87,7 +88,21 @@ export default function ForgeLogs() {
                 })}
               columns={[
                 { accessorKey: "timestamp", header: "Timestamp" },
-                { accessorKey: "level", header: "Level" },
+                {
+                  accessorKey: "level",
+                  header: "Level",
+                  cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
+                    const v = String(row.getValue("level") ?? "");
+                    const variants: Record<string, string> = { "fatal": "danger", "error": "danger", "warn": "warning", "info": "info", "debug": "default" };
+                    const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
+                    return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
+                      variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
+                      variant === "warning" ? "border-amber-500/30 bg-amber-500/10 text-amber-400" :
+                      variant === "info" ? "border-blue-500/30 bg-blue-500/10 text-blue-400" :
+                      variant === "danger" ? "" : ""
+                    }>{v}</Badge>;
+                  },
+                },
                 { accessorKey: "service", header: "Service" },
                 { accessorKey: "message", header: "Message" },
                 { accessorKey: "source", header: "Source" },

@@ -28,7 +28,10 @@ import {
 
 interface SigilChartProps {
   type: "line" | "bar" | "area" | "pie" | "donut" | "radar";
-  data: Record<string, unknown>[];
+  // Permissive: accept any typed array (Run[], Repo[], etc.) without
+  // requiring callers to widen via `as Record<string, unknown>[]`.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any[];
   config: ChartConfig;
   xKey?: string;
   dataKeys: string[];

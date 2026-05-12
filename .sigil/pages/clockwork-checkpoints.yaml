@@ -1,0 +1,219 @@
+sigil: "1.0"
+kind: page
+id: clockwork-checkpoints
+title: Checkpoints
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Checkpoint
+    capabilities: [list, get, respond, cancel]
+  - alias: Task
+    capabilities: [get]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Checkpoints
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: select
+              props:
+                placeholder: All Types
+                options:
+                  - value: all
+                    label: All
+                  - value: approval
+                    label: Approval
+                  - value: review
+                    label: Review
+                  - value: decision
+                    label: Decision
+              actions:
+                change:
+                  type: emit
+                  datasource: Checkpoint
+                  field: kind
+                  value: "{{value}}"
+            - type: select
+              props:
+                placeholder: All Statuses
+                options:
+                  - value: all
+                    label: All
+                  - value: pending
+                    label: Pending
+                  - value: resolved
+                    label: Resolved
+                  - value: cancelled
+                    label: Cancelled
+
+    - id: summary-cards
+      type: summary-cards
+      props:
+        datasource: Checkpoint
+        cards:
+          - id: pending-count
+            label: Pending
+            field: status
+            filter: pending
+            variant: warning
+            icon: alert-circle
+          - id: affected-tasks
+            label: Affected Tasks
+            field: affected_tasks
+            variant: info
+            icon: list
+          - id: oldest-age
+            label: Oldest
+            field: age
+            variant: default
+            icon: clock
+          - id: type-diversity
+            label: Types
+            field: kind
+            variant: primary
+            icon: layers
+
+    - id: split-layout
+      type: split
+      props:
+        direction: horizontal
+        defaultSize: 40
+        minSize: 30
+      children:
+        - id: checkpoint-list
+          type: rows
+          props:
+            gap: 3
+          children:
+            - id: checkpoint-cards
+              type: list
+              props:
+                datasource: Checkpoint
+                emptyMessage: No checkpoints found
+              children:
+                - type: checkpoint-card
+                  props:
+                    datasource: Checkpoint
+                    showDetail: false
+                    variant: default
+
+        - id: detail-panel
+          type: rows
+          props:
+            gap: 4
+          children:
+            - type: heading
+              props:
+                level: 2
+                text: Checkpoint Detail
+            - type: card
+              props:
+                title: Payload
+                padding: 4
+              children:
+                - type: detail-view
+                  props:
+                    datasource: Checkpoint
+                    fields:
+                      - label: ID
+                        field: id
+                      - label: Kind
+                        field: kind
+                      - label: Status
+                        field: status
+                        render: status-badge
+                      - label: Task
+                        field: task_id
+                      - label: Created
+                        field: created_at
+                      - label: Expires
+                        field: expires_at
+                      - label: Requester
+                        field: requester
+                      - label: Context
+                        field: context
+                        render: code
+            - type: card
+              props:
+                title: Data
+                padding: 4
+              children:
+                - type: detail-view
+                  props:
+                    datasource: Checkpoint
+                    fields:
+                      - label: Payload
+                        field: payload
+                        render: json
+                      - label: Notes
+                        field: notes
+                        render: markdown
+            - type: columns
+              props:
+                gap: 3
+              children:
+                - type: button
+                  props:
+                    label: Respond
+                    variant: primary
+                    icon: check-circle
+                  actions:
+                    click:
+                      type: modal
+                      title: Respond to Checkpoint
+                      fields:
+                        - name: response
+                          label: Response
+                          type: select
+                          options:
+                            - value: approve
+                              label: Approve
+                            - value: reject
+                              label: Reject
+                            - value: revise
+                              label: Request Revision
+                        - name: notes
+                          label: Notes
+                          type: text
+                          placeholder: Optional notes
+                      submit:
+                        datasource: Checkpoint
+                        method: POST
+                        url: /api/clockwork/checkpoints/{{selection.id}}/respond
+                - type: button
+                  props:
+                    label: Cancel
+                    variant: destructive
+                    icon: x-circle
+                  actions:
+                    click:
+                      type: confirm
+                      title: Cancel Checkpoint
+                      message: Cancel this checkpoint?
+                      confirmLabel: Cancel
+                      action:
+                        type: http
+                        url: /api/clockwork/checkpoints/{{selection.id}}/cancel
+                        method: POST
+
+shortcuts:
+  - key: Escape
+    action:
+      type: close

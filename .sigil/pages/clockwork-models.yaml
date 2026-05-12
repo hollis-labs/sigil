@@ -1,0 +1,95 @@
+sigil: "1.0"
+kind: page
+id: clockwork-models
+title: Models
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Model
+    capabilities: [list, get, search, filter]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - id: page-title
+          type: heading
+          props:
+            level: 1
+            text: Models
+
+    - id: provider-filter
+      type: columns
+      props:
+        gap: 4
+        align: center
+      children:
+        - id: provider-combobox
+          type: select
+          props:
+            label: Provider
+            placeholder: All Providers
+            datasource: Model
+            field: provider
+            options:
+              - label: Anthropic
+                value: anthropic
+              - label: OpenAI
+                value: openai
+              - label: Google
+                value: google
+              - label: Meta
+                value: meta
+              - label: Mistral
+                value: mistral
+              - label: Amazon
+                value: amazon
+
+    - id: model-table
+      type: data-table
+      props:
+        datasource: Model
+        pagination:
+          pageSize: 50
+        columns:
+          - label: Provider
+            field: provider
+            sortable: true
+            width: 120
+          - label: Model ID
+            field: model_id
+            sortable: true
+            width: 1
+          - label: Family
+            field: family
+            sortable: true
+            width: 140
+          - label: Input Cost
+            field: input_cost
+            sortable: true
+            width: 120
+            render: currency
+          - label: Output Cost
+            field: output_cost
+            sortable: true
+            width: 120
+            render: currency
+          - label: Context Window
+            field: context_window
+            sortable: true
+            width: 140
+            render: tokens
+          - label: Capabilities
+            field: capabilities
+            width: 200
+            render: tags

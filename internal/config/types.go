@@ -145,6 +145,10 @@ type ComponentSchemaProvider interface {
 }
 
 // AppConfig represents the .sigil/app.yaml application configuration.
+//
+// Providers live on each ModuleConfig (since sprint 10 phase 3.5) — there is
+// no app-level fallback. Each module declares the providers wrapping its own
+// layout/routes. See ModuleConfig.Providers.
 type AppConfig struct {
 	Sigil       string `yaml:"sigil" json:"sigil"`
 	Kind        string `yaml:"kind" json:"kind"`
@@ -154,12 +158,11 @@ type AppConfig struct {
 	// frontend targets (currently react-shadcn). Valid values: "spa", "app-router".
 	// Empty / unset is treated as "app-router" (the original shape) so existing
 	// configs regenerate byte-identically.
-	TargetMode string           `yaml:"target_mode,omitempty" json:"target_mode,omitempty"`
-	API        *APIConfig       `yaml:"api,omitempty" json:"api,omitempty"`
-	Modules    []ModuleConfig   `yaml:"modules" json:"modules"`
-	Features   *AppFeatures     `yaml:"features,omitempty" json:"features,omitempty"`
-	Actions    []AppAction      `yaml:"actions,omitempty" json:"actions,omitempty"`
-	Providers  []ProviderConfig `yaml:"providers,omitempty" json:"providers,omitempty"`
+	TargetMode string         `yaml:"target_mode,omitempty" json:"target_mode,omitempty"`
+	API        *APIConfig     `yaml:"api,omitempty" json:"api,omitempty"`
+	Modules    []ModuleConfig `yaml:"modules" json:"modules"`
+	Features   *AppFeatures   `yaml:"features,omitempty" json:"features,omitempty"`
+	Actions    []AppAction    `yaml:"actions,omitempty" json:"actions,omitempty"`
 }
 
 // EffectiveTargetMode returns the AppConfig's target mode, defaulting to
@@ -180,11 +183,18 @@ type APIConfig struct {
 }
 
 // ModuleConfig defines a module within an app.
+//
+// Providers are declared per-module (since sprint 10 phase 3.5): each module
+// wraps its own layout/routes with the providers it lists, in declared order
+// (first = outermost). Two modules may share the same custom provider
+// declaration — the renderer copies each provider's source files once per
+// app, deduplicated by source path.
 type ModuleConfig struct {
-	ID         string   `yaml:"id" json:"id"`
-	Shell      string   `yaml:"shell" json:"shell"`
-	RouteGroup string   `yaml:"route_group" json:"route_group"`
-	Pages      []string `yaml:"pages" json:"pages"`
+	ID         string           `yaml:"id" json:"id"`
+	Shell      string           `yaml:"shell" json:"shell"`
+	RouteGroup string           `yaml:"route_group" json:"route_group"`
+	Pages      []string         `yaml:"pages" json:"pages"`
+	Providers  []ProviderConfig `yaml:"providers,omitempty" json:"providers,omitempty"`
 }
 
 // AppFeatures controls app-wide feature flags.

@@ -42,8 +42,11 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 		features = &config.AppFeatures{}
 	}
 
-	// Extract nav groups from the shell page's nav-menu components.
-	groups := extractNavGroups(&shell.Layout, mod.ID)
+	// Extract nav groups from the shell page's nav-menu components. App
+	// Router mode keeps the legacy single-module resolver (route groups are
+	// URL-transparent in Next.js, so no prefix prepended).
+	resolve := defaultRouteResolver(mod.ID)
+	groups := extractNavGroups(&shell.Layout, resolve)
 
 	// Collect all nav items flat (for command palette).
 	var allNavItems []navItem
@@ -120,9 +123,11 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 	if len(app.Actions) > 0 {
 		buf.WriteString("import {\n  DropdownMenu,\n  DropdownMenuContent,\n  DropdownMenuItem,\n  DropdownMenuTrigger,\n} from \"@/components/ui/dropdown-menu\";\n")
 	}
-	// Check if any provider needs Select in topbar
+	// Check if any of THIS module's providers needs Select in topbar.
+	// Phase 3.5: providers are per-module, so the topbar UI mirrors only
+	// what this module declares.
 	hasTopbarSelect := false
-	for _, p := range app.Providers {
+	for _, p := range mod.Providers {
 		if p.Position == "topbar" && p.UIType == "select" {
 			hasTopbarSelect = true
 			break
@@ -228,8 +233,10 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 	shellName := pascalCase(mod.ID) + "Shell"
 
 	// Import providers and any custom-provider mounts.
-	for i := range app.Providers {
-		p := &app.Providers[i]
+	// Phase 3.5: per-module — each module's layout only imports/wraps the
+	// providers IT declares.
+	for i := range mod.Providers {
+		p := &mod.Providers[i]
 		wrapName := providerWrapName(p)
 		importPath := providerImportPath(p)
 		hookName, hookPath := providerHookImport(p)
@@ -245,7 +252,7 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 			fmt.Fprintf(&buf, "import { %s } from %q;\n", m.Name, m.Path)
 		}
 	}
-	if len(app.Providers) > 0 {
+	if len(mod.Providers) > 0 {
 		buf.WriteString("\n")
 	}
 
@@ -253,11 +260,11 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 	// Wrap children in providers (outside-in, in declared order). Custom
 	// providers with mounts render the mount components as siblings of
 	// {children} inside the provider scope.
-	if len(app.Providers) > 0 {
+	if len(mod.Providers) > 0 {
 		buf.WriteString("  return (\n")
 		indent := "    "
-		for i := range app.Providers {
-			p := &app.Providers[i]
+		for i := range mod.Providers {
+			p := &mod.Providers[i]
 			wrapName := providerWrapName(p)
 			fmt.Fprintf(&buf, "%s<%s>\n", indent, wrapName)
 			indent += "  "
@@ -267,9 +274,9 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 			}
 		}
 		fmt.Fprintf(&buf, "%s<%s>{children}</%s>\n", indent, shellName, shellName)
-		for i := len(app.Providers) - 1; i >= 0; i-- {
+		for i := len(mod.Providers) - 1; i >= 0; i-- {
 			indent = indent[:len(indent)-2]
-			wrapName := providerWrapName(&app.Providers[i])
+			wrapName := providerWrapName(&mod.Providers[i])
 			fmt.Fprintf(&buf, "%s</%s>\n", indent, wrapName)
 		}
 		buf.WriteString("  );\n}\n\n")
@@ -290,8 +297,8 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 	if features.CommandPalette {
 		buf.WriteString("  const [cmdOpen, setCmdOpen] = useState(false);\n")
 	}
-	// Provider context hooks
-	for _, p := range app.Providers {
+	// Provider context hooks — phase 3.5: only this module's providers.
+	for _, p := range mod.Providers {
 		if p.Position == "topbar" {
 			hookName := "use" + pascalCase(p.ID) + "Context"
 			varName := toCamelCase(p.ID) + "Ctx"
@@ -368,8 +375,9 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 	buf.WriteString("            </div>\n")
 	buf.WriteString("            <div className=\"flex items-center gap-2\">\n")
 
-	// Provider UI elements in topbar (e.g., lens selector)
-	for _, p := range app.Providers {
+	// Provider UI elements in topbar (e.g., lens selector) — phase 3.5
+	// per-module: each module's topbar renders only its own providers.
+	for _, p := range mod.Providers {
 		if p.Position == "topbar" && p.UIType == "select" {
 			hookName := "use" + pascalCase(p.ID) + "Context"
 
@@ -422,7 +430,7 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 		buf.WriteString("                </DropdownMenuTrigger>\n")
 		buf.WriteString("                <DropdownMenuContent align=\"end\">\n")
 		for _, action := range app.Actions {
-			href := actionHref(action, mod.ID)
+			href := actionHref(action, resolve)
 			iconComp := lucideComponentName(action.Icon)
 			fmt.Fprintf(&buf, "                  <DropdownMenuItem onSelect={() => router.push(%q)}>\n", href)
 			fmt.Fprintf(&buf, "                    <%s className=\"mr-2 h-4 w-4\" />\n", iconComp)
@@ -470,7 +478,7 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 		if len(app.Actions) > 0 {
 			buf.WriteString("            <CommandGroup heading=\"Quick Actions\">\n")
 			for _, action := range app.Actions {
-				href := actionHref(action, mod.ID)
+				href := actionHref(action, resolve)
 				iconComp := lucideComponentName(action.Icon)
 				fmt.Fprintf(&buf, "              <CommandItem onSelect={() => { router.push(%q); setCmdOpen(false); }}>\n", href)
 				fmt.Fprintf(&buf, "                <%s className=\"mr-2 h-4 w-4\" />\n", iconComp)
@@ -498,15 +506,39 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 	}, nil
 }
 
+// routeResolver maps a page ID to its URL path. Different call sites need
+// different resolution rules — App Router strips only the current module's
+// prefix; SPA mode with multi-module prepends the target page's route
+// prefix. extractNavGroups and friends accept a resolver so the rule lives
+// at the call site, not inside the navigation walker.
+type routeResolver func(pageID string) string
+
+// defaultRouteResolver returns the legacy single-module behavior (strip
+// current module's prefix).
+func defaultRouteResolver(currentModule string) routeResolver {
+	return func(pageID string) string {
+		return pageRoute(pageID, currentModule)
+	}
+}
+
+// spaRouteResolver returns a resolver that prepends each target page's
+// owning-module route prefix when there is more than one module. Single
+// module configs keep the flat paths (no behavior change vs. Phase 1).
+func spaRouteResolver(currentModule string, modules []*config.ModuleConfig) routeResolver {
+	return func(pageID string) string {
+		return pageRouteSPA(pageID, currentModule, modules)
+	}
+}
+
 // extractNavGroups walks the shell page component tree and finds all nav-menu
 // components, grouping them by separator boundaries in the parent.
-func extractNavGroups(root *config.Component, module string) []navGroup {
+func extractNavGroups(root *config.Component, resolve routeResolver) []navGroup {
 	var groups []navGroup
-	findNavMenus(root, module, &groups)
+	findNavMenus(root, resolve, &groups)
 	if len(groups) == 0 {
 		// Fallback: single group with all nav-menus found.
 		var items []navItem
-		collectAllNavItems(root, module, &items)
+		collectAllNavItems(root, resolve, &items)
 		if len(items) > 0 {
 			groups = append(groups, navGroup{Items: items})
 		}
@@ -516,9 +548,9 @@ func extractNavGroups(root *config.Component, module string) []navGroup {
 
 // findNavMenus looks for nav-menu components within rows/columns containers,
 // respecting separator boundaries to create groups.
-func findNavMenus(c *config.Component, module string, groups *[]navGroup) {
+func findNavMenus(c *config.Component, resolve routeResolver, groups *[]navGroup) {
 	if c.Type == "nav-menu" {
-		items := extractNavItemsFromMenu(c, module)
+		items := extractNavItemsFromMenu(c, resolve)
 		if len(items) > 0 {
 			*groups = append(*groups, navGroup{Items: items})
 		}
@@ -526,24 +558,24 @@ func findNavMenus(c *config.Component, module string, groups *[]navGroup) {
 	}
 	// For containers, recurse into children.
 	for i := range c.Children {
-		findNavMenus(&c.Children[i], module, groups)
+		findNavMenus(&c.Children[i], resolve, groups)
 	}
 }
 
 // collectAllNavItems is a fallback that finds all nav items in the tree.
-func collectAllNavItems(c *config.Component, module string, items *[]navItem) {
+func collectAllNavItems(c *config.Component, resolve routeResolver, items *[]navItem) {
 	if c.Type == "nav-menu" {
-		extracted := extractNavItemsFromMenu(c, module)
+		extracted := extractNavItemsFromMenu(c, resolve)
 		*items = append(*items, extracted...)
 		return
 	}
 	for i := range c.Children {
-		collectAllNavItems(&c.Children[i], module, items)
+		collectAllNavItems(&c.Children[i], resolve, items)
 	}
 }
 
 // extractNavItemsFromMenu extracts nav items from a nav-menu component's props.
-func extractNavItemsFromMenu(c *config.Component, module string) []navItem {
+func extractNavItemsFromMenu(c *config.Component, resolve routeResolver) []navItem {
 	itemsProp, ok := c.Props["items"]
 	if !ok {
 		return nil
@@ -567,7 +599,7 @@ func extractNavItemsFromMenu(c *config.Component, module string) []navItem {
 		items = append(items, navItem{
 			Label: label,
 			Icon:  icon,
-			Href:  pageRoute(page, module),
+			Href:  resolve(page),
 		})
 	}
 	return items
@@ -607,19 +639,27 @@ func findBrand(c *config.Component) (string, string) {
 	return "", ""
 }
 
-// actionHref builds a route path for an app action.
-func actionHref(action config.AppAction, module string) string {
-	href := pageRoute(action.Page, module)
+// actionHref builds a route path for an app action using the supplied
+// resolver. The resolver lets callers pick App Router (no prefix) or SPA
+// (multi-module prefix) semantics.
+func actionHref(action config.AppAction, resolve routeResolver) string {
+	href := resolve(action.Page)
 	if action.Query != "" {
 		href += "?" + action.Query
 	}
 	return href
 }
 
-// lucideComponentName converts a kebab-case icon name to PascalCase lucide component name.
+// lucideComponentName converts a kebab-case icon name to PascalCase lucide
+// component name. Empty input returns "Circle" (a safe default). The alias
+// map in pages.go (lucideIconAliases) handles shortcuts whose PascalCase
+// form isn't a valid lucide-react export (alert → AlertCircle, etc.).
 func lucideComponentName(name string) string {
 	if name == "" {
 		return "Circle"
+	}
+	if alias, ok := lucideIconAliases[name]; ok {
+		return alias
 	}
 	parts := strings.Split(name, "-")
 	var result strings.Builder

@@ -1,0 +1,161 @@
+sigil: "1.0"
+kind: page
+id: clockwork-templates
+title: Templates
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Template
+    capabilities: [list, get, search, filter, archive]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - type: heading
+          props:
+            level: 1
+            text: Templates
+        - type: columns
+          props:
+            gap: 2
+          children:
+            - type: select
+              props:
+                placeholder: Show Active
+                options:
+                  - value: active
+                    label: Active
+                  - value: archived
+                    label: Archived
+                  - value: all
+                    label: All
+              actions:
+                change:
+                  type: emit
+                  datasource: Template
+                  field: archive_status
+                  value: "{{value}}"
+            - type: button
+              props:
+                label: New Template
+                variant: primary
+                icon: plus
+              actions:
+                click:
+                  type: navigate
+                  page: clockwork-template-editor
+
+    - id: search
+      type: search-bar
+      props:
+        placeholder: Search templates...
+        datasource: Template
+        debounce: 300
+
+    - id: template-table
+      type: data-table
+      props:
+        datasource: Template
+        pagination:
+          pageSize: 25
+        selection: single
+        columns:
+          - label: Name
+            field: name
+            sortable: true
+            width: 1
+          - label: Version
+            field: version
+            sortable: true
+            width: 100
+          - label: Kind
+            field: kind
+            width: 120
+            render:
+              type: badge
+              variants:
+                plan: primary
+                task: default
+                workflow: info
+                phase: warning
+          - label: Auto-Execute
+            field: auto_execute
+            width: 120
+            render:
+              type: badge
+              variants:
+                true: success
+                false: default
+          - label: Status
+            field: status
+            sortable: true
+            width: 100
+            render:
+              type: status-badge
+          - label: Updated
+            field: updated_at
+            sortable: true
+            width: 160
+        toolbar:
+          - type: dropdown-menu
+            props:
+              label: Actions
+              variant: secondary
+              disabled: true
+              items:
+                - label: Instantiate
+                  icon: play
+                  action:
+                    type: navigate
+                    page: clockwork-plan-editor
+                    params:
+                      template: "{{selection.id}}"
+                - label: Archive
+                  icon: archive
+                  action:
+                    type: confirm
+                    title: Archive Template
+                    message: Archive this template?
+                    confirmLabel: Archive
+                    action:
+                      type: http
+                      url: /api/clockwork/templates/{{selection.id}}/archive
+                      method: POST
+                - separator: true
+                - label: View Details
+                  icon: eye
+                  action:
+                    type: emit
+                    event: view-template
+                - label: Edit
+                  icon: edit
+                  action:
+                    type: navigate
+                    page: clockwork-template-editor
+                    params:
+                      id: "{{selection.id}}"
+      actions:
+        rowClick:
+          type: emit
+          event: view-template
+
+shortcuts:
+  - key: "n"
+    action:
+      type: navigate
+      page: clockwork-template-editor
+    description: Create new template
+  - key: Escape
+    action:
+      type: close

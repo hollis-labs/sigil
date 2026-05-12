@@ -1,0 +1,73 @@
+sigil: "1.0"
+kind: page
+id: clockwork-collections
+title: Collections
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Collection
+    capabilities: [list, get, create, update, delete, reorder]
+  - alias: Task
+    capabilities: [search, filter]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - id: page-title
+          type: heading
+          props:
+            level: 1
+            text: Collections
+        - id: new-collection-btn
+          type: button
+          props:
+            label: New Collection
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: modal
+              title: New Collection
+              fields:
+                - name: name
+                  label: Name
+                  type: text
+                  required: true
+                - name: description
+                  label: Description
+                  type: textarea
+              submit:
+                datasource: Collection
+                method: POST
+
+    - id: kanban-board
+      type: kanban-board
+      props:
+        columns:
+          - id: inbox
+            title: Inbox
+            status: inbox
+          - id: active
+            title: Active
+            status: active
+          - id: archived
+            title: Archived
+            status: archived
+        cards: []
+        inbox: []
+        draggable: true
+      actions:
+        cardClick:
+          type: navigate
+          page: clockwork-task-detail

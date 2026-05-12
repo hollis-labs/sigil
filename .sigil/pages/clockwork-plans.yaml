@@ -1,0 +1,111 @@
+sigil: "1.0"
+kind: page
+id: clockwork-plans
+title: Plans
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Plan
+    capabilities: [list, get, create]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - id: page-title
+          type: heading
+          props:
+            level: 1
+            text: Plans
+        - id: new-plan-btn
+          type: button
+          props:
+            label: New Plan
+            variant: primary
+            icon: plus
+          actions:
+            click:
+              type: navigate
+              page: clockwork-plan-editor
+
+    - id: search
+      type: search-bar
+      props:
+        placeholder: Search plans...
+        datasource: Plan
+        debounce: 300
+
+    - id: plan-grid
+      type: grid
+      props:
+        columns: 3
+        columns_md: 2
+        columns_sm: 1
+        gap: 4
+      children:
+        - type: card
+          props:
+            title: "{{item.name}}"
+            padding: 4
+          children:
+            - type: rows
+              props:
+                gap: 3
+              children:
+                - type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - type: badge
+                      props:
+                        text: "{{item.status}}"
+                        variant: default
+                    - type: text
+                      props:
+                        text: "{{item.phase_count}} phases"
+                        muted: true
+                - type: columns
+                  props:
+                    justify: between
+                  children:
+                    - type: text
+                      props:
+                        text: "Progress"
+                    - type: text
+                      props:
+                        text: "{{item.progress}}%"
+                        muted: true
+                - type: progress
+                  props:
+                    value: "{{item.progress}}"
+                - type: text
+                  props:
+                    text: "{{item.description}}"
+                    muted: true
+          actions:
+            rowClick:
+              type: navigate
+              page: clockwork-plan-detail
+              params:
+                id: "{{item.id}}"
+
+shortcuts:
+  - key: "n"
+    action:
+      type: navigate
+      page: clockwork-plan-editor
+    description: Create new plan
+  - key: Escape
+    action:
+      type: close

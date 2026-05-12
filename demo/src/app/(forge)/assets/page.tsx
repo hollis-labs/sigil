@@ -6,6 +6,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2, Plus, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -21,7 +22,7 @@ export default function ForgeAssets() {
   const [filterAssetType, setFilterAssetType] = useState("all");
   const [searchAsset, setSearchAsset] = useState("");
 
-  const { data: asset, isLoading: assetLoading } = useAsset();
+  const { data: asset, isLoading: assetLoading, refetch: refetchAsset } = useAsset();
 
   if (assetLoading) {
     return (
@@ -35,7 +36,7 @@ export default function ForgeAssets() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Assets</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Assets</h1>
         <div className="flex flex-row gap-2">
           <Select onValueChange={(v) => setFilterAssetProvider(v as string)}>
             <SelectTrigger>
@@ -118,7 +119,21 @@ export default function ForgeAssets() {
                 return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
               })}
             columns={[
-              { accessorKey: "status", header: "Status" },
+              {
+                accessorKey: "status",
+                header: "Status",
+                cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
+                  const v = String(row.getValue("status") ?? "");
+                  const variants: Record<string, string> = { "degraded": "warning", "down": "danger", "provisioning": "info", "unknown": "default", "healthy": "success" };
+                  const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
+                  return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
+                    variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
+                    variant === "warning" ? "border-amber-500/30 bg-amber-500/10 text-amber-400" :
+                    variant === "info" ? "border-blue-500/30 bg-blue-500/10 text-blue-400" :
+                    variant === "danger" ? "" : ""
+                  }>{v}</Badge>;
+                },
+              },
               { accessorKey: "name", header: "Name" },
               { accessorKey: "type", header: "Type" },
               { accessorKey: "provider", header: "Provider" },

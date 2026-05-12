@@ -29,7 +29,7 @@ export default function SigilPages() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Pages</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Pages</h1>
         <Button variant="default" onClick={() => router.push("/page-editor")}>
           <Plus className="mr-2 h-4 w-4" />
           New Page

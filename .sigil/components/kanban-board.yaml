@@ -1,0 +1,29 @@
+type: kanban-board
+category: custom
+description: "Kanban board with draggable columns using @dnd-kit/core and @dnd-kit/sortable"
+source:
+  component: components/kanban-board.tsx
+props:
+  datasource:
+    type: string
+    description: "DataSource alias to query (builtin compat)"
+  columns:
+    type: array
+    required: true
+    description: "Array of {id, title, status, limit?} column definitions"
+  cards:
+    type: array
+    description: "Array of {id, title, status, priority?, assignee?} cards"
+  inbox:
+    type: array
+    description: "Array of inbox cards shown as a separate column"
+  draggable:
+    type: boolean
+    default: true
+    description: "Enable drag-and-drop reordering"
+  onCardMove:
+    type: function
+    description: "Callback when a card is moved between columns (cardId, fromStatus, toStatus)"
+  onCardClick:
+    type: function
+    description: "Callback when a card is clicked (cardId)"

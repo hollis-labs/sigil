@@ -1,0 +1,227 @@
+sigil: "1.0"
+kind: page
+id: clockwork-dashboard
+title: Dashboard
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Run
+    capabilities: [list, search, filter, sort]
+  - alias: Task
+    capabilities: [list, filter]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: dashboard-tabs
+      type: tabs
+      props:
+        defaultTab: activity
+        variant: pills
+      children:
+        - id: tab-activity
+          type: tab
+          props:
+            label: Activity
+            value: activity
+          children:
+            - id: stat-cards-row
+              type: columns
+              props:
+                gap: 4
+              children:
+                - id: runs-today
+                  type: stat-card
+                  props:
+                    label: Runs Today
+                    value: "{{Run.runs_today}}"
+                    icon: activity
+                    datasource: Run
+                - id: active-runs
+                  type: stat-card
+                  props:
+                    label: Active
+                    value: "{{Run.active}}"
+                    icon: play
+                    variant: warning
+                    datasource: Run
+                - id: error-count
+                  type: stat-card
+                  props:
+                    label: Errors
+                    value: "{{Run.errors}}"
+                    icon: alert
+                    variant: destructive
+                    datasource: Run
+                - id: total-cost
+                  type: stat-card
+                  props:
+                    label: Total Cost
+                    value: "{{Run.total_cost}}"
+                    icon: dollar
+                    datasource: Run
+
+            - id: chart-bar-activity
+              type: chart
+              props:
+                type: bar
+                datasource: Run
+                xKey: date
+                dataKeys: [runs]
+                height: 250
+                showGrid: true
+                showLegend: false
+
+            - id: chart-pulse
+              type: chart
+              props:
+                type: area
+                datasource: Run
+                xKey: timestamp
+                dataKeys: [throughput]
+                height: 200
+                showGrid: true
+                showLegend: false
+
+            - id: recent-runs
+              type: data-table
+              props:
+                datasource: Run
+                pagination:
+                  pageSize: 10
+                columns:
+                  - label: ID
+                    field: id
+                    width: 80
+                  - label: Task
+                    field: task_title
+                  - label: Status
+                    field: status
+                    width: 100
+                  - label: Duration
+                    field: duration
+                    width: 100
+                  - label: Cost
+                    field: cost
+                    width: 80
+                  - label: Started
+                    field: started_at
+                    width: 160
+              actions:
+                rowClick:
+                  type: navigate
+                  page: forge-run-detail
+
+        - id: tab-mission-control
+          type: tab
+          props:
+            label: Mission Control
+            value: mission-control
+          children:
+            - id: mc-charts-row
+              type: columns
+              props:
+                gap: 4
+              children:
+                - id: runs-over-time
+                  type: chart
+                  props:
+                    type: area
+                    datasource: Run
+                    xKey: date
+                    dataKeys: [runs]
+                    height: 300
+                    showGrid: true
+                    showLegend: true
+                    series:
+                      - key: runs
+                        label: Runs
+                        color: primary
+
+                - id: status-distribution
+                  type: chart
+                  props:
+                    type: pie
+                    datasource: Run
+                    xKey: status
+                    dataKeys: [count]
+                    height: 300
+                    showLegend: true
+
+                - id: token-throughput
+                  type: chart
+                  props:
+                    type: bar
+                    datasource: Run
+                    xKey: model
+                    dataKeys: [tokens]
+                    height: 300
+                    showGrid: true
+                    showLegend: true
+                    stacked: true
+
+            - id: task-pipeline
+              type: rows
+              props:
+                gap: 4
+              children:
+                - id: pipeline-heading
+                  type: heading
+                  props:
+                    level: 3
+                    text: Task Pipeline
+                - id: pipeline-scope
+                  type: scope-manager
+                  props:
+                    datasource: Task
+                    mode: assign
+
+        - id: tab-usage
+          type: tab
+          props:
+            label: Usage
+            value: usage
+          children:
+            - id: cost-per-day
+              type: chart
+              props:
+                type: bar
+                datasource: Run
+                xKey: date
+                dataKeys: [cost]
+                height: 300
+                showGrid: true
+                showLegend: true
+
+            - id: provider-breakdown
+              type: columns
+              props:
+                gap: 4
+              children:
+                - id: provider-chart
+                  type: chart
+                  props:
+                    type: donut
+                    datasource: Run
+                    xKey: provider
+                    dataKeys: [cost]
+                    height: 250
+                    showLegend: true
+                - id: provider-table
+                  type: data-table
+                  props:
+                    datasource: Run
+                    columns:
+                      - label: Provider
+                        field: provider
+                      - label: Runs
+                        field: run_count
+                      - label: Cost
+                        field: cost
+                      - label: Tokens
+                        field: tokens

@@ -20,7 +20,7 @@ export default function ForgeMonitoring() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Monitoring</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Monitoring</h1>
         <div className="flex flex-row gap-2">
           <Select>
             <SelectTrigger>
@@ -48,8 +48,8 @@ export default function ForgeMonitoring() {
           <CardContent>
             <div className="flex flex-row gap-4 justify-between items-center">
               <div className="flex flex-col gap-1">
-                <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">73%</h2>
-                <p className="text-base text-muted-foreground">avg across 12 servers</p>
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">73%</h2>
+                <p className="text-sm text-muted-foreground">avg across 12 servers</p>
               </div>
             </div>
             <Progress value={73} />
@@ -62,8 +62,8 @@ export default function ForgeMonitoring() {
           <CardContent>
             <div className="flex flex-row gap-4 justify-between items-center">
               <div className="flex flex-col gap-1">
-                <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">61%</h2>
-                <p className="text-base text-muted-foreground">18.3 GB / 30 GB</p>
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">61%</h2>
+                <p className="text-sm text-muted-foreground">18.3 GB / 30 GB</p>
               </div>
             </div>
             <Progress value={61} />
@@ -76,8 +76,8 @@ export default function ForgeMonitoring() {
           <CardContent>
             <div className="flex flex-row gap-4 justify-between items-center">
               <div className="flex flex-col gap-1">
-                <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">24%</h2>
-                <p className="text-base text-muted-foreground">Read: 1.2 GB/s Write: 340 MB/s</p>
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">24%</h2>
+                <p className="text-sm text-muted-foreground">Read: 1.2 GB/s Write: 340 MB/s</p>
               </div>
             </div>
             <Progress value={24} />
@@ -90,8 +90,8 @@ export default function ForgeMonitoring() {
           <CardContent>
             <div className="flex flex-row gap-4 justify-between items-center">
               <div className="flex flex-col gap-1">
-                <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">892 Mbps</h2>
-                <p className="text-base text-muted-foreground">In: 540 Mbps Out: 352 Mbps</p>
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">892 Mbps</h2>
+                <p className="text-sm text-muted-foreground">In: 540 Mbps Out: 352 Mbps</p>
               </div>
               <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">Normal</Badge>
             </div>
@@ -198,66 +198,66 @@ export default function ForgeMonitoring() {
             <div className="flex flex-row gap-4 justify-between items-center">
               <div className="flex flex-col gap-0">
                 <p className="text-base">api-gateway</p>
-                <p className="text-base text-muted-foreground">api.forge.dev</p>
+                <p className="text-sm text-muted-foreground">api.forge.dev</p>
               </div>
               <div className="flex flex-row gap-2 items-center">
                 <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Healthy</Badge>
-                <p className="text-base text-muted-foreground">12ms</p>
+                <p className="text-sm text-muted-foreground">12ms</p>
               </div>
             </div>
             <Separator />
             <div className="flex flex-row gap-4 justify-between items-center">
               <div className="flex flex-col gap-0">
                 <p className="text-base">auth-service</p>
-                <p className="text-base text-muted-foreground">auth.forge.dev</p>
+                <p className="text-sm text-muted-foreground">auth.forge.dev</p>
               </div>
               <div className="flex flex-row gap-2 items-center">
                 <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Healthy</Badge>
-                <p className="text-base text-muted-foreground">8ms</p>
+                <p className="text-sm text-muted-foreground">8ms</p>
               </div>
             </div>
             <Separator />
             <div className="flex flex-row gap-4 justify-between items-center">
               <div className="flex flex-col gap-0">
                 <p className="text-base">worker-pool</p>
-                <p className="text-base text-muted-foreground">workers.forge.dev</p>
+                <p className="text-sm text-muted-foreground">workers.forge.dev</p>
               </div>
               <div className="flex flex-row gap-2 items-center">
                 <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400">Degraded</Badge>
-                <p className="text-base text-muted-foreground">340ms</p>
+                <p className="text-sm text-muted-foreground">340ms</p>
               </div>
             </div>
             <Separator />
             <div className="flex flex-row gap-4 justify-between items-center">
               <div className="flex flex-col gap-0">
                 <p className="text-base">cdn-edge</p>
-                <p className="text-base text-muted-foreground">cdn.forge.dev</p>
+                <p className="text-sm text-muted-foreground">cdn.forge.dev</p>
               </div>
               <div className="flex flex-row gap-2 items-center">
                 <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Healthy</Badge>
-                <p className="text-base text-muted-foreground">3ms</p>
+                <p className="text-sm text-muted-foreground">3ms</p>
               </div>
             </div>
             <Separator />
             <div className="flex flex-row gap-4 justify-between items-center">
               <div className="flex flex-col gap-0">
                 <p className="text-base">database-primary</p>
-                <p className="text-base text-muted-foreground">db.forge.dev:5432</p>
+                <p className="text-sm text-muted-foreground">db.forge.dev:5432</p>
               </div>
               <div className="flex flex-row gap-2 items-center">
                 <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Healthy</Badge>
-                <p className="text-base text-muted-foreground">2ms</p>
+                <p className="text-sm text-muted-foreground">2ms</p>
               </div>
             </div>
             <Separator />
             <div className="flex flex-row gap-4 justify-between items-center">
               <div className="flex flex-col gap-0">
                 <p className="text-base">database-replica</p>
-                <p className="text-base text-muted-foreground">db-ro.forge.dev:5432</p>
+                <p className="text-sm text-muted-foreground">db-ro.forge.dev:5432</p>
               </div>
               <div className="flex flex-row gap-2 items-center">
                 <Badge variant="destructive">Down</Badge>
-                <p className="text-base text-muted-foreground">timeout</p>
+                <p className="text-sm text-muted-foreground">timeout</p>
               </div>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function ForgeMonitoring() {
                 <XCircle className="h-4 w-4" />
                 <div className="flex flex-col gap-0">
                   <p className="text-base">Database replica connection timeout</p>
-                  <p className="text-base text-muted-foreground">2 minutes ago</p>
+                  <p className="text-sm text-muted-foreground">2 minutes ago</p>
                 </div>
                 <Badge variant="destructive">Critical</Badge>
               </div>
@@ -283,7 +283,7 @@ export default function ForgeMonitoring() {
                 <AlertTriangle className="h-4 w-4" />
                 <div className="flex flex-col gap-0">
                   <p className="text-base">Worker pool response time exceeded 300ms</p>
-                  <p className="text-base text-muted-foreground">15 minutes ago</p>
+                  <p className="text-sm text-muted-foreground">15 minutes ago</p>
                 </div>
                 <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400">Warning</Badge>
               </div>
@@ -292,7 +292,7 @@ export default function ForgeMonitoring() {
                 <AlertTriangle className="h-4 w-4" />
                 <div className="flex flex-col gap-0">
                   <p className="text-base">Disk usage above 80% on srv-03</p>
-                  <p className="text-base text-muted-foreground">1 hour ago</p>
+                  <p className="text-sm text-muted-foreground">1 hour ago</p>
                 </div>
                 <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400">Warning</Badge>
               </div>
@@ -301,7 +301,7 @@ export default function ForgeMonitoring() {
                 <AlertTriangle className="h-4 w-4" />
                 <div className="flex flex-col gap-0">
                   <p className="text-base">SSL certificate expires in 7 days</p>
-                  <p className="text-base text-muted-foreground">3 hours ago</p>
+                  <p className="text-sm text-muted-foreground">3 hours ago</p>
                 </div>
                 <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">Info</Badge>
               </div>

@@ -21,6 +21,10 @@ type GenerateConfig struct {
 	Clean     bool     // Remove output dir before generating
 	DryRun    bool     // List files without writing
 	GoModule  string   // Go module path for imports
+	// TargetMode overrides AppConfig.TargetMode at generate-time. Valid
+	// values: "", "spa", "app-router". Empty falls through to whatever the
+	// app.yaml declares (or its default). Invalid values fail validation.
+	TargetMode string
 }
 
 // GenerateResult contains the results of a generation run.
@@ -74,6 +78,20 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 	appConfig, err := loadAppConfig(filepath.Join(sigilDir, "app.yaml"))
 	if err != nil {
 		return nil, fmt.Errorf("loading app config: %w", err)
+	}
+	// CLI --target-mode override wins over app.yaml's target_mode. Applied
+	// before validation so an invalid CLI value is caught by the same
+	// validator that checks app.yaml values.
+	if cfg.TargetMode != "" {
+		if appConfig == nil {
+			// Without an app.yaml the renderer has no modules to layout, so
+			// target_mode is moot — but accept the flag for forward symmetry
+			// (a CLI-only invocation that hits the renderer without app.yaml
+			// is rare).
+			appConfig = &config.AppConfig{TargetMode: cfg.TargetMode}
+		} else {
+			appConfig.TargetMode = cfg.TargetMode
+		}
 	}
 	if appConfig != nil {
 		result := config.ValidateAppConfig(appConfig)
@@ -147,6 +165,28 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 
 	targetMode := appConfig.EffectiveTargetMode() // safe on nil
 
+	// Pre-build the module pointer list once so each page's RenderContext can
+	// resolve cross-module routes in SPA mode. Filter to modules that have
+	// at least one loaded (not --pages-filtered) page — modules with no
+	// surviving pages have no routes emitted, so links into them would
+	// 404; treating them as absent matches the layout filter below.
+	var modulesForCtx []*config.ModuleConfig
+	if appConfig != nil {
+		loaded := map[string]bool{}
+		for _, p := range pages {
+			loaded[p.ID] = true
+		}
+		for i := range appConfig.Modules {
+			mod := &appConfig.Modules[i]
+			for _, mp := range mod.Pages {
+				if loaded[mp] {
+					modulesForCtx = append(modulesForCtx, mod)
+					break
+				}
+			}
+		}
+	}
+
 	for _, page := range pages {
 		ctx := &RenderContext{
 			Page:          page,
@@ -157,6 +197,7 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 			GoModule:      goModule,
 			SigilDir:      sigilDir,
 			TargetMode:    targetMode,
+			Modules:       modulesForCtx,
 		}
 		files, err := r.Render(ctx)
 		if err != nil {
@@ -212,8 +253,24 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 	}
 	allFiles = append(allFiles, themeFiles...)
 
-	// 9. Generate handler stubs (once per datasource)
+	// 9. Generate handler stubs.
+	//
+	// Phase 3.5: emit hooks only for datasources actually referenced by the
+	// loaded pages (or by ANY page if there are no pages — preserves the
+	// `sigil generate` ergonomic of "give me everything"). This prevents a
+	// `--pages X,Y,Z` filter from leaking unrelated swr-using hook files
+	// into the output, which then break `tsc` because swr isn't a
+	// dependency of the target app.
+	referencedDS := map[string]bool{}
+	for _, page := range pages {
+		for _, ref := range page.DataSources {
+			referencedDS[ref.Alias] = true
+		}
+	}
 	for _, ds := range dataSources {
+		if len(referencedDS) > 0 && !referencedDS[ds.Alias] {
+			continue
+		}
 		stubFiles, err := r.RenderDataSourceStubs(ds)
 		if err != nil {
 			return nil, fmt.Errorf("generating datasource stubs for %q: %w", ds.Alias, err)
@@ -221,29 +278,72 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 		allFiles = append(allFiles, stubFiles...)
 	}
 
-	// 10. Generate app layouts (once per module)
+	// 10. Generate app layouts.
+	//
+	// App Router mode emits one layout.tsx per module (each in its own
+	// app/(group)/ directory). SPA mode emits a single App.tsx for the whole
+	// app — so we still loop here, but pass AllModules + AllShells into the
+	// context and the renderer is expected to short-circuit on subsequent
+	// modules. The first module's RenderLayout call sees the full picture
+	// and emits the unified App.tsx + routes.tsx; subsequent module calls
+	// return no files in SPA mode.
 	if appConfig != nil {
+		// Pre-load all shell pages so SPA mode has them at hand. Also drop
+		// modules whose pages are all filtered out by --pages — leaving them
+		// in would emit nav links to routes that don't exist in the routes
+		// table, breaking navigation.
+		loadedPages := map[string]*config.Page{}
+		for _, p := range pages {
+			loadedPages[p.ID] = p
+		}
+		allShells := map[string]*config.Page{}
+		var allModulePages []*config.Page
+		var activeModuleIdx []int
 		for i := range appConfig.Modules {
 			mod := &appConfig.Modules[i]
+			hasActive := false
+			for _, mp := range mod.Pages {
+				if _, ok := loadedPages[mp]; ok {
+					hasActive = true
+					if p := loadedPages[mp]; p != nil {
+						allModulePages = append(allModulePages, p)
+					}
+				}
+			}
+			if !hasActive {
+				continue
+			}
+			activeModuleIdx = append(activeModuleIdx, i)
 			shellPage, err := loadShellPage(filepath.Join(sigilDir, "pages"), mod.Shell)
 			if err != nil {
 				return nil, fmt.Errorf("loading shell page %q for module %q: %w", mod.Shell, mod.ID, err)
 			}
+			allShells[mod.ID] = shellPage
+		}
+		allModulePtrs := make([]*config.ModuleConfig, len(activeModuleIdx))
+		for idx, i := range activeModuleIdx {
+			allModulePtrs[idx] = &appConfig.Modules[i]
+		}
+
+		for _, i := range activeModuleIdx {
+			mod := &appConfig.Modules[i]
+			shellPage := allShells[mod.ID]
 			// Collect module pages for nav extraction.
 			var modulePages []*config.Page
-			for _, p := range pages {
-				for _, mp := range mod.Pages {
-					if p.ID == mp {
-						modulePages = append(modulePages, p)
-					}
+			for _, mp := range mod.Pages {
+				if p, ok := loadedPages[mp]; ok {
+					modulePages = append(modulePages, p)
 				}
 			}
 			layoutCtx := &LayoutContext{
-				Module:    mod,
-				Shell:     shellPage,
-				AppConfig: appConfig,
-				Theme:     theme,
-				Pages:     modulePages,
+				Module:     mod,
+				Shell:      shellPage,
+				AppConfig:  appConfig,
+				Theme:      theme,
+				Pages:      modulePages,
+				AllModules: allModulePtrs,
+				AllPages:   allModulePages,
+				AllShells:  allShells,
 			}
 			layoutFiles, err := r.RenderLayout(layoutCtx)
 			if err != nil {
@@ -261,8 +361,18 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 			allFiles = append(allFiles, apiFiles...)
 		}
 
-		// 12. Generate context providers
-		if len(appConfig.Providers) > 0 {
+		// 12. Generate context providers.
+		// Phase 3.5: providers live per-module. Trigger the renderer call if
+		// any module declares at least one provider; the renderer handles
+		// per-module rendering + cross-module dedup of custom-provider files.
+		hasAnyProvider := false
+		for _, m := range appConfig.Modules {
+			if len(m.Providers) > 0 {
+				hasAnyProvider = true
+				break
+			}
+		}
+		if hasAnyProvider {
 			providerFiles, err := r.RenderProviders(appConfig, sigilDir)
 			if err != nil {
 				return nil, fmt.Errorf("generating providers: %w", err)
@@ -441,8 +551,23 @@ func loadPages(pagesDir string, filter []string) ([]*config.Page, error) {
 func collectUsedTypes(c *config.Component, types map[string]bool) {
 	if c.Type != "" {
 		types[c.Type] = true
+		// Alias mappings: some YAML types render via a differently-named
+		// custom component file. Phase 3.5 chart wiring: `type: chart` in
+		// YAML emits `<SigilChart>` and reads from `.sigil/components/
+		// sigil-chart.tsx`, so we need the engine's file-copy step to
+		// know about it.
+		for _, alias := range customComponentAliases[c.Type] {
+			types[alias] = true
+		}
 	}
 	for i := range c.Children {
 		collectUsedTypes(&c.Children[i], types)
 	}
+}
+
+// customComponentAliases maps a YAML component `type` to additional
+// custom-component schemas the engine should treat as "used" so their
+// source files are copied into the output.
+var customComponentAliases = map[string][]string{
+	"chart": {"sigil-chart"},
 }

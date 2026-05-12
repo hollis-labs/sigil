@@ -1,0 +1,39 @@
+type: scope-manager
+category: custom
+description: "Dialog for assigning project/sprint/epic scope"
+source:
+  component: components/scope-manager.tsx
+props:
+  datasource:
+    type: string
+    description: "DataSource alias to query (builtin compat)"
+  open:
+    type: boolean
+    default: false
+    description: "Dialog open state"
+  mode:
+    type: string
+    required: true
+    description: "Dialog mode: assign, edit, view"
+  multiSelect:
+    type: boolean
+    default: false
+    description: "Enable multi-select scope items"
+  projects:
+    type: array
+    description: "Array of {id, name} scope items for projects"
+  sprints:
+    type: array
+    description: "Array of {id, name} scope items for sprints"
+  epics:
+    type: array
+    description: "Array of {id, name} scope items for epics"
+  initial:
+    type: object
+    description: "Initial scope assignment {project?, sprint?, epic?}"
+  onAssign:
+    type: function
+    description: "Callback with assignment object {project?, sprint?, epic?}"
+  onClose:
+    type: function
+    description: "Callback when dialog closes"

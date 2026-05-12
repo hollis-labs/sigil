@@ -1,0 +1,36 @@
+type: comment-list
+category: custom
+description: "Threaded comment list with add/edit/delete support"
+source:
+  component: components/comment-list.tsx
+props:
+  datasource:
+    type: string
+    description: "DataSource alias to query (builtin compat)"
+  comments:
+    type: array
+    description: "Array of Comment objects with id, parent_id?, author, body, created_at"
+  editable:
+    type: boolean
+    default: false
+    description: "Allow add/edit/delete of comments"
+  maxLength:
+    type: integer
+    description: "Maximum character length for comment body"
+  showAuthor:
+    type: boolean
+    default: true
+    description: "Show author avatar and name"
+  sortOrder:
+    type: string
+    default: "asc"
+    description: "Sort order: asc or desc"
+  onAdd:
+    type: function
+    description: "Callback when a new comment is added (body, parentId?)"
+  onEdit:
+    type: function
+    description: "Callback when a comment is edited (commentId, body)"
+  onDelete:
+    type: function
+    description: "Callback when a comment is deleted (commentId)"

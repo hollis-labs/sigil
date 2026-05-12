@@ -1,0 +1,22 @@
+type: status-badge
+category: custom
+description: "Colored badge showing task status with per-status color scheme"
+source:
+  component: components/status-badge.tsx
+props:
+  status:
+    type: string
+    required: true
+    description: "Task status: backlog|todo|queued|doing|review|done|blocked|paused|cancelled"
+  size:
+    type: string
+    default: "default"
+    description: "Badge size: sm, default, lg"
+  showLabel:
+    type: boolean
+    default: true
+    description: "Show the status label text"
+  dot:
+    type: boolean
+    default: false
+    description: "Show a colored dot indicator"

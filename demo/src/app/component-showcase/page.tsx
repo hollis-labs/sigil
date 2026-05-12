@@ -20,11 +20,11 @@ export default function ComponentShowcase() {
     <>
     <div className="flex flex-col gap-8 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Component Showcase</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Component Showcase</h1>
         <Badge variant="default">New Components</Badge>
       </div>
-      <p className="text-base text-muted-foreground">Demonstrating card, switch, dropdown-menu, accordion, combobox, and tooltip components.</p>
-      <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">Cards</h2>
+      <p className="text-sm text-muted-foreground">Demonstrating card, switch, dropdown-menu, accordion, combobox, and tooltip components.</p>
+      <h2 className="text-xl font-semibold tracking-tight text-foreground">Cards</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
@@ -92,7 +92,7 @@ export default function ComponentShowcase() {
           </CardContent>
         </Card>
       </div>
-      <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">Dropdown Menus</h2>
+      <h2 className="text-xl font-semibold tracking-tight text-foreground">Dropdown Menus</h2>
       <div className="flex flex-row gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-9 px-3 hover:bg-accent hover:text-accent-foreground">Actions</DropdownMenuTrigger>
@@ -121,7 +121,7 @@ export default function ComponentShowcase() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">Combobox</h2>
+      <h2 className="text-xl font-semibold tracking-tight text-foreground">Combobox</h2>
       <div className="flex flex-row gap-4 items-center">
         <Combobox
           placeholder="Select framework..."
@@ -149,7 +149,7 @@ export default function ComponentShowcase() {
           ]}
         />
       </div>
-      <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">Accordion</h2>
+      <h2 className="text-xl font-semibold tracking-tight text-foreground">Accordion</h2>
       <Accordion className="w-full">
         <AccordionItem value="faq-1">
           <AccordionTrigger>Is Sigil free to use?</AccordionTrigger>
@@ -176,7 +176,7 @@ export default function ComponentShowcase() {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-      <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">Tooltips</h2>
+      <h2 className="text-xl font-semibold tracking-tight text-foreground">Tooltips</h2>
       <div className="flex flex-row gap-4">
         <TooltipProvider>
           <Tooltip>

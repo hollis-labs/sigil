@@ -1,0 +1,199 @@
+sigil: "1.0"
+kind: page
+id: clockwork-task-detail
+title: Task Detail
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Task
+    capabilities: [get, update, transition]
+  - alias: Run
+    capabilities: [list]
+  - alias: Artifact
+    capabilities: [list]
+  - alias: Comment
+    capabilities: [list]
+  - alias: Checkpoint
+    capabilities: [list]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: blocked-banner
+      type: rows
+      props:
+        gap: 2
+      children:
+        - id: blocked-reason
+          type: text
+          props:
+            text: "{{Task.blocked_reason}}"
+            variant: warning
+            icon: alert
+      condition:
+        field: status
+        eq: blocked
+      hidden: true
+
+    - id: header
+      type: columns
+      props:
+        justify: between
+        align: center
+      children:
+        - id: status-badge
+          type: status-badge
+          props:
+            status: "{{Task.status}}"
+            size: lg
+        - id: title-heading
+          type: heading
+          props:
+            level: 2
+            text: "{{Task.title}}"
+            datasource: Task
+        - id: edit-btn
+          type: button
+          props:
+            label: Edit
+            variant: outline
+            icon: pencil
+          actions:
+            click:
+              type: navigate
+              page: clockwork-task-editor
+
+    - id: tab-container
+      type: tabs
+      props:
+        defaultTab: details
+        variant: underline
+      children:
+        - id: tab-details
+          type: tab
+          props:
+            label: Details
+            value: details
+          children:
+            - id: detail-view
+              type: detail-view
+              props:
+                datasource: Task
+                fields:
+                  - label: ID
+                    field: id
+                  - label: Title
+                    field: title
+                  - label: Description
+                    field: description
+                    render: markdown
+                  - label: Status
+                    field: status
+                    render: status-badge
+                  - label: Priority
+                    field: priority
+                  - label: Assignee
+                    field: assignee
+                  - label: Tags
+                    field: tags
+                    render: tags
+                  - label: Collection
+                    field: collection_id
+                  - label: Created
+                    field: created_at
+                    render: datetime
+                  - label: Updated
+                    field: updated_at
+                    render: datetime
+
+        - id: tab-comments
+          type: tab
+          props:
+            label: Comments
+            value: comments
+          children:
+            - id: comment-list
+              type: comment-list
+              props:
+                datasource: Comment
+                taskField: task_id
+
+        - id: tab-artifacts
+          type: tab
+          props:
+            label: Artifacts
+            value: artifacts
+          children:
+            - id: artifact-list
+              type: rows
+              props:
+                gap: 4
+              children:
+                - id: artifact-cards
+                  type: columns
+                  props:
+                    gap: 4
+                    wrap: true
+                  children:
+                    - id: artifact-item
+                      type: artifact-card
+                      props:
+                        datasource: Artifact
+                        taskField: task_id
+
+        - id: tab-subtodos
+          type: tab
+          props:
+            label: Subtodos
+            value: subtodos
+          children:
+            - id: subtodo-list
+              type: rows
+              props:
+                gap: 2
+              children:
+                - id: subtodo-item
+                  type: columns
+                  props:
+                    gap: 3
+                    align: center
+                  children:
+                    - id: checkbox
+                      type: checkbox
+                      props:
+                        label: "{{item.title}}"
+                        default: "{{item.done}}"
+                    - id: subtodo-text
+                      type: text
+                      props:
+                        text: "{{item.title}}"
+
+        - id: tab-logs
+          type: tab
+          props:
+            label: Logs
+            value: logs
+          children:
+            - id: activity-panel
+              type: activity-panel
+              props:
+                datasource: Run
+                taskField: task_id
+
+        - id: tab-debug
+          type: tab
+          props:
+            label: Debug
+            value: debug
+          children:
+            - id: raw-json
+              type: text
+              props:
+                text: "{{Task | json}}"
+                datasource: Task
+                variant: code

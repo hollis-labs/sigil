@@ -31,7 +31,7 @@ export default function ForgeUsers() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Users</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Users</h1>
         <div className="flex flex-row gap-2 items-center">
           <Combobox
             placeholder="Filter by role..."

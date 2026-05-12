@@ -307,6 +307,9 @@ func ValidateAppConfig(app *AppConfig) *ValidationResult {
 		if len(mod.Pages) == 0 {
 			result.Warnings = append(result.Warnings, ValidationWarning{Path: path + ".pages", Message: "module has no pages"})
 		}
+		// Per-module provider validation (sprint 10 phase 3.5). The same
+		// rules that previously applied to app.Providers now apply per module.
+		validateProviders(mod.Providers, path+".providers", result)
 	}
 
 	if app.API != nil && app.API.BaseURLEnv == "" {
@@ -323,10 +326,24 @@ func ValidateAppConfig(app *AppConfig) *ValidationResult {
 		})
 	}
 
+	result.Valid = len(result.Errors) == 0
+	return result
+}
+
+// validateProviders applies provider-config rules to a slice of providers
+// (since sprint 10 phase 3.5, providers live per-module and this is reused
+// from ValidateAppConfig).
+//
+// Rules:
+//   - id required + unique within the slice
+//   - built-in: datasource required, mounts not allowed (warning if present)
+//   - custom (source.component set): source.component required,
+//     datasource ignored (warning if present)
+func validateProviders(providers []ProviderConfig, pathPrefix string, result *ValidationResult) {
 	seenProviderIDs := map[string]bool{}
-	for i := range app.Providers {
-		p := &app.Providers[i]
-		path := fmt.Sprintf("providers[%d]", i)
+	for i := range providers {
+		p := &providers[i]
+		path := fmt.Sprintf("%s[%d]", pathPrefix, i)
 		if p.ID == "" {
 			result.Errors = append(result.Errors, ValidationError{Path: path + ".id", Message: "provider id is required"})
 		} else if seenProviderIDs[p.ID] {
@@ -364,9 +381,6 @@ func ValidateAppConfig(app *AppConfig) *ValidationResult {
 			}
 		}
 	}
-
-	result.Valid = len(result.Errors) == 0
-	return result
 }
 
 func checkPropType(value interface{}, expectedType string) bool {

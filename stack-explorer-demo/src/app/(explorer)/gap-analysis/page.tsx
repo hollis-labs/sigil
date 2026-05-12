@@ -138,9 +138,9 @@ export default function SeGapAnalysis() {
         </div>
       </div>
       <GapAdvantageCharts
+        dimensionScores={dimensionScore}
         repos={repo}
         scorecards={scorecard}
-        dimensionScores={dimensionScore}
       />
       <Card>
         <CardHeader>
@@ -173,7 +173,7 @@ export default function SeGapAnalysis() {
                 header: "Category",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("category") ?? "");
-                  const variants: Record<string, string> = { "gap": "danger", "strength": "success", "opportunity": "info" };
+                  const variants: Record<string, string> = { "strength": "success", "opportunity": "info", "gap": "danger" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -188,7 +188,7 @@ export default function SeGapAnalysis() {
                 header: "Severity",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("severity") ?? "");
-                  const variants: Record<string, string> = { "critical": "danger", "high": "warning", "medium": "default", "low": "info" };
+                  const variants: Record<string, string> = { "low": "info", "critical": "danger", "high": "warning", "medium": "default" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :

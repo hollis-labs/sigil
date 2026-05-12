@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/chrispian/sigil/internal/renderer"
-	_ "github.com/chrispian/sigil/internal/renderer/gotempl"       // register go-templ renderer
-	_ "github.com/chrispian/sigil/internal/renderer/reactshadcn"   // register react-shadcn renderer
+	_ "github.com/chrispian/sigil/internal/renderer/gotempl"     // register go-templ renderer
+	_ "github.com/chrispian/sigil/internal/renderer/reactshadcn" // register react-shadcn renderer
 	"github.com/spf13/cobra"
 )
 
@@ -33,6 +33,7 @@ Examples:
 	cmd.Flags().Bool("clean", false, "Remove output directory contents before generating")
 	cmd.Flags().Bool("dry-run", false, "List files that would be generated without writing")
 	cmd.Flags().String("go-module", "", "Go module path for imports")
+	cmd.Flags().String("target-mode", "", "Output shape override for react-shadcn: spa or app-router (default: from app.yaml)")
 	return cmd
 }
 
@@ -44,20 +45,31 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	clean, _ := cmd.Flags().GetBool("clean")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	goModule, _ := cmd.Flags().GetString("go-module")
+	targetMode, _ := cmd.Flags().GetString("target-mode")
 
 	if output == "" {
 		output = "internal/ui"
 	}
 
+	// Validate --target-mode up-front so the error surfaces cleanly even on a
+	// dry-run before any work happens. The engine validator will also catch
+	// this, but a CLI-level check gives a faster, less noisy error path.
+	switch targetMode {
+	case "", "spa", "app-router":
+	default:
+		return fmt.Errorf("invalid --target-mode %q (valid: spa, app-router)", targetMode)
+	}
+
 	cfg := renderer.GenerateConfig{
-		Target:   target,
-		OutputDir: output,
-		SigilDir:  ".sigil",
-		Pages:    pages,
-		Theme:    theme,
-		Clean:    clean,
-		DryRun:   dryRun,
-		GoModule: goModule,
+		Target:     target,
+		OutputDir:  output,
+		SigilDir:   ".sigil",
+		Pages:      pages,
+		Theme:      theme,
+		Clean:      clean,
+		DryRun:     dryRun,
+		GoModule:   goModule,
+		TargetMode: targetMode,
 	}
 
 	result, err := renderer.Generate(cfg)

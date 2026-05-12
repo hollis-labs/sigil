@@ -1,0 +1,43 @@
+type: filter-bar
+category: custom
+description: "Filter bar with chip groups for status and priority, search input, and optional comboboxes for project/sprint/epic"
+source:
+  component: components/filter-bar.tsx
+props:
+  datasource:
+    type: string
+    description: "DataSource alias to query (builtin compat)"
+  statusOptions:
+    type: array
+    description: "Array of {label, value} for status filter chips"
+  priorityOptions:
+    type: array
+    description: "Array of {label, value} for priority filter chips"
+  searchable:
+    type: boolean
+    default: true
+    description: "Show search input"
+  projectEnabled:
+    type: boolean
+    default: false
+    description: "Show project combobox"
+  sprintEnabled:
+    type: boolean
+    default: false
+    description: "Show sprint combobox"
+  epicEnabled:
+    type: boolean
+    default: false
+    description: "Show epic combobox"
+  projects:
+    type: array
+    description: "Array of {label, value} for project options"
+  sprints:
+    type: array
+    description: "Array of {label, value} for sprint options"
+  epics:
+    type: array
+    description: "Array of {label, value} for epic options"
+  onFilterChange:
+    type: function
+    description: "Callback fired on any filter change with the full filter state"

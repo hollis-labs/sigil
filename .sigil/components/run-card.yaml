@@ -1,0 +1,31 @@
+type: run-card
+category: custom
+description: "Compact card showing a run's details with agent, status, duration, tokens, cost"
+source:
+  component: components/run-card.tsx
+props:
+  datasource:
+    type: string
+    description: "DataSource alias to query (builtin compat)"
+  run:
+    type: object
+    description: "Run object with agent, model, status, duration_ms, tokens_used, cost, logs"
+  compact:
+    type: boolean
+    default: false
+    description: "Compact card variant"
+  showMetrics:
+    type: boolean
+    default: true
+    description: "Show token and cost metrics"
+  showTiming:
+    type: boolean
+    default: true
+    description: "Show duration and timestamp"
+  showLogs:
+    type: boolean
+    default: false
+    description: "Show inline log preview"
+  onViewLogs:
+    type: function
+    description: "Callback when view all logs is clicked"

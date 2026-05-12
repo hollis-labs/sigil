@@ -1,0 +1,30 @@
+type: checkpoint-card
+category: custom
+description: "Card showing a pending checkpoint with respond/cancel actions and detail expansion"
+source:
+  component: components/checkpoint-card.tsx
+props:
+  datasource:
+    type: string
+    description: "DataSource alias to query (builtin compat)"
+  checkpoint:
+    type: object
+    description: "Checkpoint object with id, checkpoint_type, payload, summary, status, created_at"
+  showDetail:
+    type: boolean
+    default: false
+    description: "Show expanded detail by default"
+  actions:
+    type: array
+    default: ["approve", "reject"]
+    description: "Available action buttons: approve, reject, cancel"
+  variant:
+    type: string
+    default: "default"
+    description: "Card variant: default, compact, bordered"
+  onRespond:
+    type: function
+    description: "Callback when checkpoint is approved/rejected (checkpointId, response)"
+  onCancel:
+    type: function
+    description: "Callback when checkpoint is cancelled (checkpointId)"

@@ -4,18 +4,45 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Loader2, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Toaster } from "@/components/ui/sonner";
 import { DataTable } from "@/components/data-table";
 import { useSigilTheme } from "@/hooks/use-sigiltheme";
+import { postItem } from "@/lib/api";
 
 export default function SigilThemes() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+  const [formExtends, setFormExtends] = useState("");
+    const handleCreateSigilTheme = async () => {
+    try {
+      await postItem("sigilthemes", {
+        name: formName,
+        description: formDescription,
+        extends: formExtends,
+      });
+      toast.success("SigilTheme created");
+      setModalOpen(false);
+      setFormName("");
+      setFormDescription("");
+      setFormExtends("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to create sigiltheme");
+    }
+  };
+
+
   const [previewSampleInput, setPreviewSampleInput] = useState("");
 
-  const { data: sigilTheme, isLoading: sigilThemeLoading } = useSigilTheme();
+  const { data: sigilTheme, isLoading: sigilThemeLoading, refetch: refetchSigilTheme } = useSigilTheme();
 
   if (sigilThemeLoading) {
     return (
@@ -29,11 +56,44 @@ export default function SigilThemes() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Themes</h1>
-        <Button variant="default">
-          <Plus className="mr-2 h-4 w-4" />
-          New Theme
-        </Button>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Themes</h1>
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogTrigger render={<Button variant="default" />}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Theme
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>New Theme</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 py-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="name">Theme Name</Label>
+                <Input id="name" type="text" placeholder="my-theme" value={formName} onChange={(e) => setFormName(e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="description">Description</Label>
+                <Input id="description" type="text" placeholder="Describe this theme" value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="extends">Extends</Label>
+                <Select value={formExtends} onValueChange={(v) => v && setFormExtends(v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="default">Default</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateSigilTheme}>Save</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
       <div className="flex flex-row gap-6">
         <DataTable
@@ -45,7 +105,7 @@ export default function SigilThemes() {
           ]}
         />
         <div className="flex flex-col gap-4">
-          <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">Token Editor</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">Token Editor</h3>
           <form className="flex flex-col gap-4 max-w-lg">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="background">Background</Label>
@@ -66,7 +126,7 @@ export default function SigilThemes() {
             <Button type="submit">Update Tokens</Button>
           </form>
           <div className="flex flex-col gap-2">
-            <h4 className="scroll-m-20 text-xl font-semibold tracking-tight text-foreground">Live Preview</h4>
+            <h4 className="text-base font-medium tracking-tight text-foreground">Live Preview</h4>
             <Button variant="default">Sample Button</Button>
             <Badge variant="default">sample</Badge>
             <div className="flex flex-col gap-1.5">
@@ -76,6 +136,7 @@ export default function SigilThemes() {
         </div>
       </div>
     </div>
+    <Toaster />
     </>
   );
 }

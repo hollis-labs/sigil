@@ -16,7 +16,7 @@ export default function SigilPageEditor() {
   const router = useRouter();
   const [yamlEditor, setYamlEditor] = useState("");
 
-  const { data: sigilPage, isLoading: sigilPageLoading } = useSigilPage();
+  const { data: sigilPage, isLoading: sigilPageLoading, refetch: refetchSigilPage } = useSigilPage();
 
   if (sigilPageLoading) {
     return (
@@ -30,7 +30,7 @@ export default function SigilPageEditor() {
     <>
     <div className="flex flex-row gap-0">
       <div className="flex flex-col gap-4 p-4">
-        <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">Page Config</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-foreground">Page Config</h3>
         <form className="flex flex-col gap-4 max-w-lg">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="id">Page ID</Label>
@@ -64,7 +64,7 @@ export default function SigilPageEditor() {
       </div>
       <div className="flex flex-col gap-2 p-4">
         <div className="flex flex-row gap-4 justify-between items-center">
-          <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">YAML Editor</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">YAML Editor</h3>
           <div className="flex flex-row gap-2">
             <Button variant="secondary" onClick={() => fetch("/api/sigil/validate", { method: "POST" })}>Validate</Button>
             <Button variant="secondary" onClick={() => router.push("/preview")}>Preview</Button>

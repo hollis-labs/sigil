@@ -38,6 +38,12 @@ type Renderer interface {
 	// Receives the full *AppConfig (so renderers can branch on target mode if
 	// needed) and the path to the .sigil/ directory (so custom providers can
 	// have their source files copied into the output).
+	//
+	// Since sprint 10 phase 3.5, providers live per-module. The engine
+	// aggregates each module's providers and dedups custom-provider source
+	// file copies across modules (two modules declaring the same custom
+	// provider produce a single set of `lib/<basename>` files). The signature
+	// stays *AppConfig so renderers see every module's providers in one call.
 	RenderProviders(app *config.AppConfig, sigilDir string) ([]OutputFile, error)
 }
 
@@ -54,6 +60,11 @@ type RenderContext struct {
 	// (e.g., "app-router" or "spa"). Renderers that emit framework-specific
 	// imports/calls branch on this. Empty means "app-router" for safety.
 	TargetMode string
+	// Modules is the full app's module list, used by SPA renderers to
+	// resolve cross-module route prefixes when emitting navigation calls.
+	// Nil/empty is fine — renderers fall back to the legacy single-module
+	// path layout (no prefix). App Router renderers ignore this field.
+	Modules []*config.ModuleConfig
 }
 
 // LayoutContext provides everything a renderer needs to generate a module layout.
@@ -63,6 +74,13 @@ type LayoutContext struct {
 	AppConfig *config.AppConfig
 	Theme     *ThemeConfig
 	Pages     []*config.Page // All pages in this module (for nav extraction)
+	// AllModules and AllPages let SPA renderers emit a single App.tsx that
+	// roots every module at its own URL prefix (derived from
+	// ModuleConfig.RouteGroup). For App Router renderers these are ignored
+	// (each module already gets its own app/(group)/layout.tsx).
+	AllModules []*config.ModuleConfig
+	AllPages   []*config.Page          // shells included for parity, but pages are filtered to non-shells by the engine
+	AllShells  map[string]*config.Page // moduleID → shell page
 }
 
 // OutputFile represents a file to be written to disk.

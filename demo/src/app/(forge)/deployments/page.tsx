@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowUpCircle, Eye, Loader2, Rocket, Search, Trash2, Undo2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -35,7 +36,7 @@ export default function ForgeDeployments() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Deployments</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Deployments</h1>
         <div className="flex flex-row gap-2">
           <Select onValueChange={(v) => setFilterDeploymentEnvironment(v as string)}>
             <SelectTrigger>
@@ -71,9 +72,37 @@ export default function ForgeDeployments() {
                     return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
                   })}
                 columns={[
-                  { accessorKey: "status", header: "Status" },
+                  {
+                    accessorKey: "status",
+                    header: "Status",
+                    cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
+                      const v = String(row.getValue("status") ?? "");
+                      const variants: Record<string, string> = { "deploying": "info", "building": "default", "failed": "danger", "cancelled": "warning", "ready": "success" };
+                      const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
+                      return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
+                        variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
+                        variant === "warning" ? "border-amber-500/30 bg-amber-500/10 text-amber-400" :
+                        variant === "info" ? "border-blue-500/30 bg-blue-500/10 text-blue-400" :
+                        variant === "danger" ? "" : ""
+                      }>{v}</Badge>;
+                    },
+                  },
                   { accessorKey: "name", header: "Name" },
-                  { accessorKey: "environment", header: "Environment" },
+                  {
+                    accessorKey: "environment",
+                    header: "Environment",
+                    cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
+                      const v = String(row.getValue("environment") ?? "");
+                      const variants: Record<string, string> = { "production": "danger", "staging": "warning", "preview": "default" };
+                      const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
+                      return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
+                        variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
+                        variant === "warning" ? "border-amber-500/30 bg-amber-500/10 text-amber-400" :
+                        variant === "info" ? "border-blue-500/30 bg-blue-500/10 text-blue-400" :
+                        variant === "danger" ? "" : ""
+                      }>{v}</Badge>;
+                    },
+                  },
                   { accessorKey: "branch", header: "Branch" },
                   { accessorKey: "author", header: "Author" },
                   { accessorKey: "duration", header: "Duration" },

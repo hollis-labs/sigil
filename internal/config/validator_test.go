@@ -676,7 +676,9 @@ func TestValidateAppConfigProviders(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			app := baseAppConfig()
-			app.Providers = tc.providers
+			// Phase 3.5: providers live per-module. Attach to the single
+			// baseAppConfig module so the same test cases keep their intent.
+			app.Modules[0].Providers = tc.providers
 			result := ValidateAppConfig(app)
 			if result.Valid != tc.wantValid {
 				t.Errorf("Valid = %v, want %v; errors: %v", result.Valid, tc.wantValid, result.Errors)
@@ -693,6 +695,40 @@ func TestValidateAppConfigProviders(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestValidateAppConfigProvidersPerModuleDuplicate confirms duplicate
+// provider IDs are detected within a single module — but the same ID may
+// appear once in each of two modules (the "lens in both modules" pattern).
+func TestValidateAppConfigProvidersPerModuleDuplicate(t *testing.T) {
+	t.Run("duplicates within one module fail", func(t *testing.T) {
+		app := baseAppConfig()
+		app.Modules[0].Providers = []ProviderConfig{
+			{ID: "lens", Datasource: "Lens"},
+			{ID: "lens", Datasource: "Lens"},
+		}
+		result := ValidateAppConfig(app)
+		if result.Valid {
+			t.Error("expected invalid for duplicate provider id within one module")
+		}
+		if !containsErr(result.Errors, "duplicate provider id") {
+			t.Errorf("expected duplicate-provider-id error; got: %v", result.Errors)
+		}
+	})
+
+	t.Run("same provider id in two different modules is allowed", func(t *testing.T) {
+		app := baseAppConfig()
+		app.Modules = []ModuleConfig{
+			{ID: "a", Shell: "a-shell", Pages: []string{"p"},
+				Providers: []ProviderConfig{{ID: "lens", Datasource: "Lens"}}},
+			{ID: "b", Shell: "b-shell", Pages: []string{"p"},
+				Providers: []ProviderConfig{{ID: "lens", Datasource: "Lens"}}},
+		}
+		result := ValidateAppConfig(app)
+		if !result.Valid {
+			t.Errorf("expected valid for same provider id in two modules; got: %v", result.Errors)
+		}
+	})
 }
 
 func TestProviderConfigIsCustom(t *testing.T) {

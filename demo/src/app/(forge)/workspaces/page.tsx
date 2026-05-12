@@ -20,7 +20,7 @@ export default function ForgeWorkspaces() {
   const [filterWorkspacePlan, setFilterWorkspacePlan] = useState("all");
   const [searchWorkspace, setSearchWorkspace] = useState("");
 
-  const { data: workspace, isLoading: workspaceLoading } = useWorkspace();
+  const { data: workspace, isLoading: workspaceLoading, refetch: refetchWorkspace } = useWorkspace();
 
   if (workspaceLoading) {
     return (
@@ -34,7 +34,7 @@ export default function ForgeWorkspaces() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Workspaces</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Workspaces</h1>
         <div className="flex flex-row gap-2">
           <Select onValueChange={(v) => setFilterWorkspacePlan(v as string)}>
             <SelectTrigger>
@@ -58,12 +58,12 @@ export default function ForgeWorkspaces() {
         <Input type="search" placeholder="Search workspaces..." className="w-full pl-9 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value={searchWorkspace} onChange={(e) => setSearchWorkspace(e.target.value)} />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {workspace.map((item) => (
-          <div key={item.name}>
+        {(workspace ?? []).map((item: NonNullable<typeof workspace>[number]) => (
+          <div key={String(item.slug ?? "")}>
             <Card>
               <CardHeader>
-                <CardTitle>{item.name}</CardTitle>
-                <CardDescription>{item.slug}</CardDescription>
+                <CardTitle>{String(item.name ?? "")}</CardTitle>
+                <CardDescription>{String(item.slug ?? "")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-row gap-4 justify-between items-center">
@@ -72,11 +72,11 @@ export default function ForgeWorkspaces() {
                       <AvatarImage src="" alt={item.owner} />
                       <AvatarFallback>?</AvatarFallback>
                     </Avatar>
-                    <p className="text-base">{item.owner}</p>
+                    <p className="text-base">{String(item.owner ?? "")}</p>
                   </div>
                   <div className="flex flex-row gap-2 items-center">
-                    <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">{item.plan}</Badge>
-                    <p className="text-base text-muted-foreground">{`${item.memberCount} members`}</p>
+                    <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">{String(item.plan ?? "")}</Badge>
+                    <p className="text-sm text-muted-foreground">{`${item.memberCount} members`}</p>
                   </div>
                 </div>
               </CardContent>
@@ -101,7 +101,21 @@ export default function ForgeWorkspaces() {
               { accessorKey: "name", header: "Name" },
               { accessorKey: "slug", header: "Slug" },
               { accessorKey: "owner", header: "Owner" },
-              { accessorKey: "plan", header: "Plan" },
+              {
+                accessorKey: "plan",
+                header: "Plan",
+                cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
+                  const v = String(row.getValue("plan") ?? "");
+                  const variants: Record<string, string> = { "enterprise": "info", "pro": "success", "free": "default" };
+                  const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
+                  return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
+                    variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
+                    variant === "warning" ? "border-amber-500/30 bg-amber-500/10 text-amber-400" :
+                    variant === "info" ? "border-blue-500/30 bg-blue-500/10 text-blue-400" :
+                    variant === "danger" ? "" : ""
+                  }>{v}</Badge>;
+                },
+              },
               { accessorKey: "memberCount", header: "Members" },
               { accessorKey: "deploymentCount", header: "Deployments" },
               { accessorKey: "createdAt", header: "Created" },

@@ -8,6 +8,8 @@ api:
   base_url_default: "http://localhost:8081"
   prefix: "/api"
 
+# Phase 3.5: providers live per-module (no app-level providers block).
+# Each module declares the providers wrapping its own layout/routes.
 modules:
   - id: se
     shell: se-shell
@@ -23,6 +25,16 @@ modules:
       - se-findings
       - se-dimensions
       - se-settings
+    providers:
+      - id: lens
+        datasource: Lens
+        track_field: id
+        label_field: name
+        default: ""
+        placeholder: "All Lenses"
+        position: topbar
+        ui_type: select
+
   - id: clockwork
     shell: clockwork-shell
     route_group: "(clockwork)"
@@ -40,32 +52,40 @@ modules:
       - clockwork-settings
       - clockwork-plans
       - clockwork-plan-detail
+    providers:
+      # Shared with SE module — renderer de-dups source-file copies.
+      - id: lens
+        datasource: Lens
+        track_field: id
+        label_field: name
+        default: ""
+        placeholder: "All Lenses"
+        position: topbar
+        ui_type: select
+      # Clockwork-only: custom provider migrated from
+      # demo-clockwork/src/hooks/ in sprint 10 phase 2.
+      - id: active-runs
+        source:
+          component: providers/active-runs-context.tsx
+          export: ActiveRunsProvider
+          includes:
+            - providers/sse-active-runs-bridge.tsx
+        mounts:
+          - SSEActiveRunsBridge
+      # ApiProvider supplies the demo's mock hooks with a fetch client.
+      # clockwork-api.ts is a non-component dependency (a class), included so
+      # the renderer copies it into lib/ alongside the provider source.
+      - id: api
+        source:
+          component: providers/api-context.tsx
+          export: ApiProvider
+          includes:
+            - providers/clockwork-api.ts
 
 features:
   theme_toggle: true
   command_palette: true
   mobile_sidebar: true
-
-providers:
-  - id: lens
-    datasource: Lens
-    track_field: id
-    label_field: name
-    default: ""
-    placeholder: "All Lenses"
-    position: topbar
-    ui_type: select
-  # Custom provider migrated from demo-clockwork/src/hooks/ (sprint 10 phase 2).
-  # Phase 3 will regenerate demo-clockwork through react-shadcn SPA mode and
-  # delete the hand-written copies under demo-clockwork/src/hooks/.
-  - id: active-runs
-    source:
-      component: providers/active-runs-context.tsx
-      export: ActiveRunsProvider
-      includes:
-        - providers/sse-active-runs-bridge.tsx
-    mounts:
-      - SSEActiveRunsBridge
 
 actions:
   - label: "Add Repo"

@@ -23,7 +23,7 @@ import { useSnapshotById } from "@/hooks/use-snapshot";
 
 export default function SeRepoDetail() {
   const params = useParams();
-  const { data: repo, isLoading: repoLoading, refetch: refetchRepo } = useRepoById(params.id as string);
+  const { data: repo, isLoading: repoLoading } = useRepoById(params.id as string);
   const { data: dimensionScore, isLoading: dimensionScoreLoading } = useDimensionScoreById(params.id as string);
   const { data: snapshot, isLoading: snapshotLoading } = useSnapshotById(params.id as string);
   const { data: pattern, isLoading: patternLoading } = usePattern();
@@ -57,11 +57,11 @@ export default function SeRepoDetail() {
         <div className="flex flex-col gap-2">
           <div className="flex flex-row gap-3 items-center">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">{repo?.name}</h1>
-            <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">{repo?.category}</Badge>
-            <Badge variant="default">{repo?.stack}</Badge>
+            <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">{String(repo?.category ?? "")}</Badge>
+            <Badge variant="default">{String(repo?.stack ?? "")}</Badge>
           </div>
-          <p className="text-sm text-muted-foreground">{repo?.description}</p>
-          <p className="text-sm text-muted-foreground">{repo?.url}</p>
+          <p className="text-sm text-muted-foreground">{String(repo?.description ?? "")}</p>
+          <p className="text-sm text-muted-foreground">{String(repo?.url ?? "")}</p>
         </div>
         <div className="flex flex-row gap-2">
           <Button variant="outline">
@@ -69,10 +69,10 @@ export default function SeRepoDetail() {
             Edit
           </Button>
           <RepoScoringDialog
-            dimensions={dimension}
-            lenses={lens}
             repoId={params.id as string}
             repoName={repo?.name}
+            dimensions={dimension}
+            lenses={lens}
           />
           <Button variant="destructive" onClick={() => { if (window.confirm("This will remove the repo and all associated scores, findings, and patterns. This action cannot be undone.")) { /* action */ } }}>
             <Trash2 className="mr-2 h-4 w-4" />
@@ -189,7 +189,7 @@ export default function SeRepoDetail() {
                 header: "Type",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("type") ?? "");
-                  const variants: Record<string, string> = { "pattern": "info", "anti-pattern": "danger" };
+                  const variants: Record<string, string> = { "anti-pattern": "danger", "pattern": "info" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -214,7 +214,7 @@ export default function SeRepoDetail() {
                 header: "Category",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("category") ?? "");
-                  const variants: Record<string, string> = { "gap": "danger", "strength": "success", "opportunity": "info", "risk": "warning" };
+                  const variants: Record<string, string> = { "risk": "warning", "gap": "danger", "strength": "success", "opportunity": "info" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -244,7 +244,7 @@ export default function SeRepoDetail() {
                 header: "Status",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("status") ?? "");
-                  const variants: Record<string, string> = { "acknowledged": "warning", "resolved": "success", "open": "danger" };
+                  const variants: Record<string, string> = { "open": "danger", "acknowledged": "warning", "resolved": "success" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :

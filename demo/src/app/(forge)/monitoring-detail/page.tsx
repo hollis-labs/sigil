@@ -32,7 +32,7 @@ export default function ForgeMonitoringDetail() {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">API Latency</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">API Latency</h2>
         <ToggleGroup variant="outline">
           <ToggleGroupItem value="1h">1H</ToggleGroupItem>
           <ToggleGroupItem value="6h">6H</ToggleGroupItem>

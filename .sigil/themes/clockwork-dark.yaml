@@ -1,0 +1,65 @@
+name: clockwork-dark
+description: Clockwork zinc palette — extends dark theme
+extends: dark
+tokens:
+  colors:
+    # Page
+    background: "9 9 11"
+    foreground: "244 244 245"
+
+    # Cards and elevated surfaces
+    card: "24 24 27"
+    card-foreground: "244 244 245"
+
+    # Popover / dropdown surfaces
+    popover: "24 24 27"
+    popover-foreground: "244 244 245"
+
+    # Subtle backgrounds and muted text
+    muted: "39 39 42"
+    muted-foreground: "161 161 170"
+
+    # Surfaces
+    surface: "24 24 27"
+    surface-2: "39 39 42"
+
+    # Primary action color
+    primary: "244 244 245"
+    primary-foreground: "24 24 27"
+
+    # Secondary action color
+    secondary: "39 39 42"
+    secondary-foreground: "24 24 27"
+
+    # Accent / highlight
+    accent: "39 39 42"
+    accent-foreground: "24 24 27"
+
+    # Semantic
+    danger: "239 68 68"
+    danger-foreground: "255 255 255"
+    warning: "245 158 11"
+    info: "96 165 250"
+    success: "52 211 153"
+
+    # Borders and dividers
+    border: "39 39 42"
+    input: "63 63 70"
+    ring: "99 102 241"
+
+    # Legacy aliases
+    text: "244 244 245"
+    text-muted: "161 161 170"
+    accent-hover: "79 70 229"
+    danger-hover: "220 38 38"
+
+    # Status colors — task pipeline
+    backlog: "148 163 184"
+    todo: "96 165 250"
+    queued: "251 191 36"
+    doing: "52 211 153"
+    review: "167 139 250"
+    done: "34 197 94"
+    blocked: "239 68 68"
+    paused: "251 146 60"
+    cancelled: "113 113 122"

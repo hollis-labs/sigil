@@ -18,7 +18,7 @@ defaults:
   theme: default
   renderer: go-templ
   output: internal/ui/
-`), 0644)
+`), 0600)
 
 	cfg, err := loadProjectConfig(configPath)
 	if err != nil {
@@ -43,7 +43,7 @@ tokens:
     text: "244 244 245"
   radius:
     md: "0.375rem"
-`), 0644)
+`), 0600)
 
 	theme, err := LoadTheme(dir, "default")
 	if err != nil {
@@ -66,14 +66,14 @@ tokens:
     background: "0 0 0"
     text: "255 255 255"
     accent: "16 185 129"
-`), 0644)
+`), 0600)
 	os.WriteFile(filepath.Join(dir, "child.yaml"), []byte(`
 name: child
 extends: base
 tokens:
   colors:
     accent: "99 102 241"
-`), 0644)
+`), 0600)
 
 	theme, err := LoadTheme(dir, "child")
 	if err != nil {
@@ -108,7 +108,7 @@ fields:
 endpoints:
   list: "GET /api/sprints"
   create: "POST /api/sprints"
-`), 0644)
+`), 0600)
 
 	ds, err := loadDataSources(dir)
 	if err != nil {
@@ -142,7 +142,7 @@ overlay: page
 layout:
   id: root
   type: rows
-`), 0644)
+`), 0600)
 	os.WriteFile(filepath.Join(dir, "other-page.yaml"), []byte(`
 sigil: "1.0"
 id: other-page
@@ -151,7 +151,7 @@ overlay: modal
 layout:
   id: root
   type: columns
-`), 0644)
+`), 0600)
 
 	// Load all
 	pages, err := loadPages(dir, nil)
@@ -243,6 +243,196 @@ func TestGenerateUnknownRenderer(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for unknown renderer")
 	}
+}
+
+// TestGenerateTargetModeOverride drives the engine through a synthesized
+// .sigil/ tree and asserts that GenerateConfig.TargetMode wins over
+// app.yaml's target_mode, with unset falling through to app.yaml.
+func TestGenerateTargetModeOverride(t *testing.T) {
+	cases := []struct {
+		name           string
+		appYAMLMode    string
+		cliOverride    string
+		wantTargetMode string
+	}{
+		{"unset everywhere defaults to app-router", "", "", "app-router"},
+		{"app.yaml spa, no override", "spa", "", "spa"},
+		{"app.yaml app-router, override spa", "app-router", "spa", "spa"},
+		{"app.yaml spa, override app-router", "spa", "app-router", "app-router"},
+		{"app.yaml unset, override spa", "", "spa", "spa"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Register a capturing mock renderer.
+			captured := &captureRenderer{name: "capture-render-target"}
+			RegisterRenderer(captured)
+			defer delete(renderers, captured.name)
+
+			dir := t.TempDir()
+			sigilDir := filepath.Join(dir, ".sigil")
+			os.MkdirAll(filepath.Join(sigilDir, "pages"), 0750)
+			os.MkdirAll(filepath.Join(sigilDir, "themes"), 0750)
+			os.MkdirAll(filepath.Join(sigilDir, "datasources"), 0750)
+
+			os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte(`
+version: "1.0"
+name: capture-test
+defaults:
+  theme: default
+  renderer: capture-render-target
+`), 0600)
+
+			appYAML := "sigil: \"1.0\"\nkind: app\nname: Test\nmodules:\n  - id: x\n    shell: x-shell\n    route_group: \"(x)\"\n    pages: [x-home]\n"
+			if tc.appYAMLMode != "" {
+				appYAML += "target_mode: " + tc.appYAMLMode + "\n"
+			}
+			os.WriteFile(filepath.Join(sigilDir, "app.yaml"), []byte(appYAML), 0600)
+
+			os.WriteFile(filepath.Join(sigilDir, "themes", "default.yaml"), []byte(`
+name: default
+tokens:
+  colors:
+    background: "0 0 0"
+`), 0600)
+
+			os.WriteFile(filepath.Join(sigilDir, "pages", "x-home.yaml"), []byte(`
+sigil: "1.0"
+kind: page
+id: x-home
+title: Home
+overlay: page
+module: x
+layout:
+  id: root
+  type: rows
+`), 0600)
+			os.WriteFile(filepath.Join(sigilDir, "pages", "x-shell.yaml"), []byte(`
+sigil: "1.0"
+kind: page
+id: x-shell
+title: Shell
+overlay: page
+layout:
+  id: root
+  type: rows
+`), 0600)
+
+			cfg := GenerateConfig{
+				Target:     captured.name,
+				OutputDir:  filepath.Join(dir, "out"),
+				SigilDir:   sigilDir,
+				DryRun:     true,
+				TargetMode: tc.cliOverride,
+			}
+			if _, err := Generate(cfg); err != nil {
+				t.Fatalf("Generate failed: %v", err)
+			}
+			if captured.lastTargetMode != tc.wantTargetMode {
+				t.Errorf("TargetMode in RenderContext = %q, want %q", captured.lastTargetMode, tc.wantTargetMode)
+			}
+		})
+	}
+}
+
+// TestGenerateTargetModeInvalidOverride ensures an invalid CLI override is
+// rejected by validation (engine path; the CLI cmd has its own up-front
+// rejection too).
+func TestGenerateTargetModeInvalidOverride(t *testing.T) {
+	captured := &captureRenderer{name: "capture-render-invalid"}
+	RegisterRenderer(captured)
+	defer delete(renderers, captured.name)
+
+	dir := t.TempDir()
+	sigilDir := filepath.Join(dir, ".sigil")
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0750)
+	os.MkdirAll(filepath.Join(sigilDir, "themes"), 0750)
+	os.MkdirAll(filepath.Join(sigilDir, "datasources"), 0750)
+
+	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte(`
+version: "1.0"
+name: invalid-test
+defaults:
+  theme: default
+  renderer: capture-render-invalid
+`), 0600)
+	os.WriteFile(filepath.Join(sigilDir, "app.yaml"), []byte(`
+sigil: "1.0"
+kind: app
+name: Invalid
+modules:
+  - id: x
+    shell: x-shell
+    route_group: "(x)"
+    pages: [x-home]
+`), 0600)
+	os.WriteFile(filepath.Join(sigilDir, "themes", "default.yaml"), []byte(`
+name: default
+tokens:
+  colors:
+    background: "0 0 0"
+`), 0600)
+	os.WriteFile(filepath.Join(sigilDir, "pages", "x-home.yaml"), []byte(`
+sigil: "1.0"
+kind: page
+id: x-home
+title: Home
+overlay: page
+module: x
+layout:
+  id: root
+  type: rows
+`), 0600)
+	os.WriteFile(filepath.Join(sigilDir, "pages", "x-shell.yaml"), []byte(`
+sigil: "1.0"
+kind: page
+id: x-shell
+title: Shell
+overlay: page
+layout:
+  id: root
+  type: rows
+`), 0600)
+
+	cfg := GenerateConfig{
+		Target:     captured.name,
+		OutputDir:  filepath.Join(dir, "out"),
+		SigilDir:   sigilDir,
+		DryRun:     true,
+		TargetMode: "wails",
+	}
+	if _, err := Generate(cfg); err == nil {
+		t.Fatal("expected validation failure for invalid target_mode override, got nil")
+	}
+}
+
+type captureRenderer struct {
+	name           string
+	lastTargetMode string
+}
+
+func (m *captureRenderer) Name() string { return m.name }
+func (m *captureRenderer) Render(ctx *RenderContext) ([]OutputFile, error) {
+	m.lastTargetMode = ctx.TargetMode
+	return nil, nil
+}
+func (m *captureRenderer) RenderTheme(_ *ThemeConfig) ([]OutputFile, error) {
+	return nil, nil
+}
+func (m *captureRenderer) RenderDataSourceStubs(_ *DataSourceManifest) ([]OutputFile, error) {
+	return nil, nil
+}
+func (m *captureRenderer) SharedComponents(_ []string) ([]OutputFile, error) {
+	return nil, nil
+}
+func (m *captureRenderer) RenderLayout(_ *LayoutContext) ([]OutputFile, error) {
+	return nil, nil
+}
+func (m *captureRenderer) RenderAPIClient(_ *config.AppConfig) ([]OutputFile, error) {
+	return nil, nil
+}
+func (m *captureRenderer) RenderProviders(_ *config.AppConfig, _ string) ([]OutputFile, error) {
+	return nil, nil
 }
 
 func TestHasCapability(t *testing.T) {

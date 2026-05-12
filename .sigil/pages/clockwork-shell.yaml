@@ -1,0 +1,64 @@
+sigil: "1.0"
+kind: page
+id: clockwork-shell
+title: Clockwork
+overlay: page
+module: clockwork
+
+layout:
+  id: root
+  type: rows
+  children:
+    - id: brand
+      type: columns
+      props:
+        gap: 2
+        align: center
+      children:
+        - type: icon
+          props:
+            name: clock
+            size: md
+        - type: heading
+          props:
+            level: 1
+            text: Clockwork
+            size: sm
+    - id: nav
+      type: nav-menu
+      props:
+        orientation: vertical
+        items:
+          - label: Operations
+            page: clockwork-board
+            icon: layout-dashboard
+          - label: Dashboard
+            page: clockwork-dashboard
+            icon: bar-chart-3
+          - label: Collections
+            page: clockwork-collections
+            icon: columns-3
+          - label: Plans
+            page: clockwork-plans
+            icon: clipboard-list
+          - label: Templates
+            page: clockwork-templates
+            icon: file-stack
+          - label: Checkpoints
+            page: clockwork-checkpoints
+            icon: flag
+          - label: Runs
+            page: clockwork-runs
+            icon: play
+          - label: Models
+            page: clockwork-models
+            icon: cpu
+          - label: Projects
+            page: clockwork-projects
+            icon: folder-kanban
+          - label: Sprints
+            page: clockwork-sprints
+            icon: timer
+          - label: Settings
+            page: clockwork-settings
+            icon: settings

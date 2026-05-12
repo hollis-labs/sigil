@@ -30,24 +30,24 @@ export default function ForgeIntegrations() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Integrations</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Integrations</h1>
         <Button variant="default" onClick={() => router.push("/integrations")}>
           <Plug className="mr-2 h-4 w-4" />
           Add Integration
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {integration.map((item) => (
-          <div key={item.provider}>
+        {(integration ?? []).map((item: NonNullable<typeof integration>[number]) => (
+          <div key={String(item.provider ?? "")}>
             <Card>
               <CardHeader>
-                <CardTitle>{item.name}</CardTitle>
-                <CardDescription>{item.provider}</CardDescription>
+                <CardTitle>{String(item.name ?? "")}</CardTitle>
+                <CardDescription>{String(item.provider ?? "")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-row gap-4 justify-between items-center">
-                  <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{item.status}</Badge>
-                  <p className="text-base text-muted-foreground">{item.connectedAt}</p>
+                  <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{String(item.status ?? "")}</Badge>
+                  <p className="text-sm text-muted-foreground">{String(item.connectedAt ?? "")}</p>
                 </div>
                 <Separator />
                 <Dialog>

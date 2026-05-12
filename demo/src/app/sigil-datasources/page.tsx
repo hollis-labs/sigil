@@ -3,13 +3,40 @@
 
 "use client";
 
+import { useState } from "react";
+import { toast } from "sonner";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Toaster } from "@/components/ui/sonner";
 import { DataTable } from "@/components/data-table";
 import { useSigilDataSource } from "@/hooks/use-sigildatasource";
+import { postItem } from "@/lib/api";
 
 export default function SigilDatasources() {
-  const { data: sigilDataSource, isLoading: sigilDataSourceLoading } = useSigilDataSource();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [formAlias, setFormAlias] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+    const handleCreateSigilDataSource = async () => {
+    try {
+      await postItem("sigildatasources", {
+        alias: formAlias,
+        description: formDescription,
+      });
+      toast.success("SigilDataSource created");
+      setModalOpen(false);
+      setFormAlias("");
+      setFormDescription("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to create sigildatasource");
+    }
+  };
+
+
+
+  const { data: sigilDataSource, isLoading: sigilDataSourceLoading, refetch: refetchSigilDataSource } = useSigilDataSource();
 
   if (sigilDataSourceLoading) {
     return (
@@ -23,11 +50,32 @@ export default function SigilDatasources() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">DataSources</h1>
-        <Button variant="default">
-          <Plus className="mr-2 h-4 w-4" />
-          New DataSource
-        </Button>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">DataSources</h1>
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogTrigger render={<Button variant="default" />}>
+            <Plus className="mr-2 h-4 w-4" />
+            New DataSource
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>New DataSource</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 py-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="alias">Alias</Label>
+                <Input id="alias" type="text" placeholder="MyModel" value={formAlias} onChange={(e) => setFormAlias(e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="description">Description</Label>
+                <Input id="description" type="text" placeholder="Describe this datasource" value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateSigilDataSource}>Save</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
       <DataTable
         data={sigilDataSource ?? []}
@@ -39,6 +87,7 @@ export default function SigilDatasources() {
         ]}
       />
     </div>
+    <Toaster />
     </>
   );
 }

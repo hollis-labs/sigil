@@ -243,19 +243,22 @@ func generateComponentIndex(usedTypes []string) renderer.OutputFile {
 	buf.WriteString("// Re-exports for components used in this project.\n\n")
 
 	shadcnMap := map[string]string{
-		"button":     "button",
-		"badge":      "badge",
-		"input":      "input",
-		"select":     "select",
-		"separator":  "separator",
-		"progress":   "progress",
-		"avatar":     "avatar",
-		"alert":      "alert",
-		"label":      "label",
-		"modal":      "dialog",
-		"sheet":      "sheet",
-		"tabs":       "tabs",
-		"form":       "form",
+		"button":    "button",
+		"badge":     "badge",
+		"input":     "input",
+		"select":    "select",
+		"separator": "separator",
+		"progress":  "progress",
+		"avatar":    "avatar",
+		"alert":     "alert",
+		"label":     "label",
+		"modal":     "dialog",
+		"sheet":     "sheet",
+		"tabs":      "tabs",
+		// "form" intentionally omitted — Sigil's `form` component emits a
+		// plain <form> + Input/Label/Textarea primitives, not a re-export
+		// of @/components/ui/form (which doesn't exist in the shadcn drop
+		// used by demos).
 		"data-table": "table",
 	}
 

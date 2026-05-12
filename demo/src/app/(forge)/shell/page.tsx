@@ -18,7 +18,7 @@ export default function ForgeShell() {
         <div className="flex flex-col gap-2 p-4">
           <div className="flex flex-row gap-2 items-center">
             <Hexagon className="h-5 w-5" />
-            <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">Forge</h3>
+            <h3 className="text-lg font-semibold tracking-tight text-foreground">Forge</h3>
           </div>
           <Separator />
           <nav className="flex flex-col gap-1" id="main-nav">
@@ -72,7 +72,7 @@ export default function ForgeShell() {
               <AvatarImage src="" alt="User" />
               <AvatarFallback>US</AvatarFallback>
             </Avatar>
-            <p className="text-base text-muted-foreground">chrispian</p>
+            <p className="text-sm text-muted-foreground">chrispian</p>
           </div>
         </div>
       </aside>
@@ -105,7 +105,7 @@ export default function ForgeShell() {
           </div>
           <Separator />
           <div className="flex flex-col gap-6 p-6">
-            <p className="text-base text-muted-foreground">Select a page from the sidebar to get started.</p>
+            <p className="text-sm text-muted-foreground">Select a page from the sidebar to get started.</p>
           </div>
         </div>
       </main>

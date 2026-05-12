@@ -1,0 +1,138 @@
+sigil: "1.0"
+kind: page
+id: clockwork-board
+title: Operations
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Task
+    capabilities: [list, get, search, filter, sort, paginate, update, transition]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: summary-cards
+      type: summary-cards
+      props:
+        datasource: Task
+        cards:
+          - id: open-tasks
+            label: Open Tasks
+            field: status
+            filter: open
+            variant: primary
+            icon: inbox
+          - id: in-progress
+            label: In Progress
+            field: status
+            filter: in_progress
+            variant: warning
+            icon: play
+          - id: in-review
+            label: In Review
+            field: status
+            filter: in_review
+            variant: info
+            icon: eye
+          - id: blocked
+            label: Blocked
+            field: status
+            filter: blocked
+            variant: destructive
+            icon: alert
+
+    - id: filter-bar
+      type: filter-bar
+      props:
+        datasource: Task
+        filters:
+          - type: select
+            field: status
+            label: Status
+            options:
+              - label: Open
+                value: open
+              - label: In Progress
+                value: in_progress
+              - label: In Review
+                value: in_review
+              - label: Blocked
+                value: blocked
+              - label: Done
+                value: done
+          - type: select
+            field: priority
+            label: Priority
+            options:
+              - label: Critical
+                value: critical
+              - label: High
+                value: high
+              - label: Medium
+                value: medium
+              - label: Low
+                value: low
+          - type: search
+            field: title
+            label: Search
+            placeholder: Search tasks...
+
+    - id: task-table
+      type: data-table
+      props:
+        datasource: Task
+        pagination:
+          pageSize: 25
+        selection: single
+        columns:
+          - label: ID
+            field: id
+            sortable: true
+            width: 80
+          - label: Title
+            field: title
+            sortable: true
+            width: 1
+          - label: Status
+            field: status
+            sortable: true
+            width: 120
+            render:
+              type: status-badge
+          - label: Priority
+            field: priority
+            sortable: true
+            width: 100
+          - label: Tags
+            field: tags
+            width: 180
+          - label: Updated
+            field: updated_at
+            sortable: true
+            width: 160
+        toolbar:
+          - type: status-badge
+            props:
+              status: active
+              showLabel: true
+          - type: button
+            props:
+              label: Assign
+              variant: secondary
+              icon: user
+              disabled: true
+          - type: button
+            props:
+              label: Transition
+              variant: primary
+              icon: arrow-right
+              disabled: true
+      actions:
+        rowClick:
+          type: navigate
+          page: clockwork-task-detail

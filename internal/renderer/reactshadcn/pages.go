@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/chrispian/sigil/internal/components"
@@ -23,14 +24,24 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 	imports := newImportTracker()
 	imports.pageModule = page.Module
 	imports.targetMode = ctx.TargetMode
+	imports.modules = ctx.Modules
 	var bodyBuf bytes.Buffer
 	renderComponent(&bodyBuf, &page.Layout, 2, imports, ctx)
 
-	// Pre-register datasource hook imports (must happen before imports.String())
+	// Pre-register datasource hook imports (must happen before imports.String()).
+	// Detail-suffix pages (phase 3.5): the primary datasource picks up the
+	// ById variant even when the ref doesn't declare params, so the page can
+	// render `task?.field` from a useTaskById hook.
+	isDetailSuffix := strings.HasSuffix(page.ID, "-detail")
+	primaryDSName := ""
+	if isDetailSuffix && len(page.DataSources) > 0 {
+		primaryDSName = page.DataSources[0].Alias
+	}
 	hasParams := false
 	for _, dsRef := range page.DataSources {
 		hookModule := fmt.Sprintf("@/hooks/use-%s", toKebabCase(dsRef.Alias))
-		if len(dsRef.Params) > 0 {
+		isPrimaryDetail := isDetailSuffix && dsRef.Alias == primaryDSName && len(dsRef.Params) == 0
+		if len(dsRef.Params) > 0 || isPrimaryDetail {
 			// Detail page: import the ById variant
 			hookName := "use" + toPascalCase(dsRef.Alias) + "ById"
 			imports.addLocal(hookName, hookModule)
@@ -120,22 +131,34 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 		}
 	}
 
+	// Detail-suffix heuristic (sprint 10 phase 3.5): a page id ending in
+	// `-detail` is treated as a single-entity page even when the datasource
+	// ref declares no `params:`. The primary datasource (alias matches the
+	// page's entity stem) resolves to its ById hook and is rendered as a
+	// singular object; secondary datasources keep list semantics.
+	isDetailPage := strings.HasSuffix(page.ID, "-detail")
+	primaryDS := ""
+	if isDetailPage && len(page.DataSources) > 0 {
+		primaryDS = page.DataSources[0].Alias
+	}
+
 	for _, dsRef := range page.DataSources {
 		varName := toCamelCase(dsRef.Alias)
-		if len(dsRef.Params) > 0 {
-			// Detail page: use ById variant with first param
+		hasParams := len(dsRef.Params) > 0
+		isPrimaryDetail := isDetailPage && dsRef.Alias == primaryDS && !hasParams
+		if hasParams || isPrimaryDetail {
+			// Detail page: use ById variant with first param (or auto-pick
+			// "id" for detail-suffix pages that didn't declare params).
+			// Detail hooks return a singular entity; refetch isn't part of
+			// the mock-hook shape so we omit it even when capabilities ask
+			// for it (the mutation helpers still work standalone).
 			hookName := "use" + toPascalCase(dsRef.Alias) + "ById"
-			// Get the first param key (typically "id")
-			var paramKey string
+			paramKey := "id"
 			for k := range dsRef.Params {
 				paramKey = k
 				break
 			}
-			if needsRefetch[dsRef.Alias] {
-				fmt.Fprintf(&buf, "  const { data: %s, isLoading: %sLoading, refetch: refetch%s } = %s(params.%s as string);\n", varName, varName, toPascalCase(dsRef.Alias), hookName, paramKey)
-			} else {
-				fmt.Fprintf(&buf, "  const { data: %s, isLoading: %sLoading } = %s(params.%s as string);\n", varName, varName, hookName, paramKey)
-			}
+			fmt.Fprintf(&buf, "  const { data: %s, isLoading: %sLoading } = %s(params.%s as string);\n", varName, varName, hookName, paramKey)
 		} else {
 			hookName := "use" + toPascalCase(dsRef.Alias)
 			if needsRefetch[dsRef.Alias] {
@@ -255,15 +278,23 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		}
 		fmt.Fprintf(buf, "%s<div className=%q>\n", indent, classes)
 
-		// If children use {{item.*}} template vars and a datasource is specified,
-		// wrap the first child in a .map() iteration over the datasource array.
+		// If children use {{item.*}} template vars and a datasource is
+		// specified (or one can be inferred from the page), wrap the first
+		// child in a .map() iteration over the datasource array.
 		dsAlias := getPropString(c.Props, "datasource", "")
+		if dsAlias == "" && len(c.Children) > 0 && containsItemVars(&c.Children[0]) && ctx.Page != nil && len(ctx.Page.DataSources) > 0 {
+			// Phase 3.5 inference: a grid with item.* children but no
+			// explicit datasource adopts the page's first datasource.
+			dsAlias = ctx.Page.DataSources[0].Alias
+		}
 		if dsAlias != "" && len(c.Children) > 0 && containsItemVars(&c.Children[0]) {
 			varName := toCamelCase(dsAlias)
 			keyField := getItemKeyField(&c.Children[0])
-			fmt.Fprintf(buf, "%s  {%s.map((item) => (\n", indent, varName)
-			fmt.Fprintf(buf, "%s    <div key={item.%s}>\n", indent, keyField)
+			fmt.Fprintf(buf, "%s  {(%s ?? []).map((item: NonNullable<typeof %s>[number]) => (\n", indent, varName, varName)
+			fmt.Fprintf(buf, "%s    <div key={String(item.%s ?? \"\")}>\n", indent, keyField)
+			imports.listScopeDepth++
 			renderComponent(buf, &c.Children[0], depth+3, imports, ctx)
+			imports.listScopeDepth--
 			fmt.Fprintf(buf, "%s    </div>\n", indent)
 			fmt.Fprintf(buf, "%s  ))}\n", indent)
 		} else {
@@ -296,7 +327,14 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		if muted {
 			classes = "text-" + size + " text-muted-foreground"
 		}
+		// Strip `{{item.*}}` references when not inside a list-iteration
+		// scope — these are dead binds (the page YAML references item.*
+		// without a wrapping list). Emitting them as-is breaks TS compile.
+		if imports.listScopeDepth == 0 {
+			content = stripItemTemplateVars(content)
+		}
 		content = interpolateTemplateVars(content)
+		content = coerceJSXExprToString(content)
 		content = escapeJSXText(content)
 		fmt.Fprintf(buf, "%s<p className=%q>%s</p>\n", indent, classes, content)
 
@@ -341,6 +379,9 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		text := getPropString(c.Props, "text", "")
 		variant := getPropString(c.Props, "variant", "default")
 		text = interpolateTemplateVars(text)
+		// Coerce dynamic expressions to string for React rendering — mock
+		// hook types use index-signature `unknown` for unknown fields.
+		text = coerceJSXExprToString(text)
 		shadcnVariant, extraClass := mapBadgeVariant(variant)
 		if extraClass != "" {
 			fmt.Fprintf(buf, "%s<Badge variant=%q className=%q>%s</Badge>\n", indent, shadcnVariant, extraClass, text)
@@ -579,7 +620,22 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 	case "progress":
 		imports.addShadcn("Progress", "@/components/ui/progress")
 		value := getPropString(c.Props, "value", "0")
-		fmt.Fprintf(buf, "%s<Progress value={%s} />\n", indent, value)
+		// Template vars (e.g. "{{item.progress}}") need to be unwrapped to
+		// the raw JS expression before being embedded inside JSX's value={...}
+		// braces. interpolateTemplateVars returns "{item.progress}" for a
+		// single-variable string; strip the wrapping braces so the final
+		// emission is `value={item.progress}` rather than `value={{{...}}}`.
+		value = unwrapJSXExpr(interpolateTemplateVars(value))
+		// Progress expects a numeric value. Any dynamic expression (a
+		// reference like `item.progress`, an optional-chain, a template
+		// literal, …) is wrapped with Number(...) so TS accepts it. We only
+		// skip the wrap for literal numeric strings.
+		_, parseErr := strconv.ParseFloat(strings.TrimSpace(value), 64)
+		if parseErr != nil {
+			fmt.Fprintf(buf, "%s<Progress value={Number(%s) || 0} />\n", indent, value)
+		} else {
+			fmt.Fprintf(buf, "%s<Progress value={%s} />\n", indent, value)
+		}
 
 	case "avatar":
 		imports.addShadcn("Avatar", "@/components/ui/avatar")
@@ -654,8 +710,8 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		imports.addShadcn("CardFooter", "@/components/ui/card")
 		imports.addShadcn("CardHeader", "@/components/ui/card")
 		imports.addShadcn("CardTitle", "@/components/ui/card")
-		title := interpolateTemplateVars(getPropString(c.Props, "title", ""))
-		description := interpolateTemplateVars(getPropString(c.Props, "description", ""))
+		title := coerceJSXExprToString(interpolateTemplateVars(getPropString(c.Props, "title", "")))
+		description := coerceJSXExprToString(interpolateTemplateVars(getPropString(c.Props, "description", "")))
 		border := getPropString(c.Props, "border", "true")
 		if border == "false" {
 			fmt.Fprintf(buf, "%s<Card className=\"border-0 shadow-none ring-0\">\n", indent)
@@ -752,7 +808,12 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		fmt.Fprintf(buf, "%s<div className=\"flex items-center space-x-2\">\n", indent)
 		fmt.Fprintf(buf, "%s  <Checkbox id=%q%s />\n", indent, id, extraAttrs)
 		if label != "" {
-			fmt.Fprintf(buf, "%s  <Label htmlFor=%q>%s</Label>\n", indent, id, label)
+			labelOut := label
+			if imports.listScopeDepth == 0 {
+				labelOut = stripItemTemplateVars(labelOut)
+			}
+			labelOut = interpolateTemplateVars(labelOut)
+			fmt.Fprintf(buf, "%s  <Label htmlFor=%q>%s</Label>\n", indent, id, labelOut)
 		}
 		fmt.Fprintf(buf, "%s</div>\n", indent)
 
@@ -959,7 +1020,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 						}
 						href := "#"
 						if page != "" {
-							href = pageRoute(page, imports.pageModule)
+							href = imports.resolveRoute(page)
 						}
 						if icon != "" {
 							iconPascal := toPascalCase(icon)
@@ -1109,7 +1170,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 							}
 						} else if p, ok := im["page"]; ok {
 							// Convert page reference to route
-							href = pageRoute(fmt.Sprintf("%v", p), imports.pageModule)
+							href = imports.resolveRoute(fmt.Sprintf("%v", p))
 						}
 						isLast := i == len(itemSlice)-1
 						fmt.Fprintf(buf, "%s    <BreadcrumbItem>\n", indent)
@@ -1224,7 +1285,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 							case "navigate":
 								imports.addRouter()
 								if page, ok := actionMap["page"]; ok {
-									route := pageRoute(fmt.Sprintf("%v", page), imports.pageModule)
+									route := imports.resolveRoute(fmt.Sprintf("%v", page))
 									onSelect = fmt.Sprintf(` onSelect={() => %s}`, imports.routerPushCall(fmt.Sprintf("%q", route)))
 								}
 							case "toast":
@@ -1375,14 +1436,22 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		emptyMessage := getPropString(c.Props, "emptyMessage", "No items")
 		if datasource != "" {
 			varName := toCamelCase(datasource)
+			// Type the item parameter so children that reference item.field
+			// don't trigger TS implicit-any errors. NonNullable<...> guards
+			// against the array-or-null shape some hooks return.
 			fmt.Fprintf(buf, "%s<div className=\"divide-y\">\n", indent)
-			fmt.Fprintf(buf, "%s  {%s && %s.length > 0 ? %s.map((item, i) => (\n", indent, varName, varName, varName)
+			fmt.Fprintf(buf, "%s  {%s && %s.length > 0 ? %s.map((item: NonNullable<typeof %s>[number], i: number) => (\n", indent, varName, varName, varName, varName)
 			fmt.Fprintf(buf, "%s    <div key={i} className=\"py-3\">\n", indent)
+			// Children render inside the .map() scope, so `{{item.field}}`
+			// references resolve cleanly. Bump scope depth so descendants
+			// know they're allowed to reference `item`.
+			imports.listScopeDepth++
 			if len(c.Children) > 0 {
 				renderComponent(buf, &c.Children[0], depth+3, imports, ctx)
 			} else {
 				fmt.Fprintf(buf, "%s      <p className=\"text-sm\">{JSON.stringify(item)}</p>\n", indent)
 			}
+			imports.listScopeDepth--
 			fmt.Fprintf(buf, "%s    </div>\n", indent)
 			fmt.Fprintf(buf, "%s  )) : <p className=\"text-sm text-muted-foreground py-3\">%s</p>}\n", indent, emptyMessage)
 			fmt.Fprintf(buf, "%s</div>\n", indent)
@@ -1432,6 +1501,17 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		datasource := getPropString(c.Props, "datasource", "")
 		layout := getPropString(c.Props, "layout", "stacked")
 		varName := toCamelCase(datasource)
+		// Detail-view binds to a singular entity. If the page is a list page
+		// (the hook returns T[]), use the first-element fallback so the JSX
+		// type-checks. The page renderer's detail-suffix heuristic already
+		// picks useTaskById for `*-detail` pages — for non-detail pages that
+		// embed detail-view we need to bridge.
+		isDetail := strings.HasSuffix(ctx.Page.ID, "-detail")
+		accessor := varName + "?."
+		if !isDetail {
+			// Wrap as (Array.isArray(x) ? x[0] : x)?. — safe for both T[] and T.
+			accessor = "(Array.isArray(" + varName + ") ? " + varName + "[0] : " + varName + ")?."
+		}
 		containerClass := "space-y-4"
 		if layout == "grid" {
 			containerClass = "grid grid-cols-2 gap-4"
@@ -1447,7 +1527,10 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 						field := fmt.Sprintf("%v", fm["field"])
 						fmt.Fprintf(buf, "%s  <div>\n", indent)
 						fmt.Fprintf(buf, "%s    <dt className=\"text-sm font-medium text-muted-foreground\">%s</dt>\n", indent, label)
-						fmt.Fprintf(buf, "%s    <dd className=\"text-sm mt-1\">{%s?.%s}</dd>\n", indent, varName, field)
+						// String(...) coerces the value (which may be typed
+						// `unknown` due to the [key:string]:unknown index
+						// signature on mock types) so JSX accepts it.
+						fmt.Fprintf(buf, "%s    <dd className=\"text-sm mt-1\">{String(%s%s ?? \"\")}</dd>\n", indent, accessor, field)
 						fmt.Fprintf(buf, "%s  </div>\n", indent)
 					}
 				}
@@ -1638,9 +1721,14 @@ func renderCustomComponent(buf *bytes.Buffer, c *config.Component, indent string
 	for key, val := range c.Props {
 		switch v := val.(type) {
 		case string:
-			// Check for datasource reference {{varName}}
+			// Check for datasource reference {{varName}} / {{Datasource.field}}.
+			// Datasource references like `Task.status` resolve to the loaded
+			// variable `task.status` (the hook returns the entity name camelCased).
+			// `item.field` is left untouched so list iteration scopes still bind.
 			if strings.HasPrefix(v, "{{") && strings.HasSuffix(v, "}}") {
 				ref := strings.TrimSuffix(strings.TrimPrefix(v, "{{"), "}}")
+				ref = strings.TrimSpace(ref)
+				ref = normalizeDatasourceRef(ref, ctx)
 				fmt.Fprintf(buf, "%s  %s={%s}\n", indent, key, ref)
 			} else {
 				fmt.Fprintf(buf, "%s  %s=%q\n", indent, key, v)
@@ -1771,7 +1859,7 @@ func renderReactDataTable(buf *bytes.Buffer, c *config.Component, indent string,
 		case "navigate":
 			imports.addRouter()
 			if rowClick.Page != "" {
-				route := pageRoute(rowClick.Page, imports.pageModule)
+				route := imports.resolveRoute(rowClick.Page)
 				// If params include id, build a dynamic route
 				if _, hasID := rowClick.Params["id"]; hasID {
 					fmt.Fprintf(buf, "%s  onRowClick={(row) => %s}\n", indent, imports.routerPushCall(fmt.Sprintf("`%s/${(row as { id: string }).id}`", route)))
@@ -1805,7 +1893,7 @@ func renderReactDataTable(buf *bytes.Buffer, c *config.Component, indent string,
 			} else if rowClick.Page != "" {
 				// Fallback to navigation
 				imports.addRouter()
-				route := pageRoute(rowClick.Page, imports.pageModule)
+				route := imports.resolveRoute(rowClick.Page)
 				if _, hasID := rowClick.Params["id"]; hasID {
 					fmt.Fprintf(buf, "%s  onRowClick={(row) => %s}\n", indent, imports.routerPushCall(fmt.Sprintf("`%s/${(row as { id: string }).id}`", route)))
 				} else {
@@ -1923,7 +2011,7 @@ func renderReactActions(actions map[string]config.Action, imports *importTracker
 				url := interpolateActionURL(action.URL)
 				attrs = append(attrs, fmt.Sprintf(` onClick={() => %s}`, imports.routerPushCall(url)))
 			} else if action.Page != "" {
-				route := pageRoute(action.Page, imports.pageModule)
+				route := imports.resolveRoute(action.Page)
 				attrs = append(attrs, fmt.Sprintf(` onClick={() => %s}`, imports.routerPushCall(fmt.Sprintf("%q", route))))
 			}
 		case "http":
@@ -1966,7 +2054,7 @@ func renderReactActions(actions map[string]config.Action, imports *importTracker
 			// Create navigates to a create page or opens a modal
 			imports.addRouter()
 			if action.Page != "" {
-				route := pageRoute(action.Page, imports.pageModule)
+				route := imports.resolveRoute(action.Page)
 				attrs = append(attrs, fmt.Sprintf(` onClick={() => %s}`, imports.routerPushCall(fmt.Sprintf("%q", route+"/new"))))
 			} else if action.URL != "" {
 				url := interpolateActionURL(action.URL)
@@ -2464,10 +2552,19 @@ type importTracker struct {
 	//   - "" or "app-router" → Next.js (next/navigation, useRouter, router.push)
 	//   - "spa"              → Vite + React Router 7 (react-router-dom, useNavigate, navigate())
 	targetMode string
+	// modules is the full app's module list for cross-module route prefixing
+	// in SPA mode. nil/empty → flat single-module paths (legacy behavior).
+	modules []*config.ModuleConfig
 	// modalCounter increments to generate unique state variable names for modal dialogs
 	modalCounter int
 	// sheetOverlays collects sheet overlay configs found during component rendering
 	sheetOverlays []sheetOverlayConfig
+	// listScopeDepth tracks how deep we are inside `.map((item) => ...)`
+	// iterations. Incremented when entering a list/iteration scope and
+	// decremented on exit. Text and checkbox renderers consult this so
+	// `{{item.field}}` references outside any list scope substitute to ""
+	// rather than emitting a dangling `item` identifier (TS error).
+	listScopeDepth int
 }
 
 // routerModule returns the import source for the router hook used in this
@@ -2508,6 +2605,17 @@ func (t *importTracker) routerPushCall(targetExpr string) string {
 		return fmt.Sprintf("navigate(%s)", targetExpr)
 	}
 	return fmt.Sprintf("router.push(%s)", targetExpr)
+}
+
+// resolveRoute returns the URL path for pageID, respecting target mode and
+// multi-module SPA prefixing. App Router callers fall through to the legacy
+// pageRoute (which strips the current module's prefix), since route groups
+// are URL-transparent in Next.js.
+func (t *importTracker) resolveRoute(pageID string) string {
+	if t.targetMode == "spa" {
+		return pageRouteSPA(pageID, t.pageModule, t.modules)
+	}
+	return pageRoute(pageID, t.pageModule)
 }
 
 // sheetOverlayConfig describes a sheet edit/delete overlay to render at page level.
@@ -2627,6 +2735,43 @@ func sortedBoolKeys(m map[string]bool) []string {
 //
 // If the entire string is a single template variable, returns a JSX expression like {expr}.
 // If the string mixes static text and template variables, returns a JSX template literal like {`text ${expr}`}.
+// coerceJSXExprToString wraps single-expression JSX content with String(...)
+// so dynamic values typed as `unknown` (e.g. mock-hook fields under the
+// index signature `[key: string]: unknown`) render as React nodes without a
+// TS error. Returns the input unchanged when it's static text.
+//   - `{item.name}`                  → `{String(item.name ?? "")}`
+//   - `{task?.title}`                → `{String(task?.title ?? "")}`
+//   - `{`${item.x} foo`}`            → unchanged (already coerces via template literal)
+//   - `static text`                  → unchanged
+func coerceJSXExprToString(s string) string {
+	if len(s) < 2 || s[0] != '{' || s[len(s)-1] != '}' {
+		return s
+	}
+	inner := s[1 : len(s)-1]
+	// Template-literal expressions (\`...\`) coerce implicitly; skip wrap.
+	if strings.HasPrefix(inner, "`") {
+		return s
+	}
+	// Already wrapped (String(...) or other call).
+	if strings.HasPrefix(inner, "String(") {
+		return s
+	}
+	return "{String(" + inner + " ?? \"\")}"
+}
+
+// stripItemTemplateVars removes any `{{item.field}}` references from s.
+// Used by text/checkbox emission outside a list-iteration scope so dangling
+// `item` references don't leak into the generated TSX (which would fail to
+// compile). Other template vars (`{{data.*}}`, `{{param.*}}`,
+// `{{Datasource.field}}`) are left untouched.
+func stripItemTemplateVars(s string) string {
+	if !strings.Contains(s, "{{item.") {
+		return s
+	}
+	re := regexp.MustCompile(`\{\{item\.[A-Za-z_][A-Za-z0-9_]*\}\}`)
+	return re.ReplaceAllString(s, "")
+}
+
 func interpolateTemplateVars(s string) string {
 	if !strings.Contains(s, "{{") {
 		return s
@@ -2779,6 +2924,36 @@ func mapIconSize(size string) string {
 // interpolateActionURL converts template vars in action URLs to JS template literals.
 // e.g. "/api/deployments/{{param.id}}" → "`/api/deployments/${params.id}`"
 // Returns a raw JS expression (no JSX {} wrapper) suitable for use inside onClick handlers.
+// unwrapJSXExpr strips the outer "{...}" from a single-expression string
+// produced by interpolateTemplateVars when the result will be re-wrapped in
+// JSX braces by the caller (e.g. attribute values like value={...}).
+// Multi-token results that aren't a single brace-wrapped expression are
+// returned unchanged; in those cases the caller should wrap in a template
+// literal instead.
+func unwrapJSXExpr(s string) string {
+	if len(s) >= 2 && s[0] == '{' && s[len(s)-1] == '}' {
+		// Ensure there's no inner unbalanced brace that would change the
+		// meaning: count to verify.
+		depth := 0
+		for i := 0; i < len(s); i++ {
+			switch s[i] {
+			case '{':
+				depth++
+			case '}':
+				depth--
+				if depth == 0 && i != len(s)-1 {
+					// Closing brace before the end → not a single expression.
+					return s
+				}
+			}
+		}
+		if depth == 0 {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
+}
+
 // pageRoute converts a page ID to a route path, stripping the module prefix if present.
 // e.g., "forge-deployments" with module "forge" → "/deployments"
 func pageRoute(pageID, module string) string {
@@ -2786,6 +2961,71 @@ func pageRoute(pageID, module string) string {
 		return "/" + strings.TrimPrefix(pageID, module+"-")
 	}
 	return "/" + pageID
+}
+
+// stripParens removes leading/trailing parentheses from a string. Sigil
+// modules conventionally declare route_group: "(name)" so the App Router
+// puts the module under app/(name)/...; in SPA mode we need the raw URL
+// segment, so we strip them.
+func stripParens(s string) string {
+	if len(s) >= 2 && s[0] == '(' && s[len(s)-1] == ')' {
+		return s[1 : len(s)-1]
+	}
+	return s
+}
+
+// ownerModuleForPage returns the module that owns pageID (by Pages list or
+// by ID prefix match). Returns nil when no module owns the page.
+func ownerModuleForPage(pageID string, modules []*config.ModuleConfig) *config.ModuleConfig {
+	if len(modules) == 0 || pageID == "" {
+		return nil
+	}
+	for _, m := range modules {
+		if m == nil {
+			continue
+		}
+		for _, p := range m.Pages {
+			if p == pageID {
+				return m
+			}
+		}
+	}
+	for _, m := range modules {
+		if m == nil {
+			continue
+		}
+		if m.ID != "" && strings.HasPrefix(pageID, m.ID+"-") {
+			return m
+		}
+	}
+	return nil
+}
+
+// pageRouteSPA returns the URL path for pageID in SPA mode, including the
+// target page's owning-module route prefix when there is more than one
+// module declared (so each module's pages stay under their own URL
+// namespace and never collide). Single-module SPA configs keep flat paths
+// for backward compat with Phase 1 output.
+//
+// The prefix and the per-module suffix are computed from the TARGET page's
+// owning module — not the current page's module — so cross-module
+// navigation resolves correctly. modules may be nil/empty (legacy
+// callers); in that case it behaves like the legacy pageRoute relative to
+// currentModule.
+func pageRouteSPA(pageID, currentModule string, modules []*config.ModuleConfig) string {
+	if len(modules) <= 1 {
+		return pageRoute(pageID, currentModule)
+	}
+	owner := ownerModuleForPage(pageID, modules)
+	if owner == nil {
+		return pageRoute(pageID, currentModule)
+	}
+	suffix := pageRoute(pageID, owner.ID) // strip target module's prefix
+	prefix := stripParens(owner.RouteGroup)
+	if prefix == "" {
+		return suffix
+	}
+	return "/" + prefix + suffix
 }
 
 func renderToastCall(action *config.Action) string {
@@ -2876,7 +3116,10 @@ func pluralizeResource(alias string) string {
 }
 
 // lucideIconName maps Sigil icon names to their Lucide React export names.
-// Only icons that differ from a simple PascalCase conversion need to be listed.
+// Only icons that differ from a simple PascalCase conversion need to be listed
+// — and a handful of common shortcuts whose PascalCase form isn't a valid
+// lucide-react export (e.g. `alert` → `Alert` is undefined; the real export
+// is `AlertCircle`).
 var lucideIconAliases = map[string]string{
 	"refresh":     "RefreshCw",
 	"delete":      "Trash2",
@@ -2886,6 +3129,85 @@ var lucideIconAliases = map[string]string{
 	"remove":      "Minus",
 	"arrow-left":  "ArrowLeft",
 	"arrow-right": "ArrowRight",
+	// Shortcuts → canonical lucide name (Phase 3.5 fix). lucide does not
+	// export bare `Alert`, `Dollar`, etc.; map common shorthand to the
+	// intended icon. Authors can still use the long form (alert-circle) and
+	// it will pascalize through the default branch.
+	"alert":   "AlertCircle",
+	"dollar":  "DollarSign",
+	"git-log": "GitCommit",
+}
+
+// normalizeDatasourceRef converts a `{{Datasource.field}}` template
+// reference into a JS identifier expression. PascalCase datasource names
+// (e.g. `Task`, `Run`) used as the root of the reference are camelCased
+// because the page renderer loads the hook into a camelCase variable
+// (`useTask()` → `task`). Tokens that start lowercase (e.g. `item`) are
+// kept as-is so list-iteration scopes still bind. References that don't
+// match the datasource pattern (no dot, or no known datasource) are
+// returned unchanged.
+//
+// Note: scope-less `item.*` cleanup happens at the text/checkbox emission
+// site (via stripItemTemplateVars) before this function sees the value;
+// here we just preserve `item.*` for the list-scope case.
+func normalizeDatasourceRef(ref string, ctx *renderer.RenderContext) string {
+	// Pipe expressions like `{{Task | json}}` aren't real JS — degrade to
+	// JSON.stringify of the camelCase variable so the output is at least
+	// valid TS that the type checker accepts.
+	if idx := strings.Index(ref, "|"); idx >= 0 {
+		root := strings.TrimSpace(ref[:idx])
+		filter := strings.TrimSpace(ref[idx+1:])
+		if filter == "json" && root != "" {
+			return fmt.Sprintf("JSON.stringify(%s)", toCamelCase(root))
+		}
+		// Unknown filter — fall through to literal output of the root.
+		ref = root
+	}
+	dot := strings.Index(ref, ".")
+	if dot <= 0 {
+		// No `Datasource.field` shape; might be a bare var like `item`.
+		// If it starts uppercase AND matches a known datasource, lowercase
+		// it; otherwise leave it alone.
+		if isKnownDatasource(ref, ctx) {
+			return toCamelCase(ref)
+		}
+		return ref
+	}
+	root := ref[:dot]
+	rest := ref[dot:]
+	if isKnownDatasource(root, ctx) {
+		// Use optional chaining so the reference is null-safe regardless of
+		// whether the hook returned a singular entity (Task | null) or a
+		// list (Task[]).
+		return toCamelCase(root) + "?" + rest
+	}
+	// Unrecognized root — leave the reference alone (avoids accidental
+	// renaming of variables the renderer's other code paths bound).
+	return ref
+}
+
+// isKnownDatasource returns true if name matches a datasource alias declared
+// on the current page (or, when ctx.Page is missing, any datasource in the
+// app-level manifest).
+func isKnownDatasource(name string, ctx *renderer.RenderContext) bool {
+	if name == "" {
+		return false
+	}
+	// Quick reject: lowercase names are never datasource aliases.
+	first := name[0]
+	if first < 'A' || first > 'Z' {
+		return false
+	}
+	if ctx == nil || ctx.Page == nil {
+		// Without page context, be permissive — any PascalCase root.
+		return true
+	}
+	for _, ds := range ctx.Page.DataSources {
+		if ds.Alias == name {
+			return true
+		}
+	}
+	return false
 }
 
 func lucideIconName(name string) string {

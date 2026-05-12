@@ -6,6 +6,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2, Plus, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ export default function ForgeJobs() {
   const router = useRouter();
   const [searchScheduledJob, setSearchScheduledJob] = useState("");
 
-  const { data: scheduledJob, isLoading: scheduledJobLoading } = useScheduledJob();
+  const { data: scheduledJob, isLoading: scheduledJobLoading, refetch: refetchScheduledJob } = useScheduledJob();
 
   if (scheduledJobLoading) {
     return (
@@ -30,7 +31,7 @@ export default function ForgeJobs() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Scheduled Jobs</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Scheduled Jobs</h1>
         <Button variant="default" onClick={() => router.push("/jobs")}>
           <Plus className="mr-2 h-4 w-4" />
           New Job
@@ -50,7 +51,21 @@ export default function ForgeJobs() {
                 return Object.values(item).some((v) => String(v).toLowerCase().includes(q));
               })}
             columns={[
-              { accessorKey: "status", header: "Status" },
+              {
+                accessorKey: "status",
+                header: "Status",
+                cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
+                  const v = String(row.getValue("status") ?? "");
+                  const variants: Record<string, string> = { "paused": "warning", "failed": "danger", "disabled": "default", "active": "success", "running": "info" };
+                  const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
+                  return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
+                    variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
+                    variant === "warning" ? "border-amber-500/30 bg-amber-500/10 text-amber-400" :
+                    variant === "info" ? "border-blue-500/30 bg-blue-500/10 text-blue-400" :
+                    variant === "danger" ? "" : ""
+                  }>{v}</Badge>;
+                },
+              },
               { accessorKey: "name", header: "Name" },
               { accessorKey: "schedule", header: "Schedule" },
               { accessorKey: "runtime", header: "Runtime" },

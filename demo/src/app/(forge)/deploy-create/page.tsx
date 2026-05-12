@@ -25,7 +25,7 @@ export default function ForgeDeployCreate() {
   const [buildCommand, setBuildCommand] = useState("");
   const [outputDir, setOutputDir] = useState("");
 
-  const { data: deployment, isLoading: deploymentLoading } = useDeployment();
+  const { data: deployment, isLoading: deploymentLoading, refetch: refetchDeployment } = useDeployment();
 
   if (deploymentLoading) {
     return (
@@ -49,7 +49,7 @@ export default function ForgeDeployCreate() {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">New Deployment</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">New Deployment</h1>
       <Card>
         <CardHeader>
           <CardTitle>Deployment Configuration</CardTitle>

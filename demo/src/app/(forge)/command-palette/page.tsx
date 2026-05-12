@@ -24,8 +24,8 @@ export default function ForgeCommandPalette() {
   return (
     <>
     <div className="flex flex-col gap-6 p-6">
-      <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Command Palette</h1>
-      <p className="text-base text-muted-foreground">Press Cmd+K to open the command palette (rendered inline below for demo).</p>
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Command Palette</h1>
+      <p className="text-sm text-muted-foreground">Press Cmd+K to open the command palette (rendered inline below for demo).</p>
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput placeholder="Type a command or search..." />
         <CommandList>

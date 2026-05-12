@@ -46,8 +46,8 @@ export default function ForgeDeploymentDetail() {
       </Breadcrumb>
       <div className="flex flex-row gap-4 justify-between items-center">
         <div className="flex flex-row gap-3 items-center">
-          <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">{deployment?.name}</h2>
-          <Badge variant="default">{deployment?.status}</Badge>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">{deployment?.name}</h2>
+          <Badge variant="default">{String(deployment?.status ?? "")}</Badge>
         </div>
         <div className="flex flex-row gap-2">
           <Button variant="default" onClick={() => fetch(`/api/deployments/${params.id}/redeploy`, { method: "POST" }).then(() => toast.success("Redeployment started"))}>
@@ -87,27 +87,27 @@ export default function ForgeDeploymentDetail() {
               <div className="space-y-4">
                 <div>
                   <dt className="text-sm font-medium text-muted-foreground">Environment</dt>
-                  <dd className="text-sm mt-1">{deployment?.environment}</dd>
+                  <dd className="text-sm mt-1">{String(deployment?.environment ?? "")}</dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-muted-foreground">Branch</dt>
-                  <dd className="text-sm mt-1">{deployment?.branch}</dd>
+                  <dd className="text-sm mt-1">{String(deployment?.branch ?? "")}</dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-muted-foreground">Commit</dt>
-                  <dd className="text-sm mt-1">{deployment?.commit}</dd>
+                  <dd className="text-sm mt-1">{String(deployment?.commit ?? "")}</dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-muted-foreground">Author</dt>
-                  <dd className="text-sm mt-1">{deployment?.author}</dd>
+                  <dd className="text-sm mt-1">{String(deployment?.author ?? "")}</dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-muted-foreground">Duration</dt>
-                  <dd className="text-sm mt-1">{deployment?.duration}</dd>
+                  <dd className="text-sm mt-1">{String(deployment?.duration ?? "")}</dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-muted-foreground">Started</dt>
-                  <dd className="text-sm mt-1">{deployment?.createdAt}</dd>
+                  <dd className="text-sm mt-1">{String(deployment?.createdAt ?? "")}</dd>
                 </div>
               </div>
             </CardContent>
@@ -139,7 +139,7 @@ export default function ForgeDeploymentDetail() {
         <TabsContent value="domains">
           <Card>
             <CardContent>
-              <p className="text-base text-muted-foreground">Custom domains and aliases.</p>
+              <p className="text-sm text-muted-foreground">Custom domains and aliases.</p>
             </CardContent>
           </Card>
         </TabsContent>

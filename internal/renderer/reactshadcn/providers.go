@@ -24,33 +24,54 @@ func pluralize(s string) string {
 	return s + "s"
 }
 
-// renderProviders generates React Context + Provider files for each provider in the app config.
+// renderProviders generates React Context + Provider files for each provider
+// declared on any module.
 //
 // Built-in providers are generated from a datasource-driven template (the
 // historical behavior). Custom providers (those with Source.Component set)
 // have their source files copied from .sigil/providers/<file> into the
 // output's lib/ directory; the renderer does not synthesize their bodies.
 //
+// Phase 3.5: providers live per-module. This function walks every module's
+// Providers slice and deduplicates by provider ID — two modules declaring the
+// same provider (e.g. `lens` on both `se` and `clockwork`) produce a single
+// set of `lib/*-context.tsx` (built-ins) or `lib/<basename>` (custom)
+// files. Per-module wrap order is handled by the layout renderer, not here.
+//
 // sigilDir is the path to the .sigil directory; empty means custom-provider
 // file copying is skipped (used by tests that don't exercise source copying).
-func renderProviders(providers []config.ProviderConfig, sigilDir string) ([]renderer.OutputFile, error) {
+func renderProviders(modules []config.ModuleConfig, sigilDir string) ([]renderer.OutputFile, error) {
 	var files []renderer.OutputFile
-	for _, p := range providers {
-		if p.IsCustom() {
-			copied, err := copyCustomProviderFiles(p, sigilDir)
+	seen := map[string]bool{} // provider ID → already emitted
+	for _, mod := range modules {
+		for _, p := range mod.Providers {
+			if seen[p.ID] {
+				continue
+			}
+			seen[p.ID] = true
+			if p.IsCustom() {
+				copied, err := copyCustomProviderFiles(p, sigilDir)
+				if err != nil {
+					return nil, err
+				}
+				files = append(files, copied...)
+				continue
+			}
+			file, err := renderProvider(p)
 			if err != nil {
 				return nil, err
 			}
-			files = append(files, copied...)
-			continue
+			files = append(files, file)
 		}
-		file, err := renderProvider(p)
-		if err != nil {
-			return nil, err
-		}
-		files = append(files, file)
 	}
 	return files, nil
+}
+
+// renderProvidersForTests is a thin wrapper used by the existing test cases
+// that exercise the per-provider rendering primitives directly. New tests
+// should call renderProviders with module slices.
+func renderProvidersForTests(providers []config.ProviderConfig, sigilDir string) ([]renderer.OutputFile, error) {
+	return renderProviders([]config.ModuleConfig{{ID: "test", Providers: providers}}, sigilDir)
 }
 
 // copyCustomProviderFiles copies a custom provider's source + sidecars from
@@ -174,10 +195,9 @@ func providerMounts(p *config.ProviderConfig) []providerMountImport {
 			// Fallback: if no kebab match, take the first include we haven't
 			// already assigned. This keeps the schema permissive when authors
 			// have unusual file names.
-			for base, p := range candidates {
+			for _, p := range candidates {
 				if !pathAssigned(out, p) {
 					path = p
-					fileBase = base
 					break
 				}
 			}

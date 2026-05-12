@@ -41,8 +41,8 @@ export default function ForgeAssetDetail() {
       </Breadcrumb>
       <div className="flex flex-row gap-4 justify-between items-center">
         <div className="flex flex-row gap-3 items-center">
-          <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight text-foreground">{asset?.name}</h2>
-          <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{asset?.status}</Badge>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">{asset?.name}</h2>
+          <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">{String(asset?.status ?? "")}</Badge>
         </div>
         <div className="flex flex-row gap-2">
           <Button variant="ghost">
@@ -64,7 +64,7 @@ export default function ForgeAssetDetail() {
           <CardContent>
             <div className="flex flex-row gap-2 items-center">
               <Cloud className="h-5 w-5" />
-              <p className="text-base">{asset?.provider}</p>
+              <p className="text-base">{String(asset?.provider ?? "")}</p>
             </div>
           </CardContent>
         </Card>
@@ -73,7 +73,7 @@ export default function ForgeAssetDetail() {
             <CardTitle>Type</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-base">{asset?.type}</p>
+            <p className="text-base">{String(asset?.type ?? "")}</p>
           </CardContent>
         </Card>
         <Card>
@@ -81,30 +81,30 @@ export default function ForgeAssetDetail() {
             <CardTitle>Region</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-base">{asset?.region}</p>
+            <p className="text-base">{String(asset?.region ?? "")}</p>
           </CardContent>
         </Card>
       </div>
       <div className="flex flex-col md:flex-row">
         <div className="md:w-auto" style={{flexBasis: "60%"}}>
           <div className="flex flex-col gap-4 p-4">
-            <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">Details</h3>
+            <h3 className="text-lg font-semibold tracking-tight text-foreground">Details</h3>
             <div className="space-y-4">
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">IP Address</dt>
-                <dd className="text-sm mt-1">{asset?.ipAddress}</dd>
+                <dd className="text-sm mt-1">{String(asset?.ipAddress ?? "")}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Cost</dt>
-                <dd className="text-sm mt-1">{asset?.cost}</dd>
+                <dd className="text-sm mt-1">{String(asset?.cost ?? "")}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Created</dt>
-                <dd className="text-sm mt-1">{asset?.createdAt}</dd>
+                <dd className="text-sm mt-1">{String(asset?.createdAt ?? "")}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-muted-foreground">Last Seen</dt>
-                <dd className="text-sm mt-1">{asset?.lastSeenAt}</dd>
+                <dd className="text-sm mt-1">{String(asset?.lastSeenAt ?? "")}</dd>
               </div>
             </div>
           </div>
@@ -112,7 +112,7 @@ export default function ForgeAssetDetail() {
         <div className="h-px md:h-auto md:w-px bg-border" />
         <div className="flex-1">
           <div className="flex flex-col gap-4 p-4">
-            <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight text-foreground">Configuration</h3>
+            <h3 className="text-lg font-semibold tracking-tight text-foreground">Configuration</h3>
             <Collapsible>
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-semibold">Network Settings</h4>
@@ -121,7 +121,7 @@ export default function ForgeAssetDetail() {
                 </CollapsibleTrigger>
               </div>
               <CollapsibleContent>
-                <p className="text-base text-muted-foreground">VPC: vpc-0a1b2c3d4e5f | Subnet: subnet-abc123</p>
+                <p className="text-sm text-muted-foreground">VPC: vpc-0a1b2c3d4e5f | Subnet: subnet-abc123</p>
               </CollapsibleContent>
             </Collapsible>
             <Collapsible>
@@ -132,7 +132,7 @@ export default function ForgeAssetDetail() {
                 </CollapsibleTrigger>
               </div>
               <CollapsibleContent>
-                <p className="text-base text-muted-foreground">Last health check passed. Next check in 5 minutes.</p>
+                <p className="text-sm text-muted-foreground">Last health check passed. Next check in 5 minutes.</p>
               </CollapsibleContent>
             </Collapsible>
           </div>

@@ -1,0 +1,243 @@
+sigil: "1.0"
+kind: page
+id: clockwork-settings
+title: Settings
+overlay: page
+module: clockwork
+
+datasources:
+  - alias: Setting
+    capabilities: [get, set]
+
+layout:
+  id: root
+  type: rows
+  props:
+    gap: 6
+    padding: 6
+  children:
+    - id: settings-tabs
+      type: tabs
+      props:
+        defaultTab: general
+        variant: underline
+      children:
+        - id: tab-general
+          type: tab
+          props:
+            label: General
+            value: general
+          children:
+            - id: scheduler-card
+              type: stat-card
+              props:
+                label: Scheduler Status
+                value: "{{Setting.scheduler_status}}"
+                icon: clock
+                datasource: Setting
+
+            - id: general-form
+              type: form
+              props:
+                datasource: Setting
+                fields:
+                  - name: scheduler_interval
+                    label: Scheduler Interval
+                    type: text
+                    placeholder: e.g. 5m
+                  - name: max_retries
+                    label: Max Retries
+                    type: number
+                    default: 3
+                  - name: default_provider
+                    label: Default Provider
+                    type: select
+                    options:
+                      - label: Anthropic
+                        value: anthropic
+                      - label: OpenAI
+                        value: openai
+                      - label: Google
+                        value: google
+                  - name: default_model
+                    label: Default Model
+                    type: text
+                    placeholder: e.g. claude-sonnet-4
+                  - name: log_level
+                    label: Log Level
+                    type: select
+                    options:
+                      - label: Debug
+                        value: debug
+                      - label: Info
+                        value: info
+                      - label: Warn
+                        value: warn
+                      - label: Error
+                        value: error
+              actions:
+                submit:
+                  type: http
+                  url: /api/clockwork/settings
+                  method: POST
+
+        - id: tab-features
+          type: tab
+          props:
+            label: Features
+            value: features
+          children:
+            - id: features-list
+              type: rows
+              props:
+                gap: 4
+              children:
+                - id: toggle-projects
+                  type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - id: projects-label
+                      type: text
+                      props:
+                        text: Projects
+                    - id: projects-toggle
+                      type: switch
+                      props:
+                        label: Projects
+                        default: false
+
+                - id: toggle-sprints
+                  type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - id: sprints-label
+                      type: text
+                      props:
+                        text: Sprints
+                    - id: sprints-toggle
+                      type: switch
+                      props:
+                        label: Sprints
+                        default: false
+
+                - id: toggle-epics
+                  type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - id: epics-label
+                      type: text
+                      props:
+                        text: Epics
+                    - id: epics-toggle
+                      type: switch
+                      props:
+                        label: Epics
+                        default: false
+
+                - id: toggle-retrospectives
+                  type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - id: retros-label
+                      type: text
+                      props:
+                        text: Retrospectives
+                    - id: retros-toggle
+                      type: switch
+                      props:
+                        label: Retrospectives
+                        default: false
+
+                - id: toggle-metrics
+                  type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - id: metrics-label
+                      type: text
+                      props:
+                        text: Metrics
+                    - id: metrics-toggle
+                      type: switch
+                      props:
+                        label: Metrics
+                        default: false
+
+                - id: toggle-automation
+                  type: columns
+                  props:
+                    justify: between
+                    align: center
+                  children:
+                    - id: automation-label
+                      type: text
+                      props:
+                        text: Automation
+                    - id: automation-toggle
+                      type: switch
+                      props:
+                        label: Automation
+                        default: false
+
+        - id: tab-about
+          type: tab
+          props:
+            label: About
+            value: about
+          children:
+            - id: about-content
+              type: rows
+              props:
+                gap: 4
+              children:
+                - id: version-heading
+                  type: heading
+                  props:
+                    level: 3
+                    text: Clockwork
+                - id: version-text
+                  type: text
+                  props:
+                    text: "Version: {{Setting.version}}"
+                    datasource: Setting
+                - id: build-text
+                  type: text
+                  props:
+                    text: "Build: {{Setting.build}}"
+                    datasource: Setting
+                - id: links-section
+                  type: rows
+                  props:
+                    gap: 2
+                  children:
+                    - id: docs-link
+                      type: button
+                      props:
+                        label: Documentation
+                        variant: link
+                        icon: book-open
+                      actions:
+                        click:
+                          type: navigate
+                          url: https://docs.sigil.dev
+                    - id: changelog-link
+                      type: button
+                      props:
+                        label: Changelog
+                        variant: link
+                        icon: git-commit
+                    - id: report-link
+                      type: button
+                      props:
+                        label: Report Issue
+                        variant: link
+                        icon: bug

@@ -37,7 +37,7 @@ export default function ForgeOverview() {
     <>
     <div className="flex flex-col gap-6 p-6">
       <div className="flex flex-row gap-4 justify-between items-center">
-        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-foreground">Overview</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Overview</h1>
         <div className="flex flex-row gap-2">
           <Select>
             <SelectTrigger>
@@ -240,14 +240,14 @@ export default function ForgeOverview() {
           </CardHeader>
           <CardContent>
             <div className="divide-y">
-              {scheduledJob && scheduledJob.length > 0 ? scheduledJob.map((item, i) => (
+              {scheduledJob && scheduledJob.length > 0 ? scheduledJob.map((item: NonNullable<typeof scheduledJob>[number], i: number) => (
                 <div key={i} className="py-3">
                   <div className="flex flex-row gap-4 justify-between items-center">
                     <div className="flex flex-col gap-0">
-                      <p className="text-base">{item.name}</p>
-                      <p className="text-base text-muted-foreground">{item.lastRun}</p>
+                      <p className="text-base">{String(item.name ?? "")}</p>
+                      <p className="text-sm text-muted-foreground">{String(item.lastRun ?? "")}</p>
                     </div>
-                    <Badge variant="default">{item.status}</Badge>
+                    <Badge variant="default">{String(item.status ?? "")}</Badge>
                   </div>
                 </div>
               )) : <p className="text-sm text-muted-foreground py-3">No recent jobs</p>}

@@ -10,11 +10,20 @@ import (
 
 // renderRoutes emits routes.tsx — a SPA route table built from the page list.
 // Pages whose datasource refs include params get a sibling "/:id" route.
+// When more than one module is present, each module's pages mount under
+// "/<routeGroup>/..." to prevent collisions; single-module configs keep flat
+// paths for backward compat.
+//
+// Phase 3.5: providers live per-module. If any active module declares at
+// least one provider, routes are grouped per-module so each group can be
+// wrapped by that module's providers in App.tsx via `getModuleRoutes("id")`.
+// The legacy `getRoutes()` (flat list) is still emitted for back-compat
+// with configs that have no providers anywhere.
 //
 // SPA-mode only. App Router mode generates per-page directories under
 // `app/(group)/<route>/page.tsx` via the demo-generate Makefile target and
 // does not need a central route table.
-func renderRoutes(pages []*config.Page) ([]renderer.OutputFile, error) {
+func renderRoutes(pages []*config.Page, modules []*config.ModuleConfig) []renderer.OutputFile {
 	var buf bytes.Buffer
 
 	buf.WriteString("// routes.tsx\n")
@@ -32,13 +41,15 @@ func renderRoutes(pages []*config.Page) ([]renderer.OutputFile, error) {
 		buf.WriteString("\n")
 	}
 
+	// Legacy flat route list (used by App.tsx when no modules declare
+	// providers).
 	buf.WriteString("export function getRoutes() {\n")
 	buf.WriteString("  return (\n")
 	buf.WriteString("    <>\n")
 
 	for _, page := range pages {
 		importName := toPascalCase(page.ID) + "Page"
-		routePath := pageRoute(page.ID, page.Module)
+		routePath := pageRouteSPA(page.ID, page.Module, modules)
 
 		hasParams := false
 		for _, dsRef := range page.DataSources {
@@ -58,27 +69,154 @@ func renderRoutes(pages []*config.Page) ([]renderer.OutputFile, error) {
 
 	buf.WriteString("    </>\n")
 	buf.WriteString("  );\n")
-	buf.WriteString("}\n")
+	buf.WriteString("}\n\n")
+
+	// Per-module route helpers (phase 3.5). The App.tsx wraps each call in
+	// the owning module's providers, so cross-module renders only mount the
+	// providers their pages actually need.
+	for _, mod := range modules {
+		if mod == nil {
+			continue
+		}
+		modPages := pagesForModule(pages, mod.ID)
+		if len(modPages) == 0 {
+			continue
+		}
+		fmt.Fprintf(&buf, "export function getModuleRoutes_%s() {\n", toPascalCase(mod.ID))
+		buf.WriteString("  return (\n")
+		buf.WriteString("    <>\n")
+		for _, page := range modPages {
+			importName := toPascalCase(page.ID) + "Page"
+			routePath := pageRouteSPA(page.ID, page.Module, modules)
+			hasParams := false
+			for _, dsRef := range page.DataSources {
+				if len(dsRef.Params) > 0 {
+					hasParams = true
+					break
+				}
+			}
+			if hasParams {
+				fmt.Fprintf(&buf, "      <Route path=%q element={<%s />} />\n", routePath+"/:id", importName)
+			}
+			fmt.Fprintf(&buf, "      <Route path=%q element={<%s />} />\n", routePath, importName)
+		}
+		buf.WriteString("    </>\n")
+		buf.WriteString("  );\n")
+		buf.WriteString("}\n\n")
+	}
 
 	return []renderer.OutputFile{
 		{Path: "routes.tsx", Content: buf.Bytes()},
-	}, nil
+	}
+}
+
+// pagesForModule returns the subset of pages whose Module field matches modID.
+func pagesForModule(pages []*config.Page, modID string) []*config.Page {
+	var out []*config.Page
+	for _, p := range pages {
+		if p.Module == modID {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// dedupProvidersAcrossModules returns the union of providers declared across
+// every module, deduplicated by ID. Declaration order is preserved (first
+// module's declaration wins). Phase 3.5: used by SPA mode to build the
+// shared topbar UI + import set without double-counting providers that
+// appear in multiple modules (e.g. `lens` in both `se` and `clockwork`).
+func dedupProvidersAcrossModules(modules []*config.ModuleConfig) []*config.ProviderConfig {
+	seen := map[string]bool{}
+	var out []*config.ProviderConfig
+	for _, m := range modules {
+		if m == nil {
+			continue
+		}
+		for i := range m.Providers {
+			p := &m.Providers[i]
+			if seen[p.ID] {
+				continue
+			}
+			seen[p.ID] = true
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// allModulePagesFromCtx returns the page slice used to build per-module
+// route helpers. Prefers ctx.AllPages (multi-module) but falls back to
+// ctx.Pages so single-module SPA configs still emit per-module routes.
+func allModulePagesFromCtx(ctx *renderer.LayoutContext) []*config.Page {
+	if len(ctx.AllPages) > 0 {
+		return ctx.AllPages
+	}
+	return ctx.Pages
 }
 
 // renderLayoutSPA emits App.tsx for SPA mode. It mirrors the App Router
 // layout's nav/feature/provider extraction but wraps the shell in
 // <BrowserRouter>/<Routes> from react-router-dom rather than Next.js's
 // app-directory layout convention. It also emits routes.tsx alongside.
+//
+// SPA mode emits a single App.tsx for the entire app. The engine calls
+// RenderLayout once per module, but only the FIRST module produces files —
+// subsequent module calls return nil so the App.tsx isn't overwritten.
+// When AllModules is set (multi-module config), each module's nav items are
+// extracted from its own shell and concatenated, and routes are prefixed by
+// each module's RouteGroup so they don't collide.
 func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
-	shell := ctx.Shell
 	app := ctx.AppConfig
 	mod := ctx.Module
+
+	// Only the first module in AllModules generates the App.tsx. Subsequent
+	// per-module calls return no files (the unified App.tsx already covers
+	// them via routes.tsx).
+	if len(ctx.AllModules) > 0 && ctx.AllModules[0] != nil && ctx.AllModules[0].ID != mod.ID {
+		return nil, nil
+	}
+
 	features := app.Features
 	if features == nil {
 		features = &config.AppFeatures{}
 	}
 
-	groups := extractNavGroups(&shell.Layout, mod.ID)
+	// Build nav groups by walking every module's shell so the unified
+	// App.tsx has nav for the whole app. Each module's items use its own
+	// shell + a SPA-aware resolver (so cross-module links carry the right
+	// URL prefix). Single-module configs fall back to the original
+	// single-shell extraction.
+	modules := ctx.AllModules
+	if len(modules) == 0 {
+		modules = []*config.ModuleConfig{mod}
+	}
+
+	shellByID := ctx.AllShells
+	if shellByID == nil {
+		shellByID = map[string]*config.Page{mod.ID: ctx.Shell}
+	}
+
+	var groups []navGroup
+	for _, m := range modules {
+		if m == nil {
+			continue
+		}
+		shellPage := shellByID[m.ID]
+		if shellPage == nil {
+			// Skip modules whose shell didn't load (engine guarantees
+			// AllShells is populated when AllModules is set, but be defensive).
+			continue
+		}
+		resolver := spaRouteResolver(m.ID, modules)
+		moduleGroups := extractNavGroups(&shellPage.Layout, resolver)
+		groups = append(groups, moduleGroups...)
+	}
+
+	// App-level actions resolve against the SPA resolver anchored at the
+	// primary module — for cross-module action targets, ownership is looked
+	// up dynamically inside the resolver.
+	actionResolver := spaRouteResolver(mod.ID, modules)
 
 	var allNavItems []navItem
 	for _, g := range groups {
@@ -92,7 +230,16 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 			iconSet[item.Icon] = true
 		}
 	}
-	brandIcon, brandTitle := extractBrand(&shell.Layout)
+	// Brand comes from the primary (first) module's shell — multi-module
+	// configs use the leading module's brand as the app brand.
+	primaryShell := shellByID[mod.ID]
+	if primaryShell == nil && len(modules) > 0 {
+		primaryShell = shellByID[modules[0].ID]
+	}
+	if primaryShell == nil {
+		primaryShell = ctx.Shell
+	}
+	brandIcon, brandTitle := extractBrand(&primaryShell.Layout)
 	if brandIcon != "" {
 		iconSet[brandIcon] = true
 	}
@@ -156,8 +303,14 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 	if len(app.Actions) > 0 {
 		buf.WriteString("import {\n  DropdownMenu,\n  DropdownMenuContent,\n  DropdownMenuItem,\n  DropdownMenuTrigger,\n} from \"@/components/ui/dropdown-menu\";\n")
 	}
+	// Phase 3.5: providers live per-module. Collect a deduplicated cross-
+	// module union so the topbar / import set covers everything the app
+	// needs in one place. Wrap order remains per-module (handled below in
+	// the Route nesting), but topbar UI is shared.
+	uniqueProviders := dedupProvidersAcrossModules(modules)
+
 	hasTopbarSelect := false
-	for _, p := range app.Providers {
+	for _, p := range uniqueProviders {
 		if p.Position == "topbar" && p.UIType == "select" {
 			hasTopbarSelect = true
 			break
@@ -171,12 +324,26 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 		buf.WriteString("import {\n  Sheet,\n  SheetContent,\n  SheetHeader,\n  SheetTitle,\n} from \"@/components/ui/sheet\";\n")
 	}
 	buf.WriteString("import { Toaster } from \"@/components/ui/sonner\";\n")
-	buf.WriteString("import { getRoutes } from \"@/routes\";\n")
+	// Per-module route helpers: each module exports getModuleRoutes_<Pascal>;
+	// imported only when any active module has providers (so we can wrap
+	// each group). Plain getRoutes() is the back-compat path.
+	anyProviders := len(uniqueProviders) > 0
+	if anyProviders {
+		buf.WriteString("import {")
+		for _, m := range modules {
+			if m == nil || len(pagesForModule(allModulePagesFromCtx(ctx), m.ID)) == 0 {
+				continue
+			}
+			fmt.Fprintf(&buf, " getModuleRoutes_%s,", toPascalCase(m.ID))
+		}
+		buf.WriteString(" } from \"@/routes\";\n")
+	} else {
+		buf.WriteString("import { getRoutes } from \"@/routes\";\n")
+	}
 
-	// Provider imports (built-in: synthesized context module; custom: copied
-	// source file under lib/, plus any mount sidecars).
-	for i := range app.Providers {
-		p := &app.Providers[i]
+	// Provider imports — union across all modules. Deduped by provider ID so
+	// `lens` declared in both `se` and `clockwork` modules imports once.
+	for _, p := range uniqueProviders {
 		wrapName := providerWrapName(p)
 		importPath := providerImportPath(p)
 		hookName, hookPath := providerHookImport(p)
@@ -193,6 +360,38 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 		}
 	}
 	buf.WriteString("\n")
+
+	// Per-module wrapper components — one per module that declares providers.
+	// Wrap order: outside-in by declared order (first provider = outermost).
+	// Mounts render as siblings of <Outlet/> inside the provider scope.
+	if anyProviders {
+		buf.WriteString("// ── Per-module provider wrappers ────────────────────────\n\n")
+		buf.WriteString("import { Outlet } from \"react-router-dom\";\n\n")
+		for _, m := range modules {
+			if m == nil || len(m.Providers) == 0 {
+				continue
+			}
+			wrapperName := pascalCase(m.ID) + "ModuleProviders"
+			fmt.Fprintf(&buf, "function %s() {\n  return (\n", wrapperName)
+			indent := "    "
+			for i := range m.Providers {
+				p := &m.Providers[i]
+				wrapName := providerWrapName(p)
+				fmt.Fprintf(&buf, "%s<%s>\n", indent, wrapName)
+				indent += "  "
+				for _, mt := range providerMounts(p) {
+					fmt.Fprintf(&buf, "%s<%s />\n", indent, mt.Name)
+				}
+			}
+			fmt.Fprintf(&buf, "%s<Outlet />\n", indent)
+			for i := len(m.Providers) - 1; i >= 0; i-- {
+				indent = indent[:len(indent)-2]
+				wrapName := providerWrapName(&m.Providers[i])
+				fmt.Fprintf(&buf, "%s</%s>\n", indent, wrapName)
+			}
+			buf.WriteString("  );\n}\n\n")
+		}
+	}
 
 	// ── navItems ──
 	buf.WriteString("// ── Navigation ────────────────────────────────────────────\n\n")
@@ -292,7 +491,10 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 	if features.CommandPalette {
 		buf.WriteString("  const [cmdOpen, setCmdOpen] = useState(false);\n")
 	}
-	for _, p := range app.Providers {
+	// Topbar provider hooks — union across all modules so the shared shell
+	// can render every module's topbar contribution. Wrap scoping happens at
+	// the Route level.
+	for _, p := range uniqueProviders {
 		if p.Position == "topbar" {
 			hookName := "use" + pascalCase(p.ID) + "Context"
 			varName := toCamelCase(p.ID) + "Ctx"
@@ -365,7 +567,7 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 	buf.WriteString("            </div>\n")
 	buf.WriteString("            <div className=\"flex items-center gap-2\">\n")
 
-	for _, p := range app.Providers {
+	for _, p := range uniqueProviders {
 		if p.Position == "topbar" && p.UIType == "select" {
 			buf.WriteString("              <div className=\"flex items-center gap-2\">\n")
 			fmt.Fprintf(&buf, "                <span className=\"text-[10px] uppercase tracking-wider text-muted-foreground hidden lg:block\">%s</span>\n", pascalCase(p.ID))
@@ -410,7 +612,7 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 		buf.WriteString("                </DropdownMenuTrigger>\n")
 		buf.WriteString("                <DropdownMenuContent align=\"end\">\n")
 		for _, action := range app.Actions {
-			href := actionHref(action, mod.ID)
+			href := actionHref(action, actionResolver)
 			iconComp := lucideComponentName(action.Icon)
 			fmt.Fprintf(&buf, "                  <DropdownMenuItem onSelect={() => navigate(%q)}>\n", href)
 			fmt.Fprintf(&buf, "                    <%s className=\"mr-2 h-4 w-4\" />\n", iconComp)
@@ -459,7 +661,7 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 		if len(app.Actions) > 0 {
 			buf.WriteString("            <CommandGroup heading=\"Quick Actions\">\n")
 			for _, action := range app.Actions {
-				href := actionHref(action, mod.ID)
+				href := actionHref(action, actionResolver)
 				iconComp := lucideComponentName(action.Icon)
 				fmt.Fprintf(&buf, "              <CommandItem onSelect={() => { navigate(%q); setCmdOpen(false); }}>\n", href)
 				fmt.Fprintf(&buf, "                <%s className=\"mr-2 h-4 w-4\" />\n", iconComp)
@@ -478,49 +680,59 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 	buf.WriteString("  );\n}\n\n")
 
 	// ── App export ──
-	// Providers wrap outside-in in declared order (first = outermost). For
-	// custom providers with mounts, each mount renders as a sibling of the
-	// next nested provider / BrowserRouter inside the same provider scope.
+	// Phase 3.5: providers live per-module and wrap each module's Route
+	// group via a generated <XxxModuleProviders> wrapper that renders
+	// <Outlet/>. The chrome (BrowserRouter, AppShell) stays at the root.
+	//
+	// When no module declares providers the structure stays back-compat
+	// (single Routes block calling getRoutes()).
 	buf.WriteString("export default function App() {\n")
 	buf.WriteString("  return (\n")
 	indent := "    "
-	if len(app.Providers) > 0 {
-		for i := range app.Providers {
-			p := &app.Providers[i]
-			wrapName := providerWrapName(p)
-			fmt.Fprintf(&buf, "%s<%s>\n", indent, wrapName)
-			indent += "  "
-			for _, m := range providerMounts(p) {
-				fmt.Fprintf(&buf, "%s<%s />\n", indent, m.Name)
-			}
-		}
-	}
 	fmt.Fprintf(&buf, "%s<BrowserRouter>\n", indent)
 	fmt.Fprintf(&buf, "%s  <AppShell>\n", indent)
 	fmt.Fprintf(&buf, "%s    <Routes>\n", indent)
 	if len(allNavItems) > 0 {
 		fmt.Fprintf(&buf, "%s      <Route path=\"/\" element={<Navigate to=%q replace />} />\n", indent, allNavItems[0].Href)
 	}
-	fmt.Fprintf(&buf, "%s      {getRoutes()}\n", indent)
+	if anyProviders {
+		for _, m := range modules {
+			if m == nil {
+				continue
+			}
+			modPages := pagesForModule(allModulePagesFromCtx(ctx), m.ID)
+			if len(modPages) == 0 {
+				continue
+			}
+			if len(m.Providers) > 0 {
+				wrapperName := pascalCase(m.ID) + "ModuleProviders"
+				fmt.Fprintf(&buf, "%s      <Route element={<%s />}>\n", indent, wrapperName)
+				fmt.Fprintf(&buf, "%s        {getModuleRoutes_%s()}\n", indent, toPascalCase(m.ID))
+				fmt.Fprintf(&buf, "%s      </Route>\n", indent)
+			} else {
+				// Module without providers: render its routes flat (no wrap).
+				fmt.Fprintf(&buf, "%s      {getModuleRoutes_%s()}\n", indent, toPascalCase(m.ID))
+			}
+		}
+	} else {
+		fmt.Fprintf(&buf, "%s      {getRoutes()}\n", indent)
+	}
 	fmt.Fprintf(&buf, "%s    </Routes>\n", indent)
 	fmt.Fprintf(&buf, "%s  </AppShell>\n", indent)
 	fmt.Fprintf(&buf, "%s</BrowserRouter>\n", indent)
-	if len(app.Providers) > 0 {
-		for i := len(app.Providers) - 1; i >= 0; i-- {
-			indent = indent[:len(indent)-2]
-			wrapName := providerWrapName(&app.Providers[i])
-			fmt.Fprintf(&buf, "%s</%s>\n", indent, wrapName)
-		}
-	}
 	buf.WriteString("  );\n}\n")
+
+	// Routes table covers every page across every module; single-module
+	// configs fall back to ctx.Pages (the per-module slice the engine
+	// already filtered).
+	routesPages := ctx.AllPages
+	if len(routesPages) == 0 {
+		routesPages = ctx.Pages
+	}
 
 	files := []renderer.OutputFile{
 		{Path: "App.tsx", Content: buf.Bytes()},
 	}
-	routesFiles, err := renderRoutes(ctx.Pages)
-	if err != nil {
-		return nil, err
-	}
-	files = append(files, routesFiles...)
+	files = append(files, renderRoutes(routesPages, modules)...)
 	return files, nil
 }
