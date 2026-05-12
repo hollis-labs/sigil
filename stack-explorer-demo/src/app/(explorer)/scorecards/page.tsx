@@ -38,9 +38,9 @@ export default function SeScorecards() {
         </div>
         <div className="flex flex-row gap-2">
           <CsvExportButton
-            filename="scorecards.csv"
             data={scorecard}
             columns={[{"header":"Repo","key":"repo_name"},{"header":"Overall Score","key":"overall"},{"header":"Lens","key":"lens_name"},{"header":"Scored At","key":"scored_at"}]}
+            filename="scorecards.csv"
           />
         </div>
       </div>

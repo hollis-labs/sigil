@@ -59,7 +59,7 @@ export default function ForgeWorkspaces() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {(workspace ?? []).map((item: NonNullable<typeof workspace>[number]) => (
-          <div key={String(item.slug ?? "")}>
+          <div key={String(item.name ?? "")}>
             <Card>
               <CardHeader>
                 <CardTitle>{String(item.name ?? "")}</CardTitle>

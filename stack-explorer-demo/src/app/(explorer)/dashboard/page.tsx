@@ -142,7 +142,7 @@ export default function SeDashboard() {
                   header: "Lens",
                   cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                     const v = String(row.getValue("lens_name") ?? "");
-                    const variants: Record<string, string> = { "Security": "danger", "Community": "success", "Maintainability": "info", "Innovation": "success", "Adoption": "warning", "Leadership": "warning", "Overall": "default", "Engineering": "info", "Product": "default" };
+                    const variants: Record<string, string> = { "Product": "default", "Leadership": "warning", "Security": "danger", "Community": "success", "Maintainability": "info", "Engineering": "info", "Overall": "default", "Innovation": "success", "Adoption": "warning" };
                     const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                     return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                       variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -172,7 +172,7 @@ export default function SeDashboard() {
                   header: "Category",
                   cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                     const v = String(row.getValue("category") ?? "");
-                    const variants: Record<string, string> = { "risk": "warning", "gap": "danger", "strength": "success", "opportunity": "info" };
+                    const variants: Record<string, string> = { "gap": "danger", "strength": "success", "opportunity": "info", "risk": "warning" };
                     const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                     return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                       variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -187,7 +187,7 @@ export default function SeDashboard() {
                   header: "Severity",
                   cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                     const v = String(row.getValue("severity") ?? "");
-                    const variants: Record<string, string> = { "low": "info", "critical": "danger", "high": "warning", "medium": "default" };
+                    const variants: Record<string, string> = { "critical": "danger", "high": "warning", "medium": "default", "low": "info" };
                     const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                     return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                       variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :

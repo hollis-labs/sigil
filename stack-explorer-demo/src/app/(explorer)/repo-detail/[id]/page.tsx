@@ -69,10 +69,10 @@ export default function SeRepoDetail() {
             Edit
           </Button>
           <RepoScoringDialog
+            lenses={lens}
             repoId={params.id as string}
             repoName={repo?.name}
             dimensions={dimension}
-            lenses={lens}
           />
           <Button variant="destructive" onClick={() => { if (window.confirm("This will remove the repo and all associated scores, findings, and patterns. This action cannot be undone.")) { /* action */ } }}>
             <Trash2 className="mr-2 h-4 w-4" />
@@ -189,7 +189,7 @@ export default function SeRepoDetail() {
                 header: "Type",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("type") ?? "");
-                  const variants: Record<string, string> = { "anti-pattern": "danger", "pattern": "info" };
+                  const variants: Record<string, string> = { "pattern": "info", "anti-pattern": "danger" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -214,7 +214,7 @@ export default function SeRepoDetail() {
                 header: "Category",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("category") ?? "");
-                  const variants: Record<string, string> = { "risk": "warning", "gap": "danger", "strength": "success", "opportunity": "info" };
+                  const variants: Record<string, string> = { "gap": "danger", "strength": "success", "opportunity": "info", "risk": "warning" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :

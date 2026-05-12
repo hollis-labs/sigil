@@ -153,7 +153,7 @@ export default function SeReports() {
                 header: "Lens",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("lens_name") ?? "");
-                  const variants: Record<string, string> = { "Leadership": "warning", "Engineering": "info", "Product": "default" };
+                  const variants: Record<string, string> = { "Engineering": "info", "Product": "default", "Leadership": "warning" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :

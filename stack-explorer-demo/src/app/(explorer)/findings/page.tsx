@@ -243,7 +243,7 @@ export default function SeFindings() {
                 header: "Severity",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("severity") ?? "");
-                  const variants: Record<string, string> = { "low": "info", "critical": "danger", "high": "warning", "medium": "default" };
+                  const variants: Record<string, string> = { "critical": "danger", "high": "warning", "medium": "default", "low": "info" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -258,7 +258,7 @@ export default function SeFindings() {
                 header: "Status",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("status") ?? "");
-                  const variants: Record<string, string> = { "open": "danger", "acknowledged": "warning", "resolved": "success" };
+                  const variants: Record<string, string> = { "acknowledged": "warning", "resolved": "success", "open": "danger" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :

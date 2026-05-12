@@ -19,7 +19,8 @@ Sigil generates framework-specific source code from YAML page definitions. This 
 - **Output:** `.tsx` pages, component files, SWR hooks, TypeScript types, `globals.css`, `tailwind.config.ts`
 - **Stack:** React, TypeScript, shadcn/ui, Tailwind CSS, Lucide icons, SWR for data fetching
 - **Location:** `internal/renderer/reactshadcn/`
-- **Files:** `renderer.go` (interface impl), `pages.go` (page → .tsx), `shared.go` (shared components), `theme.go` (theme → CSS + Tailwind config)
+- **Files:** `renderer.go` (interface impl), `pages.go` (page → .tsx), `shared.go` (shared components), `theme.go` (theme → CSS + Tailwind config), `layout.go` + `routing.go` (App Router vs SPA shells)
+- **Target modes:** Supports both App Router (Next.js) and SPA (Vite + react-router-dom 7) via `target_mode` in `app.yaml` or the `--target-mode` CLI flag. Page tree, props serialization, custom-component wiring, and theme tokens are shared across modes; only the layout/routing/import-path branches differ.
 
 ### Go/Templ (`go-templ`)
 - **Output:** `.templ` pages, shared components, Go handler stubs, `theme.css`, `tailwind.sigil.cjs`

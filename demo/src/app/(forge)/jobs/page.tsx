@@ -56,7 +56,7 @@ export default function ForgeJobs() {
                 header: "Status",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("status") ?? "");
-                  const variants: Record<string, string> = { "paused": "warning", "failed": "danger", "disabled": "default", "active": "success", "running": "info" };
+                  const variants: Record<string, string> = { "active": "success", "running": "info", "paused": "warning", "failed": "danger", "disabled": "default" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :

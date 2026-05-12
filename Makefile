@@ -99,8 +99,7 @@ se-demo-dev: se-demo-generate
 se-demo: se-demo-dev
 
 # ── Clockwork Demo ────────────────────────────────────────
-# Sprint 10 phase 3: regenerated through `react-shadcn` with `--target-mode spa`
-# (Vite SPA output). The fork-mode (`react-clockwork`) is deleted in phase 4.
+# Generated through `react-shadcn` with `--target-mode spa` (Vite SPA output).
 # Uses tmp + rsync (matches se-demo-generate) so hand-written mock hooks under
 # demo-clockwork/src/hooks/ are protected by --ignore-existing.
 cw-demo-generate: build

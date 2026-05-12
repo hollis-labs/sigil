@@ -206,7 +206,7 @@ export default function SeRepos() {
                 header: "Category",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("category") ?? "");
-                  const variants: Record<string, string> = { "tool": "success", "platform": "warning", "sdk": "info", "runtime": "default", "infra": "warning", "framework": "info", "library": "default" };
+                  const variants: Record<string, string> = { "library": "default", "tool": "success", "platform": "warning", "sdk": "info", "runtime": "default", "infra": "warning", "framework": "info" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
@@ -221,7 +221,7 @@ export default function SeRepos() {
                 header: "Stack",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("stack") ?? "");
-                  const variants: Record<string, string> = { "Go": "success", "Rust": "warning", "Python": "default", "Java": "danger", "TypeScript": "info" };
+                  const variants: Record<string, string> = { "TypeScript": "info", "Go": "success", "Rust": "warning", "Python": "default", "Java": "danger" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :

@@ -207,7 +207,7 @@ examples/
 
 - Sigil is a **code generator**, not a runtime framework. It produces source files that developers integrate into their own projects.
 - The project dogfoods itself — `.sigil/pages/` contains page definitions for Sigil's own UI (editor, component browser, etc.).
-- Two render targets: `go-templ` (Go/Templ + HTMX) and `react-shadcn` (React/TypeScript + shadcn/ui + Tailwind).
+- Two render targets: `go-templ` (Go/Templ + HTMX) and `react-shadcn` (React/TypeScript + shadcn/ui + Tailwind). The `react-shadcn` renderer supports both App Router (Next.js) and SPA (Vite + react-router-dom) output via `target_mode` in `app.yaml` (or `--target-mode` flag).
 - Preview mode generates standalone HTML with mock data — no build step required.
 - Pre-commit hooks via lefthook: `gofmt`, `go vet`.
 - Version injected at build time via ldflags from `git describe --tags`.

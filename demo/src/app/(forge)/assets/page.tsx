@@ -124,7 +124,7 @@ export default function ForgeAssets() {
                 header: "Status",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("status") ?? "");
-                  const variants: Record<string, string> = { "degraded": "warning", "down": "danger", "provisioning": "info", "unknown": "default", "healthy": "success" };
+                  const variants: Record<string, string> = { "healthy": "success", "degraded": "warning", "down": "danger", "provisioning": "info", "unknown": "default" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :

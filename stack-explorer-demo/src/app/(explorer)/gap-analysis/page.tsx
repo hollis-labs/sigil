@@ -138,9 +138,9 @@ export default function SeGapAnalysis() {
         </div>
       </div>
       <GapAdvantageCharts
+        scorecards={scorecard}
         dimensionScores={dimensionScore}
         repos={repo}
-        scorecards={scorecard}
       />
       <Card>
         <CardHeader>
@@ -173,7 +173,7 @@ export default function SeGapAnalysis() {
                 header: "Category",
                 cell: ({ row }: { row: { getValue: (k: string) => unknown } }) => {
                   const v = String(row.getValue("category") ?? "");
-                  const variants: Record<string, string> = { "strength": "success", "opportunity": "info", "gap": "danger" };
+                  const variants: Record<string, string> = { "opportunity": "info", "gap": "danger", "strength": "success" };
                   const variant = variants[v] ?? variants[v.toLowerCase()] ?? "default";
                   return <Badge variant={variant === "danger" ? "destructive" : variant === "success" || variant === "warning" || variant === "info" ? "outline" : "secondary"} className={
                     variant === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :

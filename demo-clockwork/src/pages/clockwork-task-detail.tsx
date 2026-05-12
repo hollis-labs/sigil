@@ -133,8 +133,8 @@ export default function ClockworkTaskDetail() {
         </TabsContent>
         <TabsContent value="logs">
           <ActivityPanel
-            taskField="task_id"
             datasource="Run"
+            taskField="task_id"
           />
         </TabsContent>
         <TabsContent value="debug">

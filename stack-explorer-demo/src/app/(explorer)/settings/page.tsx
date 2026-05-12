@@ -120,16 +120,16 @@ export default function SeSettings() {
               <CardContent>
                 <div className="flex flex-row gap-3">
                   <FileDownloadButton
-                    label="Export Repos YAML"
-                    icon="download"
                     url="/api/repos/export"
                     filename="repos-export.yaml"
+                    label="Export Repos YAML"
+                    icon="download"
                   />
                   <FileDownloadButton
+                    filename="stack-explorer-backup.db"
                     label="Backup Database"
                     icon="database"
                     url="/api/db/backup"
-                    filename="stack-explorer-backup.db"
                   />
                 </div>
               </CardContent>

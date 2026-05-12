@@ -187,12 +187,23 @@ can pick up the work without re-deriving the strategy.
 - Add `auth` block to `app.yaml` schema once first SaaS edition starts
 - Decide where custom providers live: `.sigil/components/` shared with components,
   or new `.sigil/providers/` directory (phase 2 task will decide)
-- **Multi-module SPA layout** (surfaced 2026-05-12, phase 1): SPA mode currently
-  emits `App.tsx` and `routes.tsx` once per module to the same root paths — the
-  second module wins. Resolve in phase 3 when Clockwork demo migration forces
-  the choice: single `App.tsx` rooting all modules at distinct paths vs one
-  `App.tsx` per module written under `<module>/`. The decision affects how
-  custom providers wrap module scopes (intersects with phase 2).
+- **Multi-module SPA layout** (surfaced 2026-05-12, phase 1; resolved 2026-05-12,
+  phase 3): single `App.tsx` rooting all modules at distinct path prefixes
+  derived from `route_group` (e.g. `"(clockwork)" → "/clockwork/*"`). Routes
+  emitted per-module so each can be wrapped by its own providers.
+- **Clockwork demo visual polish** (surfaced 2026-05-12, post-phase-3 user
+  smoke): demo-clockwork builds and routes cleanly, but the visual style only
+  approximates the original Clockwork app — "right shape, doesn't look like
+  Clockwork." Two contributing factors:
+  (a) `clockwork-dark.yaml` theme tokens diverge from the original Clockwork
+  palette/radius/shadow set; needs a token-by-token pass against a reference
+  screenshot.
+  (b) The 10 custom components migrated in phase 3.5 (RunCard, FilterBar,
+  ScopeManager, ActivityPanel, SummaryCards, CheckpointCard, CommentList,
+  ArtifactCard, KanbanBoard, StatusBadge) are demo-grade permissive placeholders.
+  Original Clockwork-era counterparts had richer styling/behavior. A polish
+  sprint (post-phase-6) should reimplement them with production-grade types
+  and styling — coordinate with renderer prop emission so contracts don't drift.
 
 ## Known limitations
 
