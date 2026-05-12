@@ -173,12 +173,24 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 	buf.WriteString("import { Toaster } from \"@/components/ui/sonner\";\n")
 	buf.WriteString("import { getRoutes } from \"@/routes\";\n")
 
-	// Provider imports.
-	for _, p := range app.Providers {
-		providerName := pascalCase(p.ID) + "Provider"
-		hookName := "use" + pascalCase(p.ID) + "Context"
-		fileName := toKebabCase(p.ID) + "-context"
-		fmt.Fprintf(&buf, "import { %s, %s } from \"@/lib/%s\";\n", providerName, hookName, fileName)
+	// Provider imports (built-in: synthesized context module; custom: copied
+	// source file under lib/, plus any mount sidecars).
+	for i := range app.Providers {
+		p := &app.Providers[i]
+		wrapName := providerWrapName(p)
+		importPath := providerImportPath(p)
+		hookName, hookPath := providerHookImport(p)
+		if hookName != "" && hookPath == importPath {
+			fmt.Fprintf(&buf, "import { %s, %s } from %q;\n", wrapName, hookName, importPath)
+		} else {
+			fmt.Fprintf(&buf, "import { %s } from %q;\n", wrapName, importPath)
+			if hookName != "" {
+				fmt.Fprintf(&buf, "import { %s } from %q;\n", hookName, hookPath)
+			}
+		}
+		for _, m := range providerMounts(p) {
+			fmt.Fprintf(&buf, "import { %s } from %q;\n", m.Name, m.Path)
+		}
 	}
 	buf.WriteString("\n")
 
@@ -466,14 +478,21 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 	buf.WriteString("  );\n}\n\n")
 
 	// ── App export ──
+	// Providers wrap outside-in in declared order (first = outermost). For
+	// custom providers with mounts, each mount renders as a sibling of the
+	// next nested provider / BrowserRouter inside the same provider scope.
 	buf.WriteString("export default function App() {\n")
 	buf.WriteString("  return (\n")
 	indent := "    "
 	if len(app.Providers) > 0 {
-		for _, p := range app.Providers {
-			providerName := pascalCase(p.ID) + "Provider"
-			fmt.Fprintf(&buf, "%s<%s>\n", indent, providerName)
+		for i := range app.Providers {
+			p := &app.Providers[i]
+			wrapName := providerWrapName(p)
+			fmt.Fprintf(&buf, "%s<%s>\n", indent, wrapName)
 			indent += "  "
+			for _, m := range providerMounts(p) {
+				fmt.Fprintf(&buf, "%s<%s />\n", indent, m.Name)
+			}
 		}
 	}
 	fmt.Fprintf(&buf, "%s<BrowserRouter>\n", indent)
@@ -489,8 +508,8 @@ func renderLayoutSPA(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error)
 	if len(app.Providers) > 0 {
 		for i := len(app.Providers) - 1; i >= 0; i-- {
 			indent = indent[:len(indent)-2]
-			providerName := pascalCase(app.Providers[i].ID) + "Provider"
-			fmt.Fprintf(&buf, "%s</%s>\n", indent, providerName)
+			wrapName := providerWrapName(&app.Providers[i])
+			fmt.Fprintf(&buf, "%s</%s>\n", indent, wrapName)
 		}
 	}
 	buf.WriteString("  );\n}\n")

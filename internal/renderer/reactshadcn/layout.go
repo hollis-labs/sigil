@@ -227,32 +227,50 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 	layoutName := pascalCase(mod.ID) + "Layout"
 	shellName := pascalCase(mod.ID) + "Shell"
 
-	// Import providers
-	for _, p := range app.Providers {
-		providerName := pascalCase(p.ID) + "Provider"
-		hookName := "use" + pascalCase(p.ID) + "Context"
-		fileName := toKebabCase(p.ID) + "-context"
-		fmt.Fprintf(&buf, "import { %s, %s } from \"@/lib/%s\";\n", providerName, hookName, fileName)
+	// Import providers and any custom-provider mounts.
+	for i := range app.Providers {
+		p := &app.Providers[i]
+		wrapName := providerWrapName(p)
+		importPath := providerImportPath(p)
+		hookName, hookPath := providerHookImport(p)
+		if hookName != "" && hookPath == importPath {
+			fmt.Fprintf(&buf, "import { %s, %s } from %q;\n", wrapName, hookName, importPath)
+		} else {
+			fmt.Fprintf(&buf, "import { %s } from %q;\n", wrapName, importPath)
+			if hookName != "" {
+				fmt.Fprintf(&buf, "import { %s } from %q;\n", hookName, hookPath)
+			}
+		}
+		for _, m := range providerMounts(p) {
+			fmt.Fprintf(&buf, "import { %s } from %q;\n", m.Name, m.Path)
+		}
 	}
 	if len(app.Providers) > 0 {
 		buf.WriteString("\n")
 	}
 
 	fmt.Fprintf(&buf, "export default function %s({ children }: { children: React.ReactNode }) {\n", layoutName)
-	// Wrap children in providers
+	// Wrap children in providers (outside-in, in declared order). Custom
+	// providers with mounts render the mount components as siblings of
+	// {children} inside the provider scope.
 	if len(app.Providers) > 0 {
 		buf.WriteString("  return (\n")
 		indent := "    "
-		for _, p := range app.Providers {
-			providerName := pascalCase(p.ID) + "Provider"
-			fmt.Fprintf(&buf, "%s<%s>\n", indent, providerName)
+		for i := range app.Providers {
+			p := &app.Providers[i]
+			wrapName := providerWrapName(p)
+			fmt.Fprintf(&buf, "%s<%s>\n", indent, wrapName)
 			indent += "  "
+			// Mounts render before children inside this provider scope.
+			for _, m := range providerMounts(p) {
+				fmt.Fprintf(&buf, "%s<%s />\n", indent, m.Name)
+			}
 		}
 		fmt.Fprintf(&buf, "%s<%s>{children}</%s>\n", indent, shellName, shellName)
 		for i := len(app.Providers) - 1; i >= 0; i-- {
 			indent = indent[:len(indent)-2]
-			providerName := pascalCase(app.Providers[i].ID) + "Provider"
-			fmt.Fprintf(&buf, "%s</%s>\n", indent, providerName)
+			wrapName := providerWrapName(&app.Providers[i])
+			fmt.Fprintf(&buf, "%s</%s>\n", indent, wrapName)
 		}
 		buf.WriteString("  );\n}\n\n")
 	} else {

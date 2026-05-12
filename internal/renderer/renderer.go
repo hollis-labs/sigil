@@ -35,7 +35,10 @@ type Renderer interface {
 	RenderAPIClient(app *config.AppConfig) ([]OutputFile, error)
 
 	// RenderProviders generates React Context providers from app config.
-	RenderProviders(providers []config.ProviderConfig) ([]OutputFile, error)
+	// Receives the full *AppConfig (so renderers can branch on target mode if
+	// needed) and the path to the .sigil/ directory (so custom providers can
+	// have their source files copied into the output).
+	RenderProviders(app *config.AppConfig, sigilDir string) ([]OutputFile, error)
 }
 
 // RenderContext provides everything a renderer needs to generate code for a page.

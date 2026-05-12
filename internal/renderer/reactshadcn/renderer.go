@@ -56,7 +56,13 @@ func (r *ReactShadcnRenderer) RenderAPIClient(app *config.AppConfig) ([]renderer
 	return renderAPIClient(app.API, app.EffectiveTargetMode())
 }
 
-// RenderProviders generates React Context provider files.
-func (r *ReactShadcnRenderer) RenderProviders(providers []config.ProviderConfig) ([]renderer.OutputFile, error) {
-	return renderProviders(providers)
+// RenderProviders generates React Context provider files. Built-in
+// (datasource-driven) providers are synthesized; custom providers (those
+// declaring source: { component: ... }) have their .tsx files copied from
+// .sigil/ into the output's lib/ directory.
+func (r *ReactShadcnRenderer) RenderProviders(app *config.AppConfig, sigilDir string) ([]renderer.OutputFile, error) {
+	if app == nil {
+		return nil, nil
+	}
+	return renderProviders(app.Providers, sigilDir)
 }

@@ -282,6 +282,6 @@ func (m *mockRenderer) RenderLayout(_ *LayoutContext) ([]OutputFile, error) {
 func (m *mockRenderer) RenderAPIClient(_ *config.AppConfig) ([]OutputFile, error) {
 	return nil, nil
 }
-func (m *mockRenderer) RenderProviders(_ []config.ProviderConfig) ([]OutputFile, error) {
+func (m *mockRenderer) RenderProviders(_ *config.AppConfig, _ string) ([]OutputFile, error) {
 	return nil, nil
 }

@@ -23,6 +23,23 @@ modules:
       - se-findings
       - se-dimensions
       - se-settings
+  - id: clockwork
+    shell: clockwork-shell
+    route_group: "(clockwork)"
+    pages:
+      - clockwork-board
+      - clockwork-task-detail
+      - clockwork-collections
+      - clockwork-dashboard
+      - clockwork-templates
+      - clockwork-checkpoints
+      - clockwork-runs
+      - clockwork-models
+      - clockwork-projects
+      - clockwork-sprints
+      - clockwork-settings
+      - clockwork-plans
+      - clockwork-plan-detail
 
 features:
   theme_toggle: true
@@ -38,6 +55,17 @@ providers:
     placeholder: "All Lenses"
     position: topbar
     ui_type: select
+  # Custom provider migrated from demo-clockwork/src/hooks/ (sprint 10 phase 2).
+  # Phase 3 will regenerate demo-clockwork through react-shadcn SPA mode and
+  # delete the hand-written copies under demo-clockwork/src/hooks/.
+  - id: active-runs
+    source:
+      component: providers/active-runs-context.tsx
+      export: ActiveRunsProvider
+      includes:
+        - providers/sse-active-runs-bridge.tsx
+    mounts:
+      - SSEActiveRunsBridge
 
 actions:
   - label: "Add Repo"

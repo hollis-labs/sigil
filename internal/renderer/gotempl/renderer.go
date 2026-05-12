@@ -51,6 +51,6 @@ func (r *GoTemplRenderer) RenderAPIClient(_ *config.AppConfig) ([]renderer.Outpu
 }
 
 // RenderProviders is not yet implemented for Go/Templ.
-func (r *GoTemplRenderer) RenderProviders(_ []config.ProviderConfig) ([]renderer.OutputFile, error) {
+func (r *GoTemplRenderer) RenderProviders(_ *config.AppConfig, _ string) ([]renderer.OutputFile, error) {
 	return nil, nil
 }

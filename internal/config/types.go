@@ -195,15 +195,109 @@ type AppFeatures struct {
 }
 
 // ProviderConfig defines a context provider to generate and wire into the layout.
+//
+// Two shapes are supported:
+//
+//  1. Built-in (the historical form): set Datasource/TrackField/LabelField to
+//     have Sigil generate a data-driven context provider against the named
+//     datasource. Optional UI bits (Position/UIType/Placeholder) wire the
+//     provider into the layout topbar.
+//
+//  2. Custom (since sprint 10 phase 2): set Source.Component to point at a
+//     hand-written provider .tsx file under .sigil/providers/. Sigil copies
+//     the source files into the output's `lib/` directory and wraps the
+//     layout with <Source.Export>. Additional sidecar files (e.g. an SSE
+//     bridge) can be listed in Source.Includes, and any of those whose
+//     exported component name appears in Mounts will be rendered as a
+//     sibling of `{children}` inside the provider scope.
+//
+// A ProviderConfig is "custom" when Source.Component is non-empty.
+// Datasource/TrackField/LabelField are ignored for custom providers; Mounts
+// is ignored for built-in providers.
 type ProviderConfig struct {
-	ID          string `yaml:"id" json:"id"`
-	Datasource  string `yaml:"datasource" json:"datasource"`
-	TrackField  string `yaml:"track_field" json:"track_field"`
-	LabelField  string `yaml:"label_field" json:"label_field"`
-	Default     string `yaml:"default,omitempty" json:"default,omitempty"`
-	Placeholder string `yaml:"placeholder,omitempty" json:"placeholder,omitempty"`
-	Position    string `yaml:"position,omitempty" json:"position,omitempty"` // "topbar" or ""
-	UIType      string `yaml:"ui_type,omitempty" json:"ui_type,omitempty"`   // "select" or ""
+	ID          string          `yaml:"id" json:"id"`
+	Datasource  string          `yaml:"datasource,omitempty" json:"datasource,omitempty"`
+	TrackField  string          `yaml:"track_field,omitempty" json:"track_field,omitempty"`
+	LabelField  string          `yaml:"label_field,omitempty" json:"label_field,omitempty"`
+	Default     string          `yaml:"default,omitempty" json:"default,omitempty"`
+	Placeholder string          `yaml:"placeholder,omitempty" json:"placeholder,omitempty"`
+	Position    string          `yaml:"position,omitempty" json:"position,omitempty"` // "topbar" or ""
+	UIType      string          `yaml:"ui_type,omitempty" json:"ui_type,omitempty"`   // "select" or ""
+	Source      *ProviderSource `yaml:"source,omitempty" json:"source,omitempty"`
+	Mounts      []string        `yaml:"mounts,omitempty" json:"mounts,omitempty"`
+}
+
+// ProviderSource defines the source files for a custom (hand-written) provider.
+// Paths are relative to the .sigil/ directory (typically under
+// `.sigil/providers/`). Component is the file that exports the provider
+// component referenced by Export; Includes lists additional files copied to
+// the output as sidecars (e.g. an SSE bridge component, a shared types file).
+type ProviderSource struct {
+	Component string   `yaml:"component" json:"component"`                   // main .tsx file (required for custom)
+	Export    string   `yaml:"export,omitempty" json:"export,omitempty"`     // exported provider component name (default: pascalCase(ID)+"Provider")
+	Includes  []string `yaml:"includes,omitempty" json:"includes,omitempty"` // additional files to copy
+}
+
+// IsCustom returns true if this provider has a source file and should be
+// copied into the output rather than generated from a datasource template.
+func (p *ProviderConfig) IsCustom() bool {
+	return p != nil && p.Source != nil && p.Source.Component != ""
+}
+
+// ExportName returns the React component name to import from the provider's
+// source file. Defaults to PascalCase(ID) + "Provider" when Source.Export is
+// unset.
+func (p *ProviderConfig) ExportName() string {
+	if p == nil {
+		return ""
+	}
+	if p.Source != nil && p.Source.Export != "" {
+		return p.Source.Export
+	}
+	return pascalCaseID(p.ID) + "Provider"
+}
+
+// pascalCaseID converts a kebab/snake-case id to PascalCase. Duplicated from
+// the renderer's helper so config can compute the default export name without
+// importing the renderer package.
+func pascalCaseID(s string) string {
+	parts := splitOnDelims(s)
+	var b []byte
+	for _, p := range parts {
+		if len(p) == 0 {
+			continue
+		}
+		b = append(b, upperFirst(p)...)
+	}
+	return string(b)
+}
+
+func splitOnDelims(s string) []string {
+	var out []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '-' || s[i] == '_' {
+			if i > start {
+				out = append(out, s[start:i])
+			}
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		out = append(out, s[start:])
+	}
+	return out
+}
+
+func upperFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	b := []byte(s)
+	if b[0] >= 'a' && b[0] <= 'z' {
+		b[0] -= 'a' - 'A'
+	}
+	return string(b)
 }
 
 // AppAction defines a quick action available in command palette and menus.

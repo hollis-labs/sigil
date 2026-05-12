@@ -2,6 +2,8 @@ package reactshadcn
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/chrispian/sigil/internal/config"
@@ -23,9 +25,25 @@ func pluralize(s string) string {
 }
 
 // renderProviders generates React Context + Provider files for each provider in the app config.
-func renderProviders(providers []config.ProviderConfig) ([]renderer.OutputFile, error) {
+//
+// Built-in providers are generated from a datasource-driven template (the
+// historical behavior). Custom providers (those with Source.Component set)
+// have their source files copied from .sigil/providers/<file> into the
+// output's lib/ directory; the renderer does not synthesize their bodies.
+//
+// sigilDir is the path to the .sigil directory; empty means custom-provider
+// file copying is skipped (used by tests that don't exercise source copying).
+func renderProviders(providers []config.ProviderConfig, sigilDir string) ([]renderer.OutputFile, error) {
 	var files []renderer.OutputFile
 	for _, p := range providers {
+		if p.IsCustom() {
+			copied, err := copyCustomProviderFiles(p, sigilDir)
+			if err != nil {
+				return nil, err
+			}
+			files = append(files, copied...)
+			continue
+		}
 		file, err := renderProvider(p)
 		if err != nil {
 			return nil, err
@@ -33,6 +51,200 @@ func renderProviders(providers []config.ProviderConfig) ([]renderer.OutputFile, 
 		files = append(files, file)
 	}
 	return files, nil
+}
+
+// copyCustomProviderFiles copies a custom provider's source + sidecars from
+// the .sigil/ tree to the output. Paths in ProviderSource are interpreted
+// relative to sigilDir; the output path mirrors the relative path so that
+// `providers/active-runs-context.tsx` becomes `lib/active-runs-context.tsx`
+// (the directory prefix is rewritten to `lib/` regardless of where it lived
+// under .sigil/, keeping import paths predictable as `@/lib/<file>`).
+func copyCustomProviderFiles(p config.ProviderConfig, sigilDir string) ([]renderer.OutputFile, error) {
+	if sigilDir == "" {
+		return nil, fmt.Errorf("provider %q: sigil dir not configured; cannot copy custom provider source", p.ID)
+	}
+	var out []renderer.OutputFile
+
+	// Main component file.
+	mainFile, err := readAndRewriteProviderSource(sigilDir, p.Source.Component)
+	if err != nil {
+		return nil, fmt.Errorf("provider %q: %w", p.ID, err)
+	}
+	out = append(out, mainFile)
+
+	// Includes (e.g., SSE bridge, types).
+	for _, inc := range p.Source.Includes {
+		incFile, err := readAndRewriteProviderSource(sigilDir, inc)
+		if err != nil {
+			return nil, fmt.Errorf("provider %q include %q: %w", p.ID, inc, err)
+		}
+		out = append(out, incFile)
+	}
+	return out, nil
+}
+
+// readAndRewriteProviderSource reads a provider source file from sigilDir and
+// returns an OutputFile whose path is the file's basename under `lib/`. This
+// keeps all generated `@/lib/<file>` imports working regardless of the
+// author's chosen organization under .sigil/.
+func readAndRewriteProviderSource(sigilDir, relPath string) (renderer.OutputFile, error) {
+	srcPath := filepath.Join(sigilDir, relPath)
+	data, err := os.ReadFile(srcPath) //nolint:gosec // Path is from validated app config
+	if err != nil {
+		return renderer.OutputFile{}, fmt.Errorf("reading source %s: %w", relPath, err)
+	}
+	outPath := "lib/" + filepath.Base(relPath)
+	return renderer.OutputFile{
+		Path:    outPath,
+		Content: data,
+	}, nil
+}
+
+// providerWrapName returns the React component name to use when wrapping the
+// layout/app tree with this provider — the configured export for custom
+// providers, or the synthesized PascalCase(ID)+"Provider" for built-ins.
+func providerWrapName(p *config.ProviderConfig) string {
+	if p.IsCustom() {
+		if p.Source.Export != "" {
+			return p.Source.Export
+		}
+		return pascalCase(p.ID) + "Provider"
+	}
+	return pascalCase(p.ID) + "Provider"
+}
+
+// providerImportPath returns the @/lib/... import path (no extension) for the
+// provider's exported component. For built-ins this is the generated
+// `lib/<id>-context.tsx`; for custom providers it's `lib/<basename of source>`.
+func providerImportPath(p *config.ProviderConfig) string {
+	if p.IsCustom() {
+		return "@/lib/" + stripExt(filepath.Base(p.Source.Component))
+	}
+	return "@/lib/" + toKebabCase(p.ID) + "-context"
+}
+
+// providerHookImport returns the (hookName, hookImportPath) pair to import the
+// provider's React context hook in modules that consume the provider via
+// useXxxContext(). Built-in providers always export use<ID>Context from the
+// same generated file. Custom providers may or may not expose a hook —
+// callers should only emit the import when the renderer actually consumes the
+// hook (e.g. position: topbar). Returns ("", "") when there's no hook to
+// import (custom providers that don't need topbar UI).
+func providerHookImport(p *config.ProviderConfig) (name, path string) {
+	if p.IsCustom() {
+		// Custom providers only need a hook import if the renderer is going
+		// to call into them (Position: topbar). Today's topbar UI is
+		// built-in only; defer custom-provider topbar support to a later
+		// phase.
+		return "", ""
+	}
+	return "use" + pascalCase(p.ID) + "Context", providerImportPath(p)
+}
+
+// providerMounts returns the (componentName, importPath) pairs for any mount
+// components a custom provider wants rendered inside its scope alongside
+// {children}. Each mount name must correspond to an include in
+// Source.Includes — the mount is imported from `@/lib/<basename of include>`.
+// Built-ins return no mounts.
+func providerMounts(p *config.ProviderConfig) []providerMountImport {
+	if !p.IsCustom() || len(p.Mounts) == 0 {
+		return nil
+	}
+	// Build basename → import path map from includes (and the main source).
+	candidates := map[string]string{}
+	for _, inc := range p.Source.Includes {
+		base := stripExt(filepath.Base(inc))
+		candidates[base] = "@/lib/" + base
+	}
+	// Main source may also export a mount component (rare but allowed).
+	mainBase := stripExt(filepath.Base(p.Source.Component))
+	if _, ok := candidates[mainBase]; !ok {
+		candidates[mainBase] = "@/lib/" + mainBase
+	}
+
+	var out []providerMountImport
+	for _, m := range p.Mounts {
+		// Find an include whose basename (without extension) is a plausible
+		// match for the mount component name. Authors typically name files
+		// like `sse-active-runs-bridge.tsx` exporting `SSEActiveRunsBridge`,
+		// so we kebab-case the mount name and look for that file.
+		fileBase := kebabCaseFromPascal(m)
+		path, ok := candidates[fileBase]
+		if !ok {
+			// Fallback: if no kebab match, take the first include we haven't
+			// already assigned. This keeps the schema permissive when authors
+			// have unusual file names.
+			for base, p := range candidates {
+				if !pathAssigned(out, p) {
+					path = p
+					fileBase = base
+					break
+				}
+			}
+		}
+		out = append(out, providerMountImport{Name: m, Path: path})
+	}
+	return out
+}
+
+func pathAssigned(used []providerMountImport, p string) bool {
+	for _, u := range used {
+		if u.Path == p {
+			return true
+		}
+	}
+	return false
+}
+
+// providerMountImport names a custom-provider sibling component to render
+// alongside {children} inside the provider scope.
+type providerMountImport struct {
+	Name string // React component name (e.g. SSEActiveRunsBridge)
+	Path string // import path (e.g. @/lib/sse-active-runs-bridge)
+}
+
+// kebabCaseFromPascal converts PascalCase to kebab-case (SSEActiveRunsBridge
+// → sse-active-runs-bridge). Runs of uppercase letters are kept together
+// (acronym handling), with a hyphen before the start of each "word".
+func kebabCaseFromPascal(s string) string {
+	if s == "" {
+		return s
+	}
+	var b []byte
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		isUpper := c >= 'A' && c <= 'Z'
+		if isUpper && i > 0 {
+			prev := s[i-1]
+			prevUpper := prev >= 'A' && prev <= 'Z'
+			// Insert hyphen at lower→Upper boundary, or at the end of an
+			// acronym run (Upper→Upper followed by lowercase: "SSEActive"
+			// → "sse-active").
+			if !prevUpper {
+				b = append(b, '-')
+			} else if i+1 < len(s) {
+				next := s[i+1]
+				if next >= 'a' && next <= 'z' {
+					b = append(b, '-')
+				}
+			}
+		}
+		if isUpper {
+			b = append(b, c+('a'-'A'))
+		} else {
+			b = append(b, c)
+		}
+	}
+	return string(b)
+}
+
+// stripExt returns the filename with any extension stripped (e.g.
+// "active-runs-context.tsx" → "active-runs-context").
+func stripExt(name string) string {
+	if idx := strings.LastIndexByte(name, '.'); idx > 0 {
+		return name[:idx]
+	}
+	return name
 }
 
 func renderProvider(p config.ProviderConfig) (renderer.OutputFile, error) { //nolint:unparam // error kept for interface consistency

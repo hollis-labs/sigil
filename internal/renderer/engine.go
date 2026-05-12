@@ -263,7 +263,7 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 
 		// 12. Generate context providers
 		if len(appConfig.Providers) > 0 {
-			providerFiles, err := r.RenderProviders(appConfig.Providers)
+			providerFiles, err := r.RenderProviders(appConfig, sigilDir)
 			if err != nil {
 				return nil, fmt.Errorf("generating providers: %w", err)
 			}

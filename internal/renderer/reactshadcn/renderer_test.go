@@ -1,6 +1,8 @@
 package reactshadcn
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -1372,4 +1374,368 @@ func TestEffectiveTargetModeDefaults(t *testing.T) {
 	if got := nilCfg.EffectiveTargetMode(); got != "app-router" {
 		t.Errorf("nil AppConfig.EffectiveTargetMode() = %q, want app-router", got)
 	}
+}
+
+// --- Provider declaration tests (sprint 10 phase 2) -------------------------
+
+// shellWithNav returns a minimal shell page with one nav item so layout
+// rendering proceeds end-to-end.
+func shellWithNav() *config.Page {
+	return &config.Page{
+		Sigil:   "1.0",
+		Kind:    "page",
+		ID:      "x-shell",
+		Title:   "Shell",
+		Overlay: "page",
+		Layout: config.Component{
+			Type: "rows",
+			Children: []config.Component{
+				{
+					Type: "nav-menu",
+					Props: map[string]interface{}{
+						"items": []interface{}{
+							map[string]interface{}{"label": "Home", "page": "x-home", "icon": "home"},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func TestRenderProvidersBuiltinShortFormUnchanged(t *testing.T) {
+	// The pre-phase-2 `lens` short-form (just datasource + ui hints) must
+	// regenerate byte-identically to the way it did before custom-provider
+	// support landed: a single lib/<id>-context.tsx file with createContext +
+	// useEffect + fetchList wiring.
+	providers := []config.ProviderConfig{
+		{
+			ID:         "lens",
+			Datasource: "Lens",
+			TrackField: "id",
+			LabelField: "name",
+			Position:   "topbar",
+			UIType:     "select",
+		},
+	}
+	files, err := renderProviders(providers, "" /* no sigil dir needed for built-ins */)
+	if err != nil {
+		t.Fatalf("renderProviders: %v", err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("expected 1 file for built-in provider, got %d", len(files))
+	}
+	if files[0].Path != "lib/lens-context.tsx" {
+		t.Errorf("expected lib/lens-context.tsx, got %q", files[0].Path)
+	}
+	content := string(files[0].Content)
+	mustHave := []string{
+		`"use client";`,
+		`fetchList`,
+		`createContext`,
+		`export function useLensContext()`,
+		`export function LensProvider({ children }`,
+	}
+	for _, want := range mustHave {
+		if !strings.Contains(content, want) {
+			t.Errorf("built-in provider missing %q in output:\n%s", want, content)
+		}
+	}
+}
+
+func TestRenderProvidersCustomCopiesSourceFiles(t *testing.T) {
+	dir := t.TempDir()
+	if err := writeTestFile(dir, "providers/active-runs-context.tsx",
+		"// active runs context\nexport function ActiveRunsProvider() { return null; }\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeTestFile(dir, "providers/sse-active-runs-bridge.tsx",
+		"// bridge\nexport function SSEActiveRunsBridge() { return null; }\n"); err != nil {
+		t.Fatal(err)
+	}
+
+	providers := []config.ProviderConfig{
+		{
+			ID: "active-runs",
+			Source: &config.ProviderSource{
+				Component: "providers/active-runs-context.tsx",
+				Export:    "ActiveRunsProvider",
+				Includes:  []string{"providers/sse-active-runs-bridge.tsx"},
+			},
+			Mounts: []string{"SSEActiveRunsBridge"},
+		},
+	}
+	files, err := renderProviders(providers, dir)
+	if err != nil {
+		t.Fatalf("renderProviders: %v", err)
+	}
+	if len(files) != 2 {
+		t.Fatalf("expected 2 files (main + include), got %d", len(files))
+	}
+	got := map[string]string{}
+	for _, f := range files {
+		got[f.Path] = string(f.Content)
+	}
+	if _, ok := got["lib/active-runs-context.tsx"]; !ok {
+		t.Errorf("missing lib/active-runs-context.tsx; got files: %v", keys(got))
+	}
+	if _, ok := got["lib/sse-active-runs-bridge.tsx"]; !ok {
+		t.Errorf("missing lib/sse-active-runs-bridge.tsx; got files: %v", keys(got))
+	}
+	// Verify source content was preserved verbatim (the renderer must not
+	// rewrite hand-authored bodies).
+	if !strings.Contains(got["lib/active-runs-context.tsx"], "ActiveRunsProvider") {
+		t.Errorf("provider source content not preserved: %q", got["lib/active-runs-context.tsx"])
+	}
+}
+
+func TestRenderProvidersCustomBackwardCompatMixed(t *testing.T) {
+	// A providers: list that contains both a built-in (lens) AND a custom
+	// (active-runs) provider should generate one file per built-in plus the
+	// copied source files for each custom provider — in declared order.
+	dir := t.TempDir()
+	if err := writeTestFile(dir, "providers/active-runs-context.tsx", "export function ActiveRunsProvider() { return null; }\n"); err != nil {
+		t.Fatal(err)
+	}
+
+	providers := []config.ProviderConfig{
+		{ID: "lens", Datasource: "Lens", TrackField: "id", LabelField: "name"},
+		{ID: "active-runs", Source: &config.ProviderSource{Component: "providers/active-runs-context.tsx"}},
+	}
+	files, err := renderProviders(providers, dir)
+	if err != nil {
+		t.Fatalf("renderProviders: %v", err)
+	}
+	paths := map[string]bool{}
+	for _, f := range files {
+		paths[f.Path] = true
+	}
+	if !paths["lib/lens-context.tsx"] {
+		t.Errorf("expected lib/lens-context.tsx, got %v", paths)
+	}
+	if !paths["lib/active-runs-context.tsx"] {
+		t.Errorf("expected lib/active-runs-context.tsx, got %v", paths)
+	}
+}
+
+func TestRenderProvidersCustomMissingSourceErrors(t *testing.T) {
+	providers := []config.ProviderConfig{
+		{
+			ID:     "active-runs",
+			Source: &config.ProviderSource{Component: "providers/does-not-exist.tsx"},
+		},
+	}
+	dir := t.TempDir()
+	_, err := renderProviders(providers, dir)
+	if err == nil {
+		t.Fatal("expected error for missing source file, got nil")
+	}
+	if !strings.Contains(err.Error(), "does-not-exist") {
+		t.Errorf("error message should reference missing source file; got: %v", err)
+	}
+}
+
+func TestRenderLayoutCustomProviderWrapsWithMounts(t *testing.T) {
+	shell := shellWithNav()
+	mod := &config.ModuleConfig{ID: "x", Shell: "x-shell", RouteGroup: "(x)", Pages: []string{"x-home"}}
+
+	cases := []struct {
+		name        string
+		targetMode  string
+		mustContain []string
+		mustNotHave []string
+	}{
+		{
+			name:       "app-router custom provider",
+			targetMode: "app-router",
+			mustContain: []string{
+				`import { ActiveRunsProvider } from "@/lib/active-runs-context";`,
+				`import { SSEActiveRunsBridge } from "@/lib/sse-active-runs-bridge";`,
+				`<ActiveRunsProvider>`,
+				`<SSEActiveRunsBridge />`,
+				`</ActiveRunsProvider>`,
+			},
+			mustNotHave: []string{
+				`import { ActiveRunsProvider, use`, // no auto-hook for custom providers
+			},
+		},
+		{
+			name:       "spa custom provider",
+			targetMode: "spa",
+			mustContain: []string{
+				`import { ActiveRunsProvider } from "@/lib/active-runs-context";`,
+				`import { SSEActiveRunsBridge } from "@/lib/sse-active-runs-bridge";`,
+				`<ActiveRunsProvider>`,
+				`<SSEActiveRunsBridge />`,
+				`<BrowserRouter>`,
+				`</ActiveRunsProvider>`,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := &renderer.LayoutContext{
+				Module: mod,
+				Shell:  shell,
+				AppConfig: &config.AppConfig{
+					Name:       "X",
+					TargetMode: tc.targetMode,
+					Providers: []config.ProviderConfig{
+						{
+							ID: "active-runs",
+							Source: &config.ProviderSource{
+								Component: "providers/active-runs-context.tsx",
+								Export:    "ActiveRunsProvider",
+								Includes:  []string{"providers/sse-active-runs-bridge.tsx"},
+							},
+							Mounts: []string{"SSEActiveRunsBridge"},
+						},
+					},
+				},
+				Pages: []*config.Page{},
+			}
+			files, err := renderLayout(ctx)
+			if err != nil {
+				t.Fatalf("renderLayout: %v", err)
+			}
+			// Combine all emitted files so the assertions don't depend on
+			// which file the wrap lives in (App.tsx for spa, layout.tsx for
+			// app-router).
+			var combined strings.Builder
+			for _, f := range files {
+				combined.WriteString(f.Path)
+				combined.WriteByte('\n')
+				combined.Write(f.Content)
+				combined.WriteString("\n")
+			}
+			content := combined.String()
+			for _, want := range tc.mustContain {
+				if !strings.Contains(content, want) {
+					t.Errorf("expected %q in output:\n%s", want, content)
+				}
+			}
+			for _, banned := range tc.mustNotHave {
+				if strings.Contains(content, banned) {
+					t.Errorf("did not expect %q in output:\n%s", banned, content)
+				}
+			}
+		})
+	}
+}
+
+func TestRenderLayoutBuiltinProviderShortFormStillWorks(t *testing.T) {
+	// Backward-compat: a providers: list with only the original lens
+	// short-form must continue to import + wrap with LensProvider + the
+	// useLensContext hook (the topbar select uses it).
+	shell := shellWithNav()
+	mod := &config.ModuleConfig{ID: "x", Shell: "x-shell", RouteGroup: "(x)", Pages: []string{"x-home"}}
+
+	ctx := &renderer.LayoutContext{
+		Module: mod,
+		Shell:  shell,
+		AppConfig: &config.AppConfig{
+			Name: "X",
+			Providers: []config.ProviderConfig{{
+				ID:         "lens",
+				Datasource: "Lens",
+				TrackField: "id",
+				LabelField: "name",
+				Position:   "topbar",
+				UIType:     "select",
+			}},
+		},
+		Pages: []*config.Page{},
+	}
+	files, err := renderLayout(ctx)
+	if err != nil {
+		t.Fatalf("renderLayout: %v", err)
+	}
+	var combined strings.Builder
+	for _, f := range files {
+		combined.Write(f.Content)
+	}
+	content := combined.String()
+	mustHave := []string{
+		`import { LensProvider, useLensContext } from "@/lib/lens-context";`,
+		`<LensProvider>`,
+		`</LensProvider>`,
+		`useLensContext()`, // consumed by the topbar select
+	}
+	for _, want := range mustHave {
+		if !strings.Contains(content, want) {
+			t.Errorf("expected %q in output:\n%s", want, content)
+		}
+	}
+}
+
+func TestProviderWrapNameAndImportPath(t *testing.T) {
+	// Built-in: derived from ID.
+	builtin := config.ProviderConfig{ID: "lens", Datasource: "Lens"}
+	if got := providerWrapName(&builtin); got != "LensProvider" {
+		t.Errorf("builtin providerWrapName(lens) = %q, want LensProvider", got)
+	}
+	if got := providerImportPath(&builtin); got != "@/lib/lens-context" {
+		t.Errorf("builtin providerImportPath(lens) = %q, want @/lib/lens-context", got)
+	}
+
+	// Custom with explicit Export.
+	custom := config.ProviderConfig{
+		ID:     "active-runs",
+		Source: &config.ProviderSource{Component: "providers/active-runs-context.tsx", Export: "ActiveRunsProvider"},
+	}
+	if got := providerWrapName(&custom); got != "ActiveRunsProvider" {
+		t.Errorf("custom providerWrapName = %q, want ActiveRunsProvider", got)
+	}
+	if got := providerImportPath(&custom); got != "@/lib/active-runs-context" {
+		t.Errorf("custom providerImportPath = %q, want @/lib/active-runs-context", got)
+	}
+
+	// Custom without explicit Export — defaults to PascalCase(ID)+"Provider".
+	customNoExport := config.ProviderConfig{
+		ID:     "active-runs",
+		Source: &config.ProviderSource{Component: "providers/active-runs-context.tsx"},
+	}
+	if got := providerWrapName(&customNoExport); got != "ActiveRunsProvider" {
+		t.Errorf("custom default wrap name = %q, want ActiveRunsProvider", got)
+	}
+}
+
+func TestProviderMountsMapsKebabFileNames(t *testing.T) {
+	p := config.ProviderConfig{
+		ID: "active-runs",
+		Source: &config.ProviderSource{
+			Component: "providers/active-runs-context.tsx",
+			Includes:  []string{"providers/sse-active-runs-bridge.tsx"},
+		},
+		Mounts: []string{"SSEActiveRunsBridge"},
+	}
+	mounts := providerMounts(&p)
+	if len(mounts) != 1 {
+		t.Fatalf("expected 1 mount, got %d", len(mounts))
+	}
+	if mounts[0].Name != "SSEActiveRunsBridge" {
+		t.Errorf("mount.Name = %q, want SSEActiveRunsBridge", mounts[0].Name)
+	}
+	if mounts[0].Path != "@/lib/sse-active-runs-bridge" {
+		t.Errorf("mount.Path = %q, want @/lib/sse-active-runs-bridge", mounts[0].Path)
+	}
+}
+
+// keys returns the keys of m sorted by Go's range order (sufficient for
+// debugging assertions; we don't need stable ordering here).
+func keys(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}
+
+func writeTestFile(rootDir, relPath, content string) error {
+	full := filepath.Join(rootDir, relPath)
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(full, []byte(content), 0o644)
 }

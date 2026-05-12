@@ -550,8 +550,8 @@ func TestDeepValidateUnknownPropWarning(t *testing.T) {
 			Type: "rows",
 			Children: []Component{
 				{ID: "btn", Type: "button", Props: map[string]interface{}{
-					"label":     "Click",
-					"sparkle":   true, // unknown prop
+					"label":   "Click",
+					"sparkle": true, // unknown prop
 				}},
 			},
 		},
@@ -591,4 +591,171 @@ func TestDeepValidateValidProps(t *testing.T) {
 	if !result.Valid {
 		t.Errorf("expected valid, got: %v", result.Errors)
 	}
+}
+
+// --- AppConfig provider validation (sprint 10 phase 2) ----------------------
+
+func baseAppConfig() *AppConfig {
+	return &AppConfig{
+		Sigil:   "1.0",
+		Kind:    "app",
+		Name:    "test",
+		Modules: []ModuleConfig{{ID: "m", Shell: "m-shell", Pages: []string{"p"}}},
+	}
+}
+
+func TestValidateAppConfigProviders(t *testing.T) {
+	cases := []struct {
+		name       string
+		providers  []ProviderConfig
+		wantValid  bool
+		wantErrSub string // substring expected somewhere in errors
+		wantWarn   string // substring expected somewhere in warnings
+	}{
+		{
+			name: "builtin lens short-form is valid",
+			providers: []ProviderConfig{{
+				ID: "lens", Datasource: "Lens", TrackField: "id", LabelField: "name",
+			}},
+			wantValid: true,
+		},
+		{
+			name: "custom provider with source is valid",
+			providers: []ProviderConfig{{
+				ID:     "active-runs",
+				Source: &ProviderSource{Component: "providers/active-runs-context.tsx", Export: "ActiveRunsProvider"},
+				Mounts: []string{"SSEActiveRunsBridge"},
+			}},
+			wantValid: true,
+		},
+		{
+			name: "builtin missing datasource fails",
+			providers: []ProviderConfig{{
+				ID: "lens",
+			}},
+			wantValid:  false,
+			wantErrSub: "datasource",
+		},
+		{
+			name: "duplicate provider ids fail",
+			providers: []ProviderConfig{
+				{ID: "lens", Datasource: "Lens"},
+				{ID: "lens", Datasource: "Lens"},
+			},
+			wantValid:  false,
+			wantErrSub: "duplicate provider id",
+		},
+		{
+			name: "missing provider id fails",
+			providers: []ProviderConfig{{
+				Datasource: "Lens",
+			}},
+			wantValid:  false,
+			wantErrSub: "provider id is required",
+		},
+		{
+			name: "custom provider with datasource set warns (datasource ignored)",
+			providers: []ProviderConfig{{
+				ID:         "active-runs",
+				Datasource: "RunsApi",
+				Source:     &ProviderSource{Component: "providers/active-runs-context.tsx"},
+			}},
+			wantValid: true,
+			wantWarn:  "datasource is ignored",
+		},
+		{
+			name: "builtin with mounts set warns (mounts ignored)",
+			providers: []ProviderConfig{{
+				ID: "lens", Datasource: "Lens", Mounts: []string{"WontBeRendered"},
+			}},
+			wantValid: true,
+			wantWarn:  "mounts are ignored",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			app := baseAppConfig()
+			app.Providers = tc.providers
+			result := ValidateAppConfig(app)
+			if result.Valid != tc.wantValid {
+				t.Errorf("Valid = %v, want %v; errors: %v", result.Valid, tc.wantValid, result.Errors)
+			}
+			if tc.wantErrSub != "" {
+				if !containsErr(result.Errors, tc.wantErrSub) {
+					t.Errorf("expected error containing %q; got: %v", tc.wantErrSub, result.Errors)
+				}
+			}
+			if tc.wantWarn != "" {
+				if !containsWarn(result.Warnings, tc.wantWarn) {
+					t.Errorf("expected warning containing %q; got: %v", tc.wantWarn, result.Warnings)
+				}
+			}
+		})
+	}
+}
+
+func TestProviderConfigIsCustom(t *testing.T) {
+	cases := []struct {
+		name string
+		p    ProviderConfig
+		want bool
+	}{
+		{"empty", ProviderConfig{}, false},
+		{"builtin", ProviderConfig{ID: "lens", Datasource: "Lens"}, false},
+		{"custom", ProviderConfig{ID: "x", Source: &ProviderSource{Component: "providers/x.tsx"}}, true},
+		{"source struct present but component empty", ProviderConfig{ID: "x", Source: &ProviderSource{}}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.p.IsCustom(); got != tc.want {
+				t.Errorf("IsCustom() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestProviderConfigExportNameDefault(t *testing.T) {
+	cases := []struct {
+		in   ProviderConfig
+		want string
+	}{
+		{ProviderConfig{ID: "active-runs"}, "ActiveRunsProvider"},
+		{ProviderConfig{ID: "lens"}, "LensProvider"},
+		{
+			ProviderConfig{
+				ID:     "active-runs",
+				Source: &ProviderSource{Component: "x.tsx", Export: "MyCustomProvider"},
+			},
+			"MyCustomProvider",
+		},
+		{
+			// Snake_case id should pascalize on underscores too.
+			ProviderConfig{ID: "live_runs"},
+			"LiveRunsProvider",
+		},
+	}
+	for _, tc := range cases {
+		if got := tc.in.ExportName(); got != tc.want {
+			t.Errorf("ExportName(%+v) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func containsErr(errs []ValidationError, sub string) bool {
+	for _, e := range errs {
+		if contains(e.Message, sub) || contains(e.Path, sub) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsWarn(warns []ValidationWarning, sub string) bool {
+	for _, w := range warns {
+		if contains(w.Message, sub) || contains(w.Path, sub) {
+			return true
+		}
+	}
+	return false
 }

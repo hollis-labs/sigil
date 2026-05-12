@@ -323,6 +323,48 @@ func ValidateAppConfig(app *AppConfig) *ValidationResult {
 		})
 	}
 
+	seenProviderIDs := map[string]bool{}
+	for i := range app.Providers {
+		p := &app.Providers[i]
+		path := fmt.Sprintf("providers[%d]", i)
+		if p.ID == "" {
+			result.Errors = append(result.Errors, ValidationError{Path: path + ".id", Message: "provider id is required"})
+		} else if seenProviderIDs[p.ID] {
+			result.Errors = append(result.Errors, ValidationError{Path: path + ".id", Message: fmt.Sprintf("duplicate provider id %q", p.ID)})
+		}
+		seenProviderIDs[p.ID] = true
+
+		if p.IsCustom() {
+			// Custom (source-based) provider: source.component required;
+			// mounts must reference includes.
+			if p.Source.Component == "" {
+				result.Errors = append(result.Errors, ValidationError{Path: path + ".source.component", Message: "custom provider requires source.component"})
+			}
+			// datasource fields are ignored on custom providers — flag as warning
+			// when set, so authors don't silently expect data-driven behavior.
+			if p.Datasource != "" {
+				result.Warnings = append(result.Warnings, ValidationWarning{
+					Path:    path + ".datasource",
+					Message: "datasource is ignored on custom providers (source.component is set)",
+				})
+			}
+		} else {
+			// Built-in (data-driven) provider: datasource required.
+			if p.Datasource == "" {
+				result.Errors = append(result.Errors, ValidationError{
+					Path:    path + ".datasource",
+					Message: "built-in provider requires datasource (or set source.component for a custom provider)",
+				})
+			}
+			if len(p.Mounts) > 0 {
+				result.Warnings = append(result.Warnings, ValidationWarning{
+					Path:    path + ".mounts",
+					Message: "mounts are ignored on built-in providers",
+				})
+			}
+		}
+	}
+
 	result.Valid = len(result.Errors) == 0
 	return result
 }
