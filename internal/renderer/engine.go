@@ -25,6 +25,12 @@ type GenerateConfig struct {
 	// values: "", "spa", "app-router". Empty falls through to whatever the
 	// app.yaml declares (or its default). Invalid values fail validation.
 	TargetMode string
+	// UIKit selects the shared component kit generated pages import from.
+	// Valid values: "", "sysop". Empty (default) keeps the legacy behavior —
+	// per-app hand-written shadcn re-exports under @/components/ui. "sysop"
+	// makes the react-shadcn renderer import kit components from
+	// @hollis-labs/sysop-ui. Ignored by renderers that don't support a kit.
+	UIKit string
 }
 
 // GenerateResult contains the results of a generation run.
@@ -61,6 +67,14 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 	r, ok := GetRenderer(cfg.Target)
 	if !ok {
 		return nil, fmt.Errorf("unknown renderer %q (available: %s)", cfg.Target, strings.Join(AvailableRenderers(), ", "))
+	}
+
+	// Hand the UI-kit selection to renderers that support one. RenderContext
+	// and LayoutContext also carry UIKit, but the contextless interface methods
+	// (RenderTheme/SharedComponents/RenderAPIClient/RenderProviders) need it set
+	// on the renderer itself.
+	if ka, ok := r.(UIKitAware); ok {
+		ka.SetUIKit(cfg.UIKit)
 	}
 
 	sigilDir := cfg.SigilDir
@@ -198,6 +212,7 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 			SigilDir:      sigilDir,
 			TargetMode:    targetMode,
 			Modules:       modulesForCtx,
+			UIKit:         cfg.UIKit,
 		}
 		files, err := r.Render(ctx)
 		if err != nil {
@@ -344,6 +359,7 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 				AllModules: allModulePtrs,
 				AllPages:   allModulePages,
 				AllShells:  allShells,
+				UIKit:      cfg.UIKit,
 			}
 			layoutFiles, err := r.RenderLayout(layoutCtx)
 			if err != nil {

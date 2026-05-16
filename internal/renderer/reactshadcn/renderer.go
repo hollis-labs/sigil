@@ -9,7 +9,12 @@ import (
 const rendererName = "react-shadcn"
 
 // ReactShadcnRenderer generates React TSX files with shadcn/ui components.
-type ReactShadcnRenderer struct{}
+type ReactShadcnRenderer struct {
+	// uiKit is the shared component kit selected for this run ("" = legacy
+	// per-app shadcn re-exports, "sysop" = @hollis-labs/sysop-ui). Set by the
+	// engine via SetUIKit before any generation method runs.
+	uiKit string
+}
 
 func init() {
 	renderer.RegisterRenderer(&ReactShadcnRenderer{})
@@ -20,14 +25,22 @@ func (r *ReactShadcnRenderer) Name() string {
 	return rendererName
 }
 
+// SetUIKit implements renderer.UIKitAware.
+func (r *ReactShadcnRenderer) SetUIKit(kit string) {
+	r.uiKit = kit
+}
+
 // Render generates .tsx files for a single page config.
 func (r *ReactShadcnRenderer) Render(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
+	if ctx.UIKit == "" {
+		ctx.UIKit = r.uiKit
+	}
 	return renderPage(ctx)
 }
 
 // RenderTheme generates Tailwind config and CSS files.
 func (r *ReactShadcnRenderer) RenderTheme(theme *renderer.ThemeConfig) ([]renderer.OutputFile, error) {
-	return renderTheme(theme)
+	return renderTheme(theme, r.uiKit)
 }
 
 // RenderDataSourceStubs generates TypeScript API hooks for datasources.
@@ -35,13 +48,18 @@ func (r *ReactShadcnRenderer) RenderDataSourceStubs(ds *renderer.DataSourceManif
 	return renderDataSourceHooks(ds)
 }
 
-// SharedComponents returns shared component and utility files.
+// SharedComponents returns shared component and utility files. In sysop kit
+// mode the kit ships these (DataTable, ui primitives, cn), so app-local copies
+// are suppressed to avoid duplicate, divergent implementations.
 func (r *ReactShadcnRenderer) SharedComponents(usedTypes []string) ([]renderer.OutputFile, error) {
-	return renderSharedComponents(usedTypes)
+	return renderSharedComponents(usedTypes, r.uiKit)
 }
 
 // RenderLayout generates a layout.tsx for a module shell.
 func (r *ReactShadcnRenderer) RenderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
+	if ctx.UIKit == "" {
+		ctx.UIKit = r.uiKit
+	}
 	return renderLayout(ctx)
 }
 
