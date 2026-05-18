@@ -2062,3 +2062,92 @@ func writeTestFile(rootDir, relPath, content string) error {
 	}
 	return os.WriteFile(full, []byte(content), 0o600)
 }
+
+// TestRenderModalRefetchAfterCreate is a regression test for the codegen bug
+// surfaced by the FND-4 sysop dogfood loop: a modal that creates a row never
+// refreshed the table, and the `refetch<Alias>` binding was emitted only when
+// the page YAML carried an explicit `refresh:` field — leaving it destructured
+// but unused (a `noUnusedLocals` failure) on the common case. refetch is now
+// driven by the datasource's create/update/delete capability.
+func TestRenderModalRefetchAfterCreate(t *testing.T) {
+	page := &config.Page{
+		Sigil:   "1.0",
+		Kind:    "page",
+		ID:      "things",
+		Title:   "Things",
+		Overlay: "page",
+		DataSources: []config.DataSourceRef{
+			{Alias: "Thing", Capabilities: []string{"list", "create"}},
+		},
+		Layout: config.Component{
+			ID:   "root",
+			Type: "rows",
+			Children: []config.Component{
+				{
+					Type:  "button",
+					Props: map[string]interface{}{"label": "New Thing"},
+					Actions: map[string]config.Action{
+						"click": {
+							Type:   "modal",
+							Title:  "New Thing",
+							Fields: []config.FormField{{Name: "name", Label: "Name", Type: "text"}},
+							Submit: &config.SubmitConfig{DataSource: "Thing", Method: "POST"},
+						},
+					},
+				},
+				{Type: "data-table", Props: map[string]interface{}{"datasource": "Thing"}},
+			},
+		},
+	}
+	ctx := testCtx(page)
+	ctx.DataSources = map[string]*renderer.DataSourceManifest{
+		"Thing": {
+			Alias:        "Thing",
+			Capabilities: []string{"list", "create"},
+			Endpoints:    map[string]string{"list": "/api/things", "create": "/api/things"},
+		},
+	}
+
+	files, err := renderPage(ctx)
+	if err != nil {
+		t.Fatalf("renderPage: %v", err)
+	}
+	content := string(files[0].Content)
+	if !strings.Contains(content, "refetch: refetchThing") {
+		t.Errorf("expected the list hook to be destructured with a refetch binding:\n%s", content)
+	}
+	if !strings.Contains(content, "refetchThing();") {
+		t.Errorf("expected the create handler to call refetchThing():\n%s", content)
+	}
+}
+
+// TestGenerateDSHookRefetch verifies the generated SWR list hook exposes a
+// `refetch` alias (SWR itself ships `mutate`, not `refetch`) and that the
+// `<Type>Input` type import is emitted only when a mutation helper consumes it.
+func TestGenerateDSHookRefetch(t *testing.T) {
+	crud := &renderer.DataSourceManifest{
+		Alias:        "Thing",
+		Capabilities: []string{"list", "create"},
+		Endpoints:    map[string]string{"list": "/api/things", "create": "/api/things"},
+	}
+	crudOut := string(generateDSHook(crud).Content)
+	if !strings.Contains(crudOut, "refetch: () => swr.mutate()") {
+		t.Errorf("expected list hook to expose a refetch alias:\n%s", crudOut)
+	}
+	if !strings.Contains(crudOut, "ThingInput") {
+		t.Errorf("expected ThingInput import for a create-capable datasource:\n%s", crudOut)
+	}
+
+	listOnly := &renderer.DataSourceManifest{
+		Alias:        "Note",
+		Capabilities: []string{"list"},
+		Endpoints:    map[string]string{"list": "/api/notes"},
+	}
+	listOut := string(generateDSHook(listOnly).Content)
+	if !strings.Contains(listOut, "refetch: () => swr.mutate()") {
+		t.Errorf("expected list-only hook to still expose a refetch alias:\n%s", listOut)
+	}
+	if strings.Contains(listOut, "NoteInput") {
+		t.Errorf("list-only datasource should not import the unused NoteInput type:\n%s", listOut)
+	}
+}

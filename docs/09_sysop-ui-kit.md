@@ -85,3 +85,42 @@ load. The `PageHeader` title is route-derived from the nav table.
 - In kit mode the engine still copies hand-written custom-component `.tsx`
   (e.g. `filter-bar.tsx`) into `components/` even when the page uses the kit
   equivalent. The copies are unused; a project-wide `tsc` may still check them.
+
+## Dogfood loop — kit mode vs the hand-composed Sysop UI (CW-20260518-0035)
+
+The Sysop UI app (`sysop/`) was hand-composed against `@hollis-labs/sysop-ui`
+in CW-20260515-0133. CW-20260518-0035 ran the kit renderer over the matching
+`sigil-*` page configs (`sigil-components`, `sigil-datasources`, `sigil-pages`,
+`sigil-themes`) to see whether the generated output could replace those screens.
+
+**Outcome: kept hand-composed.** The generated kit pages are valid and import
+the kit, but they are not yet at parity, so swapping them in would regress —
+and break — the Sysop UI:
+
+- **API envelope mismatch (blocker).** The Sigil server returns single-key
+  envelopes (`/api/components` → `{ "components": [...] }`). The generated SWR
+  hooks (`fetch(url).then(r => r.json())` typed as `T[]`) and `lib/api.ts`
+  (a `{ data, meta }` paginated envelope) assume a different shape, so a
+  generated page hands `DataTable` an object instead of an array and breaks at
+  runtime. The hand-composed app uses the kit `createApiClient` and unwraps the
+  single-key envelope explicitly.
+- **No detail view.** The hand-composed screens open a fetch-on-open
+  `DetailDialog` per row (`onRowOpen`); the renderer does not map the modal
+  `detail` page kind (see above), so generated rows are inert.
+- **No `OperationsTablePage` / `MetaList` / `Metric` / `JsonViewer` mapping.**
+  The hand-composed screens compose these kit pieces (summary cards, search,
+  header refresh action; the Overview screen is entirely `Metric`/`MetaList`/
+  `JsonViewer` with no list at all). The renderer emits a bare `DataTable`.
+- **`@/components/ui/*` dependency.** Generated pages still import primitives
+  the kit does not re-export (`select`, `label`, …). The Sysop UI is a thin
+  kit consumer with no local `components/ui/` — adopting generated pages would
+  require scaffolding shadcn primitives the kit deliberately omits.
+
+Bug fixed during the loop (`refetch` codegen): the generated SWR list hook
+exposed only SWR's `mutate`, while pages destructured a `refetch` binding — a
+type error. And that binding was emitted whenever a datasource was CRUD-capable
+but only *consumed* when the page YAML carried an explicit `refresh:` field,
+leaving it destructured-but-unused (a `noUnusedLocals` failure). The list hook
+now exposes a `refetch` alias, and a create modal always re-pulls its
+datasource list after a successful create. The `<Type>Input` type import is
+now gated on a create/update mutation helper actually being emitted.

@@ -26,6 +26,19 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 	imports.targetMode = ctx.TargetMode
 	imports.modules = ctx.Modules
 	imports.uiKit = ctx.UIKit
+
+	// A datasource with a create/update/delete capability gets its list hook
+	// destructured with a `refetch` binding (see below). Compute that set up
+	// front — before the layout pre-pass — so modal submit handlers rendered
+	// during that pass can tell whether `refetch<Alias>()` resolves.
+	for _, dsRef := range page.DataSources {
+		for _, cap := range dsRef.Capabilities {
+			if cap == "create" || cap == "update" || cap == "delete" {
+				imports.refetchVars[dsRef.Alias] = true
+			}
+		}
+	}
+
 	var bodyBuf bytes.Buffer
 	renderComponent(&bodyBuf, &page.Layout, 2, imports, ctx)
 
@@ -121,16 +134,9 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 		buf.WriteString("  }, []);\n\n")
 	}
 
-	// DataSource hooks
-	// Track which datasources need refetch (have create/update/delete capabilities)
-	needsRefetch := map[string]bool{}
-	for _, dsRef := range page.DataSources {
-		for _, cap := range dsRef.Capabilities {
-			if cap == "create" || cap == "update" || cap == "delete" {
-				needsRefetch[dsRef.Alias] = true
-			}
-		}
-	}
+	// DataSource hooks. Datasources needing refetch (create/update/delete
+	// capabilities) were collected into imports.refetchVars before the
+	// layout pre-pass.
 
 	// Detail-suffix heuristic (sprint 10 phase 3.5): a page id ending in
 	// `-detail` is treated as a single-entity page even when the datasource
@@ -162,7 +168,7 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 			fmt.Fprintf(&buf, "  const { data: %s, isLoading: %sLoading } = %s(params.%s as string);\n", varName, varName, hookName, paramKey)
 		} else {
 			hookName := "use" + toPascalCase(dsRef.Alias)
-			if needsRefetch[dsRef.Alias] {
+			if imports.refetchVars[dsRef.Alias] {
 				fmt.Fprintf(&buf, "  const { data: %s, isLoading: %sLoading, refetch: refetch%s } = %s();\n", varName, varName, toPascalCase(dsRef.Alias), hookName)
 			} else {
 				fmt.Fprintf(&buf, "  const { data: %s, isLoading: %sLoading } = %s();\n", varName, varName, hookName)
@@ -2235,7 +2241,6 @@ func renderModalButton(buf *bytes.Buffer, c *config.Component, indent string, im
 		dsAlias := action.Submit.DataSource
 		resource := pluralizeResource(dsAlias)
 		saveFunc := fmt.Sprintf("handleCreate%s%s", toPascalCase(dsAlias), suffix)
-		refreshTarget := action.Refresh
 
 		// Add local import for postItem
 		imports.addLocal("postItem", "@/lib/api")
@@ -2271,7 +2276,11 @@ func renderModalButton(buf *bytes.Buffer, c *config.Component, indent string, im
 		for _, resetter := range imports.formResetters {
 			fmt.Fprintf(&handlerBuf, "      %s;\n", resetter)
 		}
-		if refreshTarget != "" {
+		// Re-pull the list after a successful create so the new row shows
+		// without a manual reload. Only emit the call when the page actually
+		// destructured a `refetch` binding for this datasource (a CRUD
+		// datasource present on the page) — otherwise it is a dangling ref.
+		if imports.refetchVars[dsAlias] {
 			fmt.Fprintf(&handlerBuf, "      refetch%s();\n", toPascalCase(dsAlias))
 		}
 		handlerBuf.WriteString("    } catch (e) {\n")
@@ -2628,6 +2637,13 @@ type importTracker struct {
 	// "sysop" = @hollis-labs/sysop-ui). Emission helpers branch on this to
 	// redirect imports and switch component shapes.
 	uiKit string
+	// refetchVars is the set of datasource aliases whose list hook is
+	// destructured with a `refetch` binding (datasources declaring create/
+	// update/delete). It is computed before the layout pre-pass so modal
+	// submit handlers know whether a `refetch<Alias>()` call resolves to a
+	// real binding — emitting one without the binding is a dangling
+	// reference, omitting one when the binding exists leaves it unused.
+	refetchVars map[string]bool
 }
 
 // kitMode reports whether generation targets the sysop UI kit.
@@ -2699,10 +2715,11 @@ type filterBinding struct {
 
 func newImportTracker() *importTracker {
 	return &importTracker{
-		shadcn: map[string]map[string]bool{},
-		lucide: map[string]bool{},
-		react:  map[string]map[string]bool{},
-		local:  map[string]map[string]bool{},
+		shadcn:      map[string]map[string]bool{},
+		lucide:      map[string]bool{},
+		react:       map[string]map[string]bool{},
+		local:       map[string]map[string]bool{},
+		refetchVars: map[string]bool{},
 	}
 }
 

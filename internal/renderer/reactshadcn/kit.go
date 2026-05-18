@@ -78,7 +78,7 @@ func renderKitCustomComponent(buf *bytes.Buffer, c *config.Component, indent str
 		fmt.Fprintf(buf, "%s<StatusBadge status={%s} />\n", indent, kitStatusExpr(c.Props["status"], ctx))
 		return true
 	case "filter-bar":
-		renderKitFilterBar(buf, c, indent, imports, ctx)
+		renderKitFilterBar(buf, c, indent, imports)
 		return true
 	}
 	return false
@@ -103,7 +103,7 @@ func kitStatusExpr(val interface{}, ctx *renderer.RenderContext) string {
 // one piece of state per field. Search is owned by the FilterBar (the kit's
 // FilterBar has a built-in search input) and registered so the table consumes
 // it too. `date-range` filters have no kit equivalent and are skipped.
-func renderKitFilterBar(buf *bytes.Buffer, c *config.Component, indent string, imports *importTracker, ctx *renderer.RenderContext) {
+func renderKitFilterBar(buf *bytes.Buffer, c *config.Component, indent string, imports *importTracker) {
 	imports.addKit("FilterBar")
 	datasource := getPropString(c.Props, "datasource", "")
 
