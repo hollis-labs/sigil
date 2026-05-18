@@ -694,7 +694,7 @@ func TestRenderInput(t *testing.T) {
 }
 
 func TestSharedComponentsDataTable(t *testing.T) {
-	files, err := renderSharedComponents([]string{"data-table", "button"})
+	files, err := renderSharedComponents([]string{"data-table", "button"}, "")
 	if err != nil {
 		t.Fatalf("renderSharedComponents: %v", err)
 	}
@@ -717,7 +717,7 @@ func TestSharedComponentsDataTable(t *testing.T) {
 }
 
 func TestSharedComponentsNoDT(t *testing.T) {
-	files, err := renderSharedComponents([]string{"button", "badge"})
+	files, err := renderSharedComponents([]string{"button", "badge"}, "")
 	if err != nil {
 		t.Fatalf("renderSharedComponents: %v", err)
 	}
@@ -822,7 +822,7 @@ func TestThemeGeneration(t *testing.T) {
 		},
 	}
 
-	files, err := renderTheme(theme)
+	files, err := renderTheme(theme, "")
 	if err != nil {
 		t.Fatalf("renderTheme: %v", err)
 	}

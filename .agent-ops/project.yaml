@@ -1,0 +1,69 @@
+project:
+  id: sigil
+  display_name: Sigil
+  status: active
+  purpose: |
+    System-agnostic UI configuration and code-generation tool. Pages, themes, and
+    datasources are defined declaratively in YAML, validated against 49 built-in
+    component schemas, and compiled to framework-specific source code via pluggable
+    render targets (Go/Templ+HTMX, React/shadcn+Tailwind, static HTML preview).
+    Core value proposition: one config language, multiple render targets. Codegen
+    is the differentiator — Sigil is deliberately not a runtime renderer, visual
+    editor, or low-code platform. Ships as a single Go binary with a live dev server
+    and an MCP server for AI-agent integration.
+catalog:
+  torque_project_id: null            # no Torque project ID found in catalog or repo
+  cerberus_project_id: null          # no Cerberus project entry; see note below
+  tether_catalog_project: sigil      # ~/.tether/catalog/projects/sigil.yaml
+locations:
+  repo: ~/dev/hollis-labs/apps/sigil
+  agent_os_tracking: ~/dev/agent-os/workspaces/execution/sigil
+  state_dir: ~/dev/hollis-labs/apps/sigil/.sigil   # in-repo Sigil project / dogfood workspace; no ~/.sigil global state dir
+  catalog: null
+  artifacts: ~/.cerberus/apps/sigil                # Cerberus-installed sigil-serve artifact lives here
+build:
+  authority: local                  # built via Makefile + go toolchain; no .github/workflows, no Cerberus build resource
+  resource: null
+  command: make build               # → bin/sigil; also: make test, make vet, make install
+deployment:
+  type: launchd                     # a sigil-serve artifact is Cerberus-installed under ~/.cerberus/apps/sigil/sigil-serve
+  service_name: sigil-serve          # Cerberus app/launch name; see anomalies note
+  binary: ~/.cerberus/apps/sigil/sigil-serve/bin/sigil-serve
+docs:
+  readme: README.md
+  architecture: docs/01_architecture.md
+  adrs: docs/adr/
+  roadmap: null                      # no docs/roadmap.md; roadmap is spread across docs/projects/ briefs
+roadmap:
+  current_phase: 'Core 1.0 stable; catalog renderer in active planning, lightweight-studio spike pending'
+  pointer: null
+usage_examples:
+  - intent: Build the binary
+    command: make build
+    note: Output at bin/sigil; requires Go 1.25+.
+  - intent: Generate React/shadcn code from page configs
+    command: sigil generate --target react-shadcn --output src/generated
+    note: Emits .tsx pages, SWR hooks, TS types, Tailwind config.
+  - intent: Generate Go/Templ+HTMX code
+    command: sigil generate --target go-templ --output internal/ui
+    note: Emits .templ components, HTMX interactions, handler stubs, theme CSS.
+  - intent: Validate all page configs
+    command: sigil validate
+    note: Deep prop validation against 49 component schemas with did-you-mean hints.
+  - intent: Live-preview pages while editing
+    command: sigil serve
+    note: Watches .sigil/ and reloads the browser over SSE.
+  - intent: Integrate with an AI agent
+    command: sigil mcp serve
+    note: JSON-RPC 2.0 over stdio; 9 tools, 7 resource types, 2 prompts.
+  - intent: Run the bundled demo apps
+    command: make demo            # port 3333
+    note: make se-demo (3334) and make cw-demo (Vite SPA) are sibling demo targets.
+scopes:
+  - sigil.backend.main
+  - sigil.renderer.main
+  - sigil.frontend.main
+related_projects:
+  - stack-explorer
+  - torque
+  - hadron

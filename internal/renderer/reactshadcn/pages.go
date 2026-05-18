@@ -25,6 +25,7 @@ func renderPage(ctx *renderer.RenderContext) ([]renderer.OutputFile, error) {
 	imports.pageModule = page.Module
 	imports.targetMode = ctx.TargetMode
 	imports.modules = ctx.Modules
+	imports.uiKit = ctx.UIKit
 	var bodyBuf bytes.Buffer
 	renderComponent(&bodyBuf, &page.Layout, 2, imports, ctx)
 
@@ -441,24 +442,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		// Wire filter state if select has an emit action with datasource + field
 		var selectOnChange string
 		if changeAction, ok := c.Actions["change"]; ok && changeAction.Type == "emit" && changeAction.Datasource != "" && changeAction.Field != "" {
-			imports.addReact("useState", "react")
-			stateVar := "filter" + toPascalCase(changeAction.Datasource) + toPascalCase(changeAction.Field)
-			setterVar := "setFilter" + toPascalCase(changeAction.Datasource) + toPascalCase(changeAction.Field)
-			if imports.filterBindings == nil {
-				imports.filterBindings = map[string][]filterBinding{}
-			}
-			// Only add state declaration once per unique stateVar
-			alreadyExists := false
-			for _, fb := range imports.filterBindings[changeAction.Datasource] {
-				if fb.stateVar == stateVar {
-					alreadyExists = true
-					break
-				}
-			}
-			if !alreadyExists {
-				imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState(\"all\");", stateVar, setterVar))
-				imports.filterBindings[changeAction.Datasource] = append(imports.filterBindings[changeAction.Datasource], filterBinding{field: changeAction.Field, stateVar: stateVar})
-			}
+			_, setterVar := registerFilter(imports, changeAction.Datasource, changeAction.Field)
 			selectOnChange = fmt.Sprintf(" onValueChange={(v) => %s(v as string)}", setterVar)
 		}
 		fmt.Fprintf(buf, "%s<Select%s>\n", indent, selectOnChange)
@@ -512,7 +496,11 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		fmt.Fprintf(buf, "%s</div>\n", indent)
 
 	case "data-table":
-		imports.addLocal("DataTable", "@/components/data-table")
+		// Kit mode imports DataTable from the kit barrel (renderKitDataTable
+		// registers it via addKit); legacy mode uses the app-local component.
+		if !imports.kitMode() {
+			imports.addLocal("DataTable", "@/components/data-table")
+		}
 		renderReactDataTable(buf, c, indent, imports, ctx)
 
 	case "form":
@@ -1686,6 +1674,14 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int, imports 
 		fmt.Fprintf(buf, "%s/>\n", indent)
 
 	default:
+		// In kit mode, custom components with a kit equivalent are emitted as
+		// the kit component (FND-4) instead of copying the hand-written .tsx.
+		if imports.kitMode() && customKitComponents[c.Type] {
+			if renderKitCustomComponent(buf, c, indent, imports, ctx) {
+				break
+			}
+		}
+
 		// Check if this is a custom component with source files
 		if ctx != nil && ctx.Registry != nil {
 			if schema, ok := ctx.Registry.Get(c.Type); ok && schema.IsCustom() {
@@ -1765,6 +1761,10 @@ func renderCustomComponent(buf *bytes.Buffer, c *config.Component, indent string
 }
 
 func renderReactDataTable(buf *bytes.Buffer, c *config.Component, indent string, imports *importTracker, ctx *renderer.RenderContext) {
+	if imports.kitMode() {
+		renderKitDataTableComponent(buf, c, indent, imports, ctx)
+		return
+	}
 	datasource := getPropString(c.Props, "datasource", "")
 
 	// Build column definitions
@@ -1997,6 +1997,61 @@ func renderReactForm(buf *bytes.Buffer, c *config.Component, indent string, dept
 	fmt.Fprintf(buf, "%s</form>\n", indent)
 }
 
+// registerFilter ensures a filter state var + datasource binding exists for the
+// given datasource/field pair and returns (stateVar, setterVar). It is shared by
+// select onChange wiring and button onClick (emit/filter) wiring so every
+// control targeting the same field converges on one piece of state — the
+// data-table reads imports.filterBindings to apply `.filter()` chains. Calls are
+// deduplicated by stateVar so N buttons + a select on one field declare state
+// (and the binding) exactly once.
+func registerFilter(imports *importTracker, datasource, field string) (stateVar, setterVar string) {
+	imports.addReact("useState", "react")
+	stateVar = "filter" + toPascalCase(datasource) + toPascalCase(field)
+	setterVar = "setFilter" + toPascalCase(datasource) + toPascalCase(field)
+	if imports.filterBindings == nil {
+		imports.filterBindings = map[string][]filterBinding{}
+	}
+	for _, fb := range imports.filterBindings[datasource] {
+		if fb.stateVar == stateVar {
+			return stateVar, setterVar
+		}
+	}
+	imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState(\"all\");", stateVar, setterVar))
+	imports.filterBindings[datasource] = append(imports.filterBindings[datasource], filterBinding{field: field, stateVar: stateVar})
+	return stateVar, setterVar
+}
+
+// registerSearch ensures a search state var exists for the datasource and
+// returns (stateVar, setterVar). Deduplicated against the search-bar
+// component's wiring (same var names) so a page with both a search-bar and a
+// kit FilterBar declares the search state once. The data-table reads
+// imports.searchDatasources to apply the search `.filter()` chain.
+func registerSearch(imports *importTracker, datasource string) (stateVar, setterVar string) {
+	imports.addReact("useState", "react")
+	stateVar = "search" + toPascalCase(datasource)
+	setterVar = "setSearch" + toPascalCase(datasource)
+	if imports.searchDatasources == nil {
+		imports.searchDatasources = map[string]string{}
+	}
+	if _, exists := imports.searchDatasources[datasource]; !exists {
+		imports.searchDatasources[datasource] = stateVar
+		imports.stateDecls = append(imports.stateDecls, fmt.Sprintf("const [%s, %s] = useState(\"\");", stateVar, setterVar))
+	}
+	return stateVar, setterVar
+}
+
+// filterButtonOnClick returns an ` onClick=...` attribute for a button whose
+// emit/filter action sets a shared filter state var to a fixed value. An empty
+// value resets the filter to "all" (the data-table treats "all" as no filter),
+// which is what a "Show all" button needs.
+func filterButtonOnClick(imports *importTracker, datasource, field, value string) string {
+	_, setterVar := registerFilter(imports, datasource, field)
+	if value == "" {
+		value = "all"
+	}
+	return fmt.Sprintf(` onClick={() => %s(%q)}`, setterVar, value)
+}
+
 func renderReactActions(actions map[string]config.Action, imports *importTracker) string {
 	if len(actions) == 0 {
 		return ""
@@ -2044,11 +2099,12 @@ func renderReactActions(actions map[string]config.Action, imports *importTracker
 			toastCall := renderToastCall(&action)
 			attrs = append(attrs, fmt.Sprintf(` onClick={() => %s}`, toastCall))
 		case "filter":
-			// Filter emits a custom event with datasource + field + value for filtering
-			ds := action.Datasource
-			field := action.Field
-			if ds != "" && field != "" {
-				attrs = append(attrs, fmt.Sprintf(` onChange={(e) => window.dispatchEvent(new CustomEvent("filter:%s", { detail: { field: %q, value: e.target.value } }))}`, strings.ToLower(ds), field))
+			// renderReactActions only ever runs for clickable elements (button,
+			// icon-button, form) — never form inputs — so a fixed-value onClick
+			// is correct here. An onChange handler reading e.target.value would
+			// be silently dropped by React on a <button>.
+			if action.Datasource != "" && action.Field != "" {
+				attrs = append(attrs, filterButtonOnClick(imports, action.Datasource, action.Field, action.Value))
 			}
 		case "create":
 			// Create navigates to a create page or opens a modal
@@ -2064,8 +2120,11 @@ func renderReactActions(actions map[string]config.Action, imports *importTracker
 			if action.Event != "" {
 				attrs = append(attrs, fmt.Sprintf(` onClick={() => window.dispatchEvent(new CustomEvent(%q))}`, action.Event))
 			} else if action.Datasource != "" && action.Field != "" {
-				// emit with datasource/field acts as a filter event
-				attrs = append(attrs, fmt.Sprintf(` onChange={(e) => window.dispatchEvent(new CustomEvent("filter:%s", { detail: { field: %q, value: e.target.value } }))}`, strings.ToLower(action.Datasource), action.Field))
+				// emit with datasource/field on a button sets the shared filter
+				// state var to a fixed value. Previously emitted onChange +
+				// e.target.value on a <button>, which React drops silently —
+				// the filter never fired (FND-4 bug).
+				attrs = append(attrs, filterButtonOnClick(imports, action.Datasource, action.Field, action.Value))
 			}
 		case "confirm":
 			if action.Message != "" {
@@ -2565,7 +2624,14 @@ type importTracker struct {
 	// `{{item.field}}` references outside any list scope substitute to ""
 	// rather than emitting a dangling `item` identifier (TS error).
 	listScopeDepth int
+	// uiKit is the selected shared component kit ("" = legacy per-app shadcn,
+	// "sysop" = @hollis-labs/sysop-ui). Emission helpers branch on this to
+	// redirect imports and switch component shapes.
+	uiKit string
 }
+
+// kitMode reports whether generation targets the sysop UI kit.
+func (t *importTracker) kitMode() bool { return t.uiKit == "sysop" }
 
 // routerModule returns the import source for the router hook used in this
 // target mode ("next/navigation" for App Router, "react-router-dom" for SPA).
@@ -2641,6 +2707,9 @@ func newImportTracker() *importTracker {
 }
 
 func (t *importTracker) addShadcn(name, module string) {
+	if t.kitMode() {
+		module = kitRedirect(module)
+	}
 	if t.shadcn[module] == nil {
 		t.shadcn[module] = map[string]bool{}
 	}

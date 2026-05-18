@@ -31,6 +31,9 @@ func renderLayout(ctx *renderer.LayoutContext) ([]renderer.OutputFile, error) {
 	}
 
 	if ctx.AppConfig.EffectiveTargetMode() == "spa" {
+		if ctx.UIKit == "sysop" {
+			return renderKitLayoutSPA(ctx)
+		}
 		return renderLayoutSPA(ctx)
 	}
 
