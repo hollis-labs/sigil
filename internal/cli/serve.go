@@ -21,6 +21,8 @@ func NewServeCmd() *cobra.Command {
 		Long: `Start an HTTP server that renders page previews in real-time.
 
 The server watches .sigil/ for changes and reloads the browser automatically.
+It also exposes a JSON/REST API under /api/* (pages, components, datasources,
+themes, project config; CRUD for pages and datasources) for browser SPAs.
 
 Examples:
   sigil serve                    Start on default port 3210
