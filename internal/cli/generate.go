@@ -34,6 +34,7 @@ Examples:
 	cmd.Flags().Bool("dry-run", false, "List files that would be generated without writing")
 	cmd.Flags().String("go-module", "", "Go module path for imports")
 	cmd.Flags().String("target-mode", "", "Output shape override for react-shadcn: spa or app-router (default: from app.yaml)")
+	cmd.Flags().String("ui-kit", "", "Shared component kit for react-shadcn: sysop (import from @hollis-labs/sysop-ui) or empty (per-app shadcn)")
 	return cmd
 }
 
@@ -46,9 +47,16 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	goModule, _ := cmd.Flags().GetString("go-module")
 	targetMode, _ := cmd.Flags().GetString("target-mode")
+	uiKit, _ := cmd.Flags().GetString("ui-kit")
 
 	if output == "" {
 		output = "internal/ui"
+	}
+
+	switch uiKit {
+	case "", "sysop":
+	default:
+		return fmt.Errorf("invalid --ui-kit %q (valid: sysop)", uiKit)
 	}
 
 	// Validate --target-mode up-front so the error surfaces cleanly even on a
@@ -70,6 +78,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		DryRun:     dryRun,
 		GoModule:   goModule,
 		TargetMode: targetMode,
+		UIKit:      uiKit,
 	}
 
 	result, err := renderer.Generate(cfg)

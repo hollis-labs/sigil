@@ -47,6 +47,15 @@ type Renderer interface {
 	RenderProviders(app *config.AppConfig, sigilDir string) ([]OutputFile, error)
 }
 
+// UIKitAware is an optional interface for renderers that support generating
+// against a shared component kit. The engine calls SetUIKit once before any
+// generation method so the contextless interface methods
+// (RenderTheme/SharedComponents/RenderAPIClient/RenderProviders) can branch on
+// the selected kit. Renderers without kit support simply don't implement it.
+type UIKitAware interface {
+	SetUIKit(kit string)
+}
+
 // RenderContext provides everything a renderer needs to generate code for a page.
 type RenderContext struct {
 	Page          *config.Page
@@ -65,6 +74,9 @@ type RenderContext struct {
 	// Nil/empty is fine — renderers fall back to the legacy single-module
 	// path layout (no prefix). App Router renderers ignore this field.
 	Modules []*config.ModuleConfig
+	// UIKit is the GenerateConfig.UIKit value (e.g., "sysop" or ""). Renderers
+	// that support a shared component kit branch on this to redirect imports.
+	UIKit string
 }
 
 // LayoutContext provides everything a renderer needs to generate a module layout.
@@ -81,6 +93,8 @@ type LayoutContext struct {
 	AllModules []*config.ModuleConfig
 	AllPages   []*config.Page          // shells included for parity, but pages are filtered to non-shells by the engine
 	AllShells  map[string]*config.Page // moduleID → shell page
+	// UIKit mirrors RenderContext.UIKit for the layout/shell generation pass.
+	UIKit string
 }
 
 // OutputFile represents a file to be written to disk.

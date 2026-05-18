@@ -148,6 +148,18 @@ cw-demo-generate: build
 cw-demo-install:
 	cd demo-clockwork && npm install
 
+# ── Clockwork Demo — sysop UI kit (FND-4) ─────────────────
+# Same pages, generated with `--ui-kit sysop` so they import the shared
+# @hollis-labs/sysop-ui kit (DataTable, FilterBar, StatusBadge, EmptyState,
+# theme) instead of per-app hand-written components. Output lands in a temp
+# dir — it is NOT rsynced into demo-clockwork/, which still rides the legacy
+# Tailwind v3 theme; the kit demo is a standalone validation artifact.
+cw-demo-kit-generate: build
+	bin/sigil generate --target react-shadcn --target-mode spa --ui-kit sysop --theme clockwork-dark \
+		--pages clockwork-board,clockwork-task-detail,clockwork-collections,clockwork-dashboard,clockwork-templates,clockwork-checkpoints,clockwork-runs,clockwork-models,clockwork-projects,clockwork-sprints,clockwork-settings,clockwork-plans,clockwork-plan-detail \
+		--output /tmp/sigil-cw-kit
+	@echo "✓ Clockwork pages generated against @hollis-labs/sysop-ui → /tmp/sigil-cw-kit"
+
 cw-demo-dev: cw-demo-generate
 	cd demo-clockwork && npm run dev
 
