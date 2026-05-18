@@ -23,10 +23,10 @@ type Server struct {
 	SigilDir string
 	Port     int
 
-	mu       sync.RWMutex
-	clients  map[chan struct{}]struct{}
-	mux      *http.ServeMux
-	srv      *http.Server
+	mu      sync.RWMutex
+	clients map[chan struct{}]struct{}
+	mux     *http.ServeMux
+	srv     *http.Server
 }
 
 // New creates a new dev server.
@@ -46,6 +46,12 @@ func (s *Server) buildMux() *http.ServeMux {
 	mux.HandleFunc("GET /pages/{id}", s.handlePage)
 	mux.HandleFunc("GET /assets/theme.css", s.handleThemeCSS)
 	mux.HandleFunc("GET /events", s.handleSSE)
+
+	// Mount the JSON/REST API. The /api/* routes coexist with the HTML
+	// preview routes above; a browser SPA consumes the API while the
+	// preview pages keep working unchanged.
+	NewAPI(s.SigilDir).Register(mux)
+
 	return mux
 }
 

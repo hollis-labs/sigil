@@ -244,10 +244,42 @@ file changes and reloads the browser via SSE (Server-Sent Events).
 - On-the-fly page rendering with theme CSS
 - Auto-reload on file changes (pages, themes, datasources)
 - Navigation bar injected into page previews
+- JSON/REST API under `/api/*` for browser SPAs (see below)
 
 **Flags:**
 - `--port <int>` — HTTP server port (default: 3210)
 - `--sigil-dir <string>` — Path to .sigil directory (default: ".sigil")
+
+**JSON API (`/api/*`)**
+
+`sigil serve` also exposes a JSON/REST API over the project's data layer so a
+browser SPA can read and mutate Sigil data. It reuses the same parse/validate
+logic as the MCP tools.
+
+| Method & path | Description |
+| --- | --- |
+| `GET /api/health` | Liveness probe — returns `{"status":"ok"}` |
+| `GET /api/pages` | List pages (id, title, overlay, module) |
+| `GET /api/pages/{id}` | Full page config as JSON |
+| `POST /api/pages` | Create a page (validates before saving) |
+| `PUT /api/pages/{id}` | Update an existing page (validates) |
+| `GET /api/components` | List component types (`?category=` filter) |
+| `GET /api/components/{type}` | Full schema for a component type |
+| `GET /api/datasources` | List datasource manifests |
+| `GET /api/datasources/{alias}` | Full datasource manifest as JSON |
+| `POST /api/datasources` | Create a datasource manifest |
+| `GET /api/themes` | List themes (name, description, extends) |
+| `GET /api/themes/{name}` | Full theme definition as JSON |
+| `GET /api/project` | Project config (`sigil.yaml`) as JSON |
+
+Write endpoints accept a JSON object by default, or a raw YAML document when
+the request carries a YAML `Content-Type`. Page writes return `422` with a
+`details` array when validation fails, and `409` when the target already
+exists.
+
+The API is also available as a standalone `http.Handler` via
+`server.NewAPI(sigilDir).Handler()`, so it can be mounted alongside a static
+SPA handler to serve a single-page app and its API same-origin.
 
 ### `sigil export`
 
