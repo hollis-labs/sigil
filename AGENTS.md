@@ -1,106 +1,62 @@
-# AGENTS.md — Sigil
+# Sigil
 
-## What is this and why
+Sigil is a UI compiler. Pages, themes and datasources are authored as YAML,
+validated against embedded component schemas, and compiled to source code for
+one of several render targets (Go/Templ+HTMX, React/shadcn, static HTML
+preview). It is not a runtime renderer, a visual editor or a low-code platform,
+and what it emits must stand alone — generated code never depends on Sigil at
+runtime.
 
-Sigil is a system-agnostic UI configuration and code-generation tool. You define a UI
-declaratively in YAML (pages as component trees, themes as design tokens, datasources as
-data shapes), Sigil validates it against 49 built-in component schemas, and generates
-framework-specific source code for one of several render targets — Go/Templ+HTMX,
-React/shadcn+Tailwind, or a static HTML preview. The core value proposition is **one
-config language, multiple render targets**: write your pages once, generate for any
-target. Codegen is the differentiator — Sigil deliberately is *not* a runtime renderer,
-visual editor, or low-code platform; protect that boundary.
+## Start Here
 
-## Where to start
+- `README.md` for the CLI surface, `docs/01_architecture.md` through
+  `docs/09_sysop-ui-kit.md` for the specs.
+- `internal/renderer/renderer.go` defines the `Renderer` interface every target
+  implements; `docs/05_renderer-contract.md` explains it.
+- `internal/renderer/engine.go` is the only place output reaches disk. Renderers
+  return `[]OutputFile`, which is what makes `--dry-run` and `--clean` work.
+- `internal/components/builtin/` holds the component schemas as embedded YAML.
+  The registry auto-discovers them: adding a file adds a component, and a
+  component absent from the registry does not exist.
+- `internal/config/types.go` owns the config shape, including which level —
+  app, module or page — each field lives on.
+- `internal/server/api.go` is the JSON/REST API browser SPAs consume;
+  `internal/mcp/` is the agent-facing surface.
+- `.sigil/` is a real Sigil project — the dogfood workspace `sigil serve` and
+  `sigil generate` read.
+- `sysop/` is a separate Go module: the Sysop admin binary and its Vite frontend.
 
-- `README.md` — feature overview, quick start, CLI table, render-target outputs.
-- `cmd/sigil/` — entry point (single binary, Cobra CLI).
-- `internal/cli/` — CLI command implementations.
-- `internal/renderer/` — the `Renderer` interface plus concrete targets (gotempl,
-  reactshadcn, preview).
-- `internal/components/builtin/` — the 49 component schemas (YAML, embedded in binary).
-- `docs/` — numbered architecture docs (`01_architecture.md` through
-  `08_mcp-integration.md`); start with `01_architecture.md` and `02_config-spec.md`.
-- `.sigil/` — a working Sigil project lives here (project config, pages, themes,
-  datasources, custom components) and doubles as the dogfooding workspace.
-- `.agentrc/config.yaml` — per-project agent definitions (`sigil-backend`,
-  `sigil-renderer`, `sigil-frontend`, `sigil-reviewer`).
-
-## Key domain concepts
-
-- **Page config** — a YAML document (`sigil: "1.0"`, `kind: page`) describing a UI as a
-  nested component tree with props, actions, and datasource bindings.
-- **Component registry** — 49 built-in component types across 6 categories (layout,
-  primitive, form, data, overlay, navigation); custom schemas are supported via
-  `*.schema.yaml`.
-- **Render target** — a pluggable code generator. `go-templ` emits `.templ` + HTMX +
-  handler stubs; `react-shadcn` emits `.tsx` + shadcn imports + SWR hooks + TS types;
-  `preview` emits static HTML with mock data. A catalog target is in active planning.
-- **Theme** — design tokens (colors, radius, etc.) compiled to `--sigil-*` CSS custom
-  properties and a Tailwind preset.
-- **DataSource** — a declared data shape; generators emit typed React hooks or Go
-  handler stubs from it.
-- **MCP server** — `sigil mcp serve` exposes Sigil to AI agents over JSON-RPC 2.0 on
-  stdio (9 tools, 7 resource types, 2 prompts). This is the primary agent-facing surface.
-- **Live dev server** — `sigil serve` watches `.sigil/` and reloads the browser via SSE.
-
-## Common operations
+## Commands
 
 ```bash
-# Build the binary
-make build                       # → bin/sigil
-
-# Run tests and vet
-make test
+make build              # → bin/sigil
+make test               # go test ./... — root module only
 make vet
-
-# Install locally
-make install                     # go install → $GOBIN/sigil
-
-# Initialize and author a project
-sigil init --name my-app
-sigil new page dashboard --title "Dashboard"
-sigil validate
-
-# Generate code
-sigil generate --target go-templ     --output internal/ui
-sigil generate --target react-shadcn --output src/generated
-
-# Preview / live dev
-sigil preview dashboard
-sigil serve
-
-# Agent integration
-sigil mcp serve
-
-# Run the bundled demos (Next.js / SPA)
-make demo                        # demo/ on port 3333
-make se-demo                     # Stack Explorer demo on port 3334
-make cw-demo                     # Clockwork demo (Vite SPA)
+cd sysop && go test ./...
 ```
 
-The `demo*` Make targets regenerate React output into the demo apps; they use
-`rsync --ignore-existing` to protect hand-written mock hooks. If hooks get clobbered,
-restore the mock versions manually.
+`lefthook` gates commits on gofmt/goimports, `golangci-lint run --new` and
+`go vet ./...`, and pushes on `go test ./...`. The `make demo`, `make se-demo`
+and `make cw-demo` targets regenerate output into the checked-in demo apps —
+use them to see a renderer change, not to verify one.
 
-## Where to look for more
+## Boundaries
 
-- **Architecture / specs:** `docs/01_architecture.md` … `docs/08_mcp-integration.md`,
-  plus `docs/05_renderer-contract.md` for the renderer plugin contract.
-- **ADRs:** `docs/adr/` — `0001-sigil-studio-positioning.md` (Proposed; positions a
-  prospective Sigil Studio sibling repo). ADR 0002 (lightweight-studio spike outcome)
-  is not yet written.
-- **Project briefs / roadmap:** `docs/projects/` — `catalog-renderer-prompt.md`,
-  `lightweight-studio-exploration-prompt.md`, `sigil-studio-planning-prompt.md`,
-  `stack-explorer-api-prompt.md`, `stack-explorer-frontend.md`.
-- **Portfolio knowledge:** `~/dev/agent-os/knowledge/projects/sigil.md` — cross-project
-  context, sub-project status, composition points, open gaps.
-- **SoT:** `.agent-ops/project.yaml` — machine-readable project source-of-truth.
+`sysop/` is its own Go module. `go test ./...` at the repo root does not reach
+it, so a change touching both needs both commands.
 
-## Conventions
+The five Sysop UI screens in `sysop/frontend/src/pages/` are hand-composed on
+purpose. The react-shadcn `--ui-kit` renderer is not at parity and its generated
+pages break at runtime against the server API — tracked as CW-20260518-0037. Do
+not "fix" these screens by regenerating them.
 
-- Three core dependencies only (Cobra, yaml.v3, pflag) — adding a dependency requires
-  strong justification.
-- Do not guess when uncertain — stop and ask.
-- Sub-agent output stays in the sub-agent; the main context gets one-line confirmations.
-- Prefer focused, minimal output; no trailing summaries.
+Hooks under `demo/src/hooks/` and the sibling demo apps are hand-written mocks,
+because SWR 2.x does not work with React 19. The demo targets protect them with
+`rsync --ignore-existing`; if a generated hook lands on one, restore the mock,
+because the generated version does not run.
+
+Three runtime dependencies only — Cobra, pflag, yaml.v3. A fourth needs a real
+argument.
+
+A component renders in every target or its unsupported status is documented. A
+schema added without a case in each renderer validates and then emits nothing.
