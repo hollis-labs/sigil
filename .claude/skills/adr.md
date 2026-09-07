@@ -1,1 +1,0 @@
-/Users/chrispian/Projects-apps/sigil/.agentrc/skills/adr.md
