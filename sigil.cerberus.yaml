@@ -1,0 +1,33 @@
+kind: cerberus-project/v1
+owner: sigil
+namespace: local
+project:
+  id: sigil
+  name: Sigil
+resources:
+  - id: sigil-serve
+    name: Sigil Serve
+    type: process
+    project: sigil
+    connector: local
+    config:
+      build_strategy:
+        kind: make_standard
+      command:
+        - ./bin/sigil
+        - serve
+        - --port
+        - "3210"
+      dir: /Users/chrispian/dev/hollis-labs/apps/sigil
+      mode: os_service
+      port: 3210
+      run_from: artifact
+      supervisor: launchd
+      url: http://127.0.0.1:3210
+    tags:
+      - ui
+      - go
+      - launchd
+      - devserver
+      - v2
+registry_urn: msg://agent/agent-mux/prj_o8loxv2k5e
