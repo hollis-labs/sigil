@@ -1,39 +1,42 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/chrispian/sigil/internal/components"
 	"github.com/chrispian/sigil/internal/config"
 )
 
-// RegisterAllPrompts registers MCP prompts.
+// RegisterAllPrompts registers Sigil's MCP prompts. Prompts are not wrapped
+// by go-mcp, so registration goes directly against the underlying
+// official-SDK server.
 func RegisterAllPrompts(s *Server) {
-	s.SetPrompts([]Prompt{
-		{
-			Name:        "sigil_design_page",
-			Description: "Guide for designing a Sigil page config",
-			Arguments: []PromptArgument{
-				{Name: "description", Description: "Description of the page to design", Required: true},
-			},
-		},
-		{
-			Name:        "sigil_review_config",
-			Description: "Review a Sigil config for issues and suggest improvements",
-			Arguments: []PromptArgument{
-				{Name: "config", Description: "YAML config to review", Required: true},
-			},
-		},
-	})
+	sdk := s.SDKServer()
 
-	s.RegisterPromptHandler("sigil_design_page", handleDesignPage)
-	s.RegisterPromptHandler("sigil_review_config", handleReviewConfig(s))
+	sdk.AddPrompt(&mcpsdk.Prompt{
+		Name:        "sigil_design_page",
+		Description: "Guide for designing a Sigil page config",
+		Arguments: []*mcpsdk.PromptArgument{
+			{Name: "description", Description: "Description of the page to design", Required: true},
+		},
+	}, handleDesignPage)
+
+	sdk.AddPrompt(&mcpsdk.Prompt{
+		Name:        "sigil_review_config",
+		Description: "Review a Sigil config for issues and suggest improvements",
+		Arguments: []*mcpsdk.PromptArgument{
+			{Name: "config", Description: "YAML config to review", Required: true},
+		},
+	}, handleReviewConfig(s))
 }
 
-func handleDesignPage(args map[string]string) ([]PromptMessage, error) {
-	description := args["description"]
+func handleDesignPage(ctx context.Context, req *mcpsdk.GetPromptRequest) (*mcpsdk.GetPromptResult, error) {
+	description := req.Params.Arguments["description"]
 	if description == "" {
 		return nil, fmt.Errorf("'description' argument is required")
 	}
@@ -101,17 +104,16 @@ Rules:
 
 Generate the complete YAML config now.`, description, "```yaml\n", configTemplate, "```\n", catalog.String())
 
-	return []PromptMessage{
-		{
-			Role:    "user",
-			Content: ContentBlock{Type: "text", Text: systemPrompt},
+	return &mcpsdk.GetPromptResult{
+		Messages: []*mcpsdk.PromptMessage{
+			{Role: "user", Content: &mcpsdk.TextContent{Text: systemPrompt}},
 		},
 	}, nil
 }
 
-func handleReviewConfig(s *Server) PromptHandler {
-	return func(args map[string]string) ([]PromptMessage, error) {
-		yamlConfig := args["config"]
+func handleReviewConfig(s *Server) mcpsdk.PromptHandler {
+	return func(ctx context.Context, req *mcpsdk.GetPromptRequest) (*mcpsdk.GetPromptResult, error) {
+		yamlConfig := req.Params.Arguments["config"]
 		if yamlConfig == "" {
 			return nil, fmt.Errorf("'config' argument is required")
 		}
@@ -119,12 +121,13 @@ func handleReviewConfig(s *Server) PromptHandler {
 		// Parse and validate
 		page, err := config.Parse([]byte(yamlConfig))
 		if err != nil {
-			return []PromptMessage{
-				{
-					Role: "user",
-					Content: ContentBlock{
-						Type: "text",
-						Text: fmt.Sprintf("The following Sigil config has a parse error:\n\n```yaml\n%s\n```\n\nError: %s\n\nPlease fix the YAML syntax.", yamlConfig, err),
+			return &mcpsdk.GetPromptResult{
+				Messages: []*mcpsdk.PromptMessage{
+					{
+						Role: "user",
+						Content: &mcpsdk.TextContent{
+							Text: fmt.Sprintf("The following Sigil config has a parse error:\n\n```yaml\n%s\n```\n\nError: %s\n\nPlease fix the YAML syntax.", yamlConfig, err),
+						},
 					},
 				},
 			}, nil
@@ -168,10 +171,9 @@ func handleReviewConfig(s *Server) PromptHandler {
 		}, "", "  ")
 		review.WriteString(fmt.Sprintf("\nValidation summary:\n```json\n%s\n```\n", string(data)))
 
-		return []PromptMessage{
-			{
-				Role:    "user",
-				Content: ContentBlock{Type: "text", Text: review.String()},
+		return &mcpsdk.GetPromptResult{
+			Messages: []*mcpsdk.PromptMessage{
+				{Role: "user", Content: &mcpsdk.TextContent{Text: review.String()}},
 			},
 		}, nil
 	}

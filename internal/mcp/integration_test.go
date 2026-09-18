@@ -1,11 +1,13 @@
 package mcp
 
 import (
-	"encoding/json"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // setupTestProject creates a minimal .sigil project in a temp directory
@@ -37,7 +39,7 @@ name: default
 description: "Default dark theme"
 tokens:
   colors:
-    background: "9 9 11"
+    background: "9 9 21"
     text: "244 244 245"
     accent: "16 185 129"
 `), 0644)
@@ -82,49 +84,77 @@ endpoints:
 	return s, root
 }
 
-func callTool(t *testing.T, s *Server, name string, args interface{}) *jsonRPCResponse {
+// connectClient wires an in-memory MCP client to s over the real protocol
+// and returns the connected client session. Both sides are closed
+// automatically at test cleanup.
+func connectClient(t *testing.T, s *Server) *mcpsdk.ClientSession {
 	t.Helper()
-	return sendRequest(t, s, "tools/call", 1, map[string]interface{}{
-		"name":      name,
-		"arguments": args,
-	})
+	ctx := context.Background()
+
+	serverTransport, clientTransport := mcpsdk.NewInMemoryTransports()
+
+	serverSession, err := s.SDKServer().Connect(ctx, serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server connect: %v", err)
+	}
+	t.Cleanup(func() { serverSession.Close() })
+
+	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "test-client", Version: "1.0"}, nil)
+	clientSession, err := client.Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() { clientSession.Close() })
+
+	return clientSession
 }
 
-func TestIntegrationInitialize(t *testing.T) {
-	s, _ := setupTestProject(t)
-	resp := sendRequest(t, s, "initialize", 1, map[string]interface{}{
-		"protocolVersion": "2024-11-05",
-		"capabilities":    map[string]interface{}{},
-		"clientInfo":      map[string]interface{}{"name": "test-client", "version": "1.0"},
+func callTool(t *testing.T, cs *mcpsdk.ClientSession, name string, args map[string]any) *mcpsdk.CallToolResult {
+	t.Helper()
+	res, err := cs.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name:      name,
+		Arguments: args,
 	})
+	if err != nil {
+		t.Fatalf("call tool %s: %v", name, err)
+	}
+	return res
+}
 
-	if resp.Error != nil {
-		t.Fatalf("initialize error: %v", resp.Error)
+// extractToolText returns the text of a tool result's first content block.
+func extractToolText(t *testing.T, res *mcpsdk.CallToolResult) string {
+	t.Helper()
+	if len(res.Content) == 0 {
+		return ""
 	}
+	tc, ok := res.Content[0].(*mcpsdk.TextContent)
+	if !ok {
+		t.Fatalf("expected text content, got %T", res.Content[0])
+	}
+	return tc.Text
+}
 
-	result := resp.Result.(map[string]interface{})
-	caps := result["capabilities"].(map[string]interface{})
-	if _, ok := caps["tools"]; !ok {
-		t.Error("expected tools capability")
+// promptText returns the text of a prompt result's first message.
+func promptText(t *testing.T, res *mcpsdk.GetPromptResult) string {
+	t.Helper()
+	if len(res.Messages) == 0 {
+		t.Fatal("expected at least one message")
 	}
-	if _, ok := caps["resources"]; !ok {
-		t.Error("expected resources capability")
+	tc, ok := res.Messages[0].Content.(*mcpsdk.TextContent)
+	if !ok {
+		t.Fatalf("expected text content, got %T", res.Messages[0].Content)
 	}
-	if _, ok := caps["prompts"]; !ok {
-		t.Error("expected prompts capability")
-	}
+	return tc.Text
 }
 
 func TestIntegrationToolsList(t *testing.T) {
 	s, _ := setupTestProject(t)
-	resp := sendRequest(t, s, "tools/list", 1, nil)
+	cs := connectClient(t, s)
 
-	if resp.Error != nil {
-		t.Fatalf("tools/list error: %v", resp.Error)
+	res, err := cs.ListTools(context.Background(), &mcpsdk.ListToolsParams{})
+	if err != nil {
+		t.Fatalf("tools/list error: %v", err)
 	}
-
-	result := resp.Result.(map[string]interface{})
-	tools := result["tools"].([]interface{})
 
 	expectedTools := []string{
 		"sigil_list_pages", "sigil_get_page", "sigil_create_page",
@@ -134,9 +164,8 @@ func TestIntegrationToolsList(t *testing.T) {
 	}
 
 	toolNames := map[string]bool{}
-	for _, t := range tools {
-		tm := t.(map[string]interface{})
-		toolNames[tm["name"].(string)] = true
+	for _, tl := range res.Tools {
+		toolNames[tl.Name] = true
 	}
 
 	for _, expected := range expectedTools {
@@ -145,20 +174,21 @@ func TestIntegrationToolsList(t *testing.T) {
 		}
 	}
 
-	if len(tools) != 9 {
-		t.Errorf("expected 9 tools, got %d", len(tools))
+	if len(res.Tools) != 9 {
+		t.Errorf("expected 9 tools, got %d", len(res.Tools))
 	}
 }
 
 func TestIntegrationListPages(t *testing.T) {
 	s, _ := setupTestProject(t)
-	resp := callTool(t, s, "sigil_list_pages", map[string]interface{}{})
+	cs := connectClient(t, s)
 
-	if resp.Error != nil {
-		t.Fatalf("error: %v", resp.Error)
+	res := callTool(t, cs, "sigil_list_pages", map[string]any{})
+	if res.IsError {
+		t.Fatalf("unexpected error: %s", extractToolText(t, res))
 	}
 
-	text := extractToolText(t, resp)
+	text := extractToolText(t, res)
 	if !strings.Contains(text, "dashboard") {
 		t.Error("expected dashboard in pages list")
 	}
@@ -169,15 +199,14 @@ func TestIntegrationListPages(t *testing.T) {
 
 func TestIntegrationGetPage(t *testing.T) {
 	s, _ := setupTestProject(t)
-	resp := callTool(t, s, "sigil_get_page", map[string]interface{}{
-		"id": "dashboard",
-	})
+	cs := connectClient(t, s)
 
-	if resp.Error != nil {
-		t.Fatalf("error: %v", resp.Error)
+	res := callTool(t, cs, "sigil_get_page", map[string]any{"id": "dashboard"})
+	if res.IsError {
+		t.Fatalf("unexpected error: %s", extractToolText(t, res))
 	}
 
-	text := extractToolText(t, resp)
+	text := extractToolText(t, res)
 	if !strings.Contains(text, "sigil:") {
 		t.Error("expected YAML content")
 	}
@@ -188,6 +217,7 @@ func TestIntegrationGetPage(t *testing.T) {
 
 func TestIntegrationCreatePage(t *testing.T) {
 	s, _ := setupTestProject(t)
+	cs := connectClient(t, s)
 
 	pageConfig := `sigil: "1.0"
 id: new-page
@@ -203,24 +233,22 @@ layout:
         level: 2
         text: New Page`
 
-	resp := callTool(t, s, "sigil_create_page", map[string]interface{}{
+	res := callTool(t, cs, "sigil_create_page", map[string]any{
 		"id":     "new-page",
 		"config": pageConfig,
 	})
-
-	if resp.Error != nil {
-		t.Fatalf("error: %v", resp.Error)
+	if res.IsError {
+		t.Fatalf("unexpected error: %s", extractToolText(t, res))
 	}
 
-	text := extractToolText(t, resp)
-	if !strings.Contains(text, `"valid": true`) {
+	text := extractToolText(t, res)
+	if !strings.Contains(text, `"valid":true`) {
 		t.Errorf("expected valid: true, got: %s", text)
 	}
 	if !strings.Contains(text, "new-page.yaml") {
 		t.Error("expected file path in response")
 	}
 
-	// Verify file was created
 	path := filepath.Join(s.SigilDir(), "pages", "new-page.yaml")
 	if _, err := os.Stat(path); err != nil {
 		t.Errorf("expected file to be created at %s", path)
@@ -229,23 +257,21 @@ layout:
 
 func TestIntegrationCreatePageInvalid(t *testing.T) {
 	s, _ := setupTestProject(t)
+	cs := connectClient(t, s)
 
-	// Missing required fields
-	resp := callTool(t, s, "sigil_create_page", map[string]interface{}{
+	res := callTool(t, cs, "sigil_create_page", map[string]any{
 		"id":     "bad-page",
 		"config": "id: bad\nlayout:\n  type: rows\n",
 	})
-
-	if resp.Error != nil {
-		t.Fatalf("error: %v", resp.Error)
+	if res.IsError {
+		t.Fatalf("unexpected error: %s", extractToolText(t, res))
 	}
 
-	text := extractToolText(t, resp)
-	if !strings.Contains(text, `"valid": false`) {
+	text := extractToolText(t, res)
+	if !strings.Contains(text, `"valid":false`) {
 		t.Errorf("expected valid: false for invalid config, got: %s", text)
 	}
 
-	// File should NOT be created
 	path := filepath.Join(s.SigilDir(), "pages", "bad-page.yaml")
 	if _, err := os.Stat(path); err == nil {
 		t.Error("expected invalid page to NOT be saved")
@@ -254,6 +280,7 @@ func TestIntegrationCreatePageInvalid(t *testing.T) {
 
 func TestIntegrationValidate(t *testing.T) {
 	s, _ := setupTestProject(t)
+	cs := connectClient(t, s)
 
 	validConfig := `sigil: "1.0"
 id: test
@@ -263,38 +290,37 @@ layout:
   id: root
   type: rows`
 
-	resp := callTool(t, s, "sigil_validate", map[string]interface{}{
-		"config": validConfig,
-	})
-
-	if resp.Error != nil {
-		t.Fatalf("error: %v", resp.Error)
+	res := callTool(t, cs, "sigil_validate", map[string]any{"config": validConfig})
+	if res.IsError {
+		t.Fatalf("unexpected error: %s", extractToolText(t, res))
 	}
 
-	text := extractToolText(t, resp)
-	if !strings.Contains(text, `"valid": true`) {
+	text := extractToolText(t, res)
+	if !strings.Contains(text, `"valid":true`) {
 		t.Errorf("expected valid: true, got: %s", text)
 	}
 }
 
 func TestIntegrationValidateInvalid(t *testing.T) {
 	s, _ := setupTestProject(t)
+	cs := connectClient(t, s)
 
-	resp := callTool(t, s, "sigil_validate", map[string]interface{}{
+	res := callTool(t, cs, "sigil_validate", map[string]any{
 		"config": "id: \ntitle: \noverlay: bad\nlayout:\n  type: \n",
 	})
 
-	text := extractToolText(t, resp)
-	if !strings.Contains(text, `"valid": false`) {
+	text := extractToolText(t, res)
+	if !strings.Contains(text, `"valid":false`) {
 		t.Errorf("expected valid: false, got: %s", text)
 	}
 }
 
 func TestIntegrationListComponents(t *testing.T) {
 	s, _ := setupTestProject(t)
-	resp := callTool(t, s, "sigil_list_components", map[string]interface{}{})
+	cs := connectClient(t, s)
 
-	text := extractToolText(t, resp)
+	res := callTool(t, cs, "sigil_list_components", map[string]any{})
+	text := extractToolText(t, res)
 	if !strings.Contains(text, "button") {
 		t.Error("expected button component")
 	}
@@ -308,18 +334,16 @@ func TestIntegrationListComponents(t *testing.T) {
 
 func TestIntegrationListComponentsByCategory(t *testing.T) {
 	s, _ := setupTestProject(t)
-	resp := callTool(t, s, "sigil_list_components", map[string]interface{}{
-		"category": "layouts",
-	})
+	cs := connectClient(t, s)
 
-	text := extractToolText(t, resp)
+	res := callTool(t, cs, "sigil_list_components", map[string]any{"category": "layouts"})
+	text := extractToolText(t, res)
 	if !strings.Contains(text, "rows") {
 		t.Error("expected rows in layouts")
 	}
 	if !strings.Contains(text, "columns") {
 		t.Error("expected columns in layouts")
 	}
-	// Should NOT include primitives
 	if strings.Contains(text, `"category": "primitives"`) {
 		t.Error("unexpected primitives in layouts filter")
 	}
@@ -327,11 +351,10 @@ func TestIntegrationListComponentsByCategory(t *testing.T) {
 
 func TestIntegrationGetComponentSchema(t *testing.T) {
 	s, _ := setupTestProject(t)
-	resp := callTool(t, s, "sigil_get_component_schema", map[string]interface{}{
-		"type": "button",
-	})
+	cs := connectClient(t, s)
 
-	text := extractToolText(t, resp)
+	res := callTool(t, cs, "sigil_get_component_schema", map[string]any{"type": "button"})
+	text := extractToolText(t, res)
 	if !strings.Contains(text, "button") {
 		t.Error("expected button type")
 	}
@@ -342,9 +365,10 @@ func TestIntegrationGetComponentSchema(t *testing.T) {
 
 func TestIntegrationListDataSources(t *testing.T) {
 	s, _ := setupTestProject(t)
-	resp := callTool(t, s, "sigil_list_datasources", map[string]interface{}{})
+	cs := connectClient(t, s)
 
-	text := extractToolText(t, resp)
+	res := callTool(t, cs, "sigil_list_datasources", map[string]any{})
+	text := extractToolText(t, res)
 	if !strings.Contains(text, "Sprint") {
 		t.Error("expected Sprint datasource")
 	}
@@ -352,6 +376,7 @@ func TestIntegrationListDataSources(t *testing.T) {
 
 func TestIntegrationCreateDataSource(t *testing.T) {
 	s, _ := setupTestProject(t)
+	cs := connectClient(t, s)
 
 	dsConfig := `alias: Task
 description: "Task management"
@@ -364,17 +389,15 @@ fields:
     type: string
     required: true`
 
-	resp := callTool(t, s, "sigil_create_datasource", map[string]interface{}{
+	res := callTool(t, cs, "sigil_create_datasource", map[string]any{
 		"alias":  "Task",
 		"config": dsConfig,
 	})
-
-	text := extractToolText(t, resp)
+	text := extractToolText(t, res)
 	if !strings.Contains(text, "task.yaml") {
 		t.Errorf("expected file path, got: %s", text)
 	}
 
-	// Verify file was created
 	path := filepath.Join(s.SigilDir(), "datasources", "task.yaml")
 	if _, err := os.Stat(path); err != nil {
 		t.Errorf("expected datasource file at %s", path)
@@ -383,6 +406,7 @@ fields:
 
 func TestIntegrationResourcesRead(t *testing.T) {
 	s, _ := setupTestProject(t)
+	cs := connectClient(t, s)
 
 	tests := []struct {
 		uri      string
@@ -399,16 +423,15 @@ func TestIntegrationResourcesRead(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.uri, func(t *testing.T) {
-			resp := sendRequest(t, s, "resources/read", 1, map[string]interface{}{
-				"uri": tt.uri,
-			})
-			if resp.Error != nil {
-				t.Fatalf("error reading %s: %v", tt.uri, resp.Error)
+			res, err := cs.ReadResource(context.Background(), &mcpsdk.ReadResourceParams{URI: tt.uri})
+			if err != nil {
+				t.Fatalf("error reading %s: %v", tt.uri, err)
 			}
-
-			resultData, _ := json.Marshal(resp.Result)
-			if !strings.Contains(string(resultData), tt.contains) {
-				t.Errorf("expected %q in result for %s, got: %s", tt.contains, tt.uri, string(resultData))
+			if len(res.Contents) == 0 {
+				t.Fatalf("expected contents for %s", tt.uri)
+			}
+			if !strings.Contains(res.Contents[0].Text, tt.contains) {
+				t.Errorf("expected %q in result for %s, got: %s", tt.contains, tt.uri, res.Contents[0].Text)
 			}
 		})
 	}
@@ -416,18 +439,17 @@ func TestIntegrationResourcesRead(t *testing.T) {
 
 func TestIntegrationPromptsDesignPage(t *testing.T) {
 	s, _ := setupTestProject(t)
+	cs := connectClient(t, s)
 
-	resp := sendRequest(t, s, "prompts/get", 1, map[string]interface{}{
-		"name":      "sigil_design_page",
-		"arguments": map[string]string{"description": "A user management page"},
+	res, err := cs.GetPrompt(context.Background(), &mcpsdk.GetPromptParams{
+		Name:      "sigil_design_page",
+		Arguments: map[string]string{"description": "A user management page"},
 	})
-
-	if resp.Error != nil {
-		t.Fatalf("error: %v", resp.Error)
+	if err != nil {
+		t.Fatalf("error: %v", err)
 	}
 
-	resultData, _ := json.Marshal(resp.Result)
-	text := string(resultData)
+	text := promptText(t, res)
 	if !strings.Contains(text, "user management") {
 		t.Error("expected description in prompt")
 	}
@@ -441,6 +463,7 @@ func TestIntegrationPromptsDesignPage(t *testing.T) {
 
 func TestIntegrationPromptsReviewConfig(t *testing.T) {
 	s, _ := setupTestProject(t)
+	cs := connectClient(t, s)
 
 	validConfig := `sigil: "1.0"
 id: test
@@ -450,33 +473,27 @@ layout:
   id: root
   type: rows`
 
-	resp := sendRequest(t, s, "prompts/get", 1, map[string]interface{}{
-		"name":      "sigil_review_config",
-		"arguments": map[string]string{"config": validConfig},
+	res, err := cs.GetPrompt(context.Background(), &mcpsdk.GetPromptParams{
+		Name:      "sigil_review_config",
+		Arguments: map[string]string{"config": validConfig},
 	})
-
-	if resp.Error != nil {
-		t.Fatalf("error: %v", resp.Error)
+	if err != nil {
+		t.Fatalf("error: %v", err)
 	}
 
-	resultData, _ := json.Marshal(resp.Result)
-	if !strings.Contains(string(resultData), "PASS") {
+	text := promptText(t, res)
+	if !strings.Contains(text, "PASS") {
 		t.Error("expected PASS for valid config")
 	}
 }
 
 func TestIntegrationEndToEnd(t *testing.T) {
 	s, _ := setupTestProject(t)
+	cs := connectClient(t, s)
 
-	// Simulate an agent workflow:
 	// 1. List components to understand what's available
-	resp := callTool(t, s, "sigil_list_components", map[string]interface{}{
-		"category": "primitives",
-	})
-	if resp.Error != nil {
-		t.Fatalf("list components error: %v", resp.Error)
-	}
-	text := extractToolText(t, resp)
+	res := callTool(t, cs, "sigil_list_components", map[string]any{"category": "primitives"})
+	text := extractToolText(t, res)
 	if !strings.Contains(text, "button") {
 		t.Fatal("expected button in components")
 	}
@@ -503,27 +520,27 @@ layout:
         label: Add User
         variant: primary`
 
-	resp = callTool(t, s, "sigil_create_page", map[string]interface{}{
+	res = callTool(t, cs, "sigil_create_page", map[string]any{
 		"id":     "user-list",
 		"config": pageConfig,
 	})
-	text = extractToolText(t, resp)
-	if !strings.Contains(text, `"valid": true`) {
+	text = extractToolText(t, res)
+	if !strings.Contains(text, `"valid":true`) {
 		t.Fatalf("expected valid page, got: %s", text)
 	}
 
 	// 3. Validate the created page
-	resp = callTool(t, s, "sigil_validate", map[string]interface{}{
+	res = callTool(t, cs, "sigil_validate", map[string]any{
 		"path": filepath.Join(s.SigilDir(), "pages", "user-list.yaml"),
 	})
-	text = extractToolText(t, resp)
-	if !strings.Contains(text, `"valid": true`) {
+	text = extractToolText(t, res)
+	if !strings.Contains(text, `"valid":true`) {
 		t.Fatalf("expected validation pass, got: %s", text)
 	}
 
 	// 4. List pages — should include both dashboard and user-list
-	resp = callTool(t, s, "sigil_list_pages", map[string]interface{}{})
-	text = extractToolText(t, resp)
+	res = callTool(t, cs, "sigil_list_pages", map[string]any{})
+	text = extractToolText(t, res)
 	if !strings.Contains(text, "dashboard") {
 		t.Error("expected dashboard in pages list")
 	}
@@ -532,29 +549,9 @@ layout:
 	}
 
 	// 5. Get the created page
-	resp = callTool(t, s, "sigil_get_page", map[string]interface{}{"id": "user-list"})
-	text = extractToolText(t, resp)
+	res = callTool(t, cs, "sigil_get_page", map[string]any{"id": "user-list"})
+	text = extractToolText(t, res)
 	if !strings.Contains(text, "User List") {
 		t.Error("expected page title in content")
 	}
-}
-
-// extractToolText extracts the text content from a tool result response.
-func extractToolText(t *testing.T, resp *jsonRPCResponse) string {
-	t.Helper()
-
-	resultData, _ := json.Marshal(resp.Result)
-	var result struct {
-		Content []struct {
-			Text string `json:"text"`
-		} `json:"content"`
-	}
-	if err := json.Unmarshal(resultData, &result); err != nil {
-		// Try to find text in the raw result
-		return string(resultData)
-	}
-	if len(result.Content) > 0 {
-		return result.Content[0].Text
-	}
-	return string(resultData)
 }
