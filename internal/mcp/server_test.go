@@ -1,281 +1,91 @@
 package mcp
 
 import (
-	"bytes"
-	"encoding/json"
-	"strings"
+	"context"
 	"testing"
 )
 
-func sendRequest(t *testing.T, s *Server, method string, id interface{}, params interface{}) *jsonRPCResponse {
-	t.Helper()
+func TestNewServer(t *testing.T) {
+	s := NewServer("/tmp/example/.sigil")
+	if got := s.SigilDir(); got != "/tmp/example/.sigil" {
+		t.Errorf("SigilDir() = %q, want %q", got, "/tmp/example/.sigil")
+	}
+}
 
-	var paramsJSON json.RawMessage
-	if params != nil {
-		data, err := json.Marshal(params)
-		if err != nil {
-			t.Fatalf("marshaling params: %v", err)
+func TestRegisterAllToolsAnnotations(t *testing.T) {
+	s := NewServer(".")
+	RegisterAllTools(s)
+
+	defs := s.ToolDefinitions()
+	if len(defs) != 9 {
+		t.Fatalf("expected 9 tools, got %d", len(defs))
+	}
+
+	wantReadOnly := map[string]bool{
+		"sigil_list_pages":           true,
+		"sigil_get_page":             true,
+		"sigil_create_page":          false,
+		"sigil_update_page":          false,
+		"sigil_validate":             true,
+		"sigil_list_components":      true,
+		"sigil_get_component_schema": true,
+		"sigil_list_datasources":     true,
+		"sigil_create_datasource":    false,
+	}
+
+	seen := map[string]bool{}
+	for _, d := range defs {
+		seen[d.Name] = true
+		want, ok := wantReadOnly[d.Name]
+		if !ok {
+			t.Errorf("unexpected tool %q", d.Name)
+			continue
 		}
-		paramsJSON = data
+		if d.Annotations.ReadOnlyHint != want {
+			t.Errorf("%s: ReadOnlyHint = %v, want %v", d.Name, d.Annotations.ReadOnlyHint, want)
+		}
+		if !d.Annotations.IdempotentHint {
+			t.Errorf("%s: expected IdempotentHint true", d.Name)
+		}
+		if d.InputSchema == nil {
+			t.Errorf("%s: expected a non-nil input schema", d.Name)
+		}
 	}
-
-	req := jsonRPCRequest{
-		JSONRPC: "2.0",
-		ID:      id,
-		Method:  method,
-		Params:  paramsJSON,
-	}
-
-	reqData, _ := json.Marshal(req)
-	reader := bytes.NewReader(append(reqData, '\n'))
-	var writer bytes.Buffer
-
-	s.Run(reader, &writer)
-
-	var resp jsonRPCResponse
-	if err := json.Unmarshal(writer.Bytes(), &resp); err != nil {
-		t.Fatalf("parsing response: %v (raw: %s)", err, writer.String())
-	}
-	return &resp
-}
-
-func TestInitialize(t *testing.T) {
-	s := NewServer(".")
-	resp := sendRequest(t, s, "initialize", 1, map[string]interface{}{
-		"protocolVersion": "2024-11-05",
-		"capabilities":    map[string]interface{}{},
-		"clientInfo":      map[string]interface{}{"name": "test", "version": "1.0"},
-	})
-
-	if resp.Error != nil {
-		t.Fatalf("unexpected error: %v", resp.Error)
-	}
-
-	result, ok := resp.Result.(map[string]interface{})
-	if !ok {
-		t.Fatal("expected map result")
-	}
-	if result["protocolVersion"] != "2024-11-05" {
-		t.Errorf("expected protocol version 2024-11-05, got %v", result["protocolVersion"])
-	}
-
-	serverInfo, ok := result["serverInfo"].(map[string]interface{})
-	if !ok {
-		t.Fatal("expected serverInfo map")
-	}
-	if serverInfo["name"] != "sigil" {
-		t.Errorf("expected server name 'sigil', got %v", serverInfo["name"])
+	for name := range wantReadOnly {
+		if !seen[name] {
+			t.Errorf("missing tool %q", name)
+		}
 	}
 }
 
-func TestToolsList(t *testing.T) {
+func TestRegisterAllToolsUpdatePageIsDestructive(t *testing.T) {
 	s := NewServer(".")
-	s.RegisterTool(Tool{
-		Name:        "test_tool",
-		Description: "A test tool",
-		InputSchema: json.RawMessage(`{"type":"object"}`),
-		Handler:     func(params json.RawMessage) (*ToolResult, error) { return textResult("ok"), nil },
-	})
+	RegisterAllTools(s)
 
-	resp := sendRequest(t, s, "tools/list", 2, nil)
-	if resp.Error != nil {
-		t.Fatalf("unexpected error: %v", resp.Error)
+	for _, d := range s.ToolDefinitions() {
+		if d.Name != "sigil_update_page" {
+			continue
+		}
+		if !d.Annotations.DestructiveHint {
+			t.Error("sigil_update_page: expected DestructiveHint true (it overwrites file content)")
+		}
+		return
 	}
+	t.Fatal("sigil_update_page not registered")
+}
 
-	result, ok := resp.Result.(map[string]interface{})
-	if !ok {
-		t.Fatal("expected map result")
-	}
-	tools, ok := result["tools"].([]interface{})
-	if !ok {
-		t.Fatal("expected tools array")
-	}
-	if len(tools) != 1 {
-		t.Errorf("expected 1 tool, got %d", len(tools))
+func TestCallToolDirect(t *testing.T) {
+	s := NewServer(".")
+	RegisterAllTools(s)
+
+	if _, err := s.CallTool(context.Background(), "sigil_list_components", map[string]any{}); err != nil {
+		t.Fatalf("CallTool error: %v", err)
 	}
 }
 
-func TestToolsCall(t *testing.T) {
+func TestCallToolUnknown(t *testing.T) {
 	s := NewServer(".")
-	s.RegisterTool(Tool{
-		Name:        "echo_tool",
-		Description: "Echo back the input",
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
-			return textResult(string(params)), nil
-		},
-	})
-
-	resp := sendRequest(t, s, "tools/call", 3, map[string]interface{}{
-		"name":      "echo_tool",
-		"arguments": map[string]interface{}{"msg": "hello"},
-	})
-
-	if resp.Error != nil {
-		t.Fatalf("unexpected error: %v", resp.Error)
-	}
-
-	// The result should contain our tool result
-	resultData, _ := json.Marshal(resp.Result)
-	if !strings.Contains(string(resultData), "hello") {
-		t.Errorf("expected 'hello' in result, got %s", string(resultData))
-	}
-}
-
-func TestToolsCallUnknown(t *testing.T) {
-	s := NewServer(".")
-	resp := sendRequest(t, s, "tools/call", 4, map[string]interface{}{
-		"name":      "nonexistent",
-		"arguments": map[string]interface{}{},
-	})
-
-	if resp.Error == nil {
+	if _, err := s.CallTool(context.Background(), "nonexistent", map[string]any{}); err == nil {
 		t.Fatal("expected error for unknown tool")
-	}
-}
-
-func TestResourcesList(t *testing.T) {
-	s := NewServer(".")
-	s.SetResources([]Resource{
-		{URI: "sigil://pages", Name: "Pages", MimeType: "application/json"},
-		{URI: "sigil://project", Name: "Project", MimeType: "text/yaml"},
-	})
-
-	resp := sendRequest(t, s, "resources/list", 5, nil)
-	if resp.Error != nil {
-		t.Fatalf("unexpected error: %v", resp.Error)
-	}
-
-	result, ok := resp.Result.(map[string]interface{})
-	if !ok {
-		t.Fatal("expected map result")
-	}
-	resources, ok := result["resources"].([]interface{})
-	if !ok {
-		t.Fatal("expected resources array")
-	}
-	if len(resources) != 2 {
-		t.Errorf("expected 2 resources, got %d", len(resources))
-	}
-}
-
-func TestResourcesRead(t *testing.T) {
-	s := NewServer(".")
-	s.SetResourceHandler(func(uri string) (*ResourceContent, error) {
-		return &ResourceContent{
-			URI:      uri,
-			MimeType: "text/plain",
-			Text:     "test content for " + uri,
-		}, nil
-	})
-
-	resp := sendRequest(t, s, "resources/read", 6, map[string]interface{}{
-		"uri": "sigil://test",
-	})
-
-	if resp.Error != nil {
-		t.Fatalf("unexpected error: %v", resp.Error)
-	}
-
-	resultData, _ := json.Marshal(resp.Result)
-	if !strings.Contains(string(resultData), "test content") {
-		t.Errorf("expected 'test content' in result, got %s", string(resultData))
-	}
-}
-
-func TestPromptsList(t *testing.T) {
-	s := NewServer(".")
-	s.SetPrompts([]Prompt{
-		{Name: "test_prompt", Description: "A test prompt"},
-	})
-
-	resp := sendRequest(t, s, "prompts/list", 7, nil)
-	if resp.Error != nil {
-		t.Fatalf("unexpected error: %v", resp.Error)
-	}
-
-	result, ok := resp.Result.(map[string]interface{})
-	if !ok {
-		t.Fatal("expected map result")
-	}
-	prompts, ok := result["prompts"].([]interface{})
-	if !ok {
-		t.Fatal("expected prompts array")
-	}
-	if len(prompts) != 1 {
-		t.Errorf("expected 1 prompt, got %d", len(prompts))
-	}
-}
-
-func TestPromptsGet(t *testing.T) {
-	s := NewServer(".")
-	s.RegisterPromptHandler("test_prompt", func(args map[string]string) ([]PromptMessage, error) {
-		return []PromptMessage{
-			{Role: "user", Content: ContentBlock{Type: "text", Text: "Hello " + args["name"]}},
-		}, nil
-	})
-
-	resp := sendRequest(t, s, "prompts/get", 8, map[string]interface{}{
-		"name":      "test_prompt",
-		"arguments": map[string]string{"name": "World"},
-	})
-
-	if resp.Error != nil {
-		t.Fatalf("unexpected error: %v", resp.Error)
-	}
-
-	resultData, _ := json.Marshal(resp.Result)
-	if !strings.Contains(string(resultData), "Hello World") {
-		t.Errorf("expected 'Hello World' in result, got %s", string(resultData))
-	}
-}
-
-func TestPing(t *testing.T) {
-	s := NewServer(".")
-	resp := sendRequest(t, s, "ping", 9, nil)
-	if resp.Error != nil {
-		t.Fatalf("unexpected error: %v", resp.Error)
-	}
-}
-
-func TestUnknownMethod(t *testing.T) {
-	s := NewServer(".")
-	resp := sendRequest(t, s, "nonexistent/method", 10, nil)
-	if resp.Error == nil {
-		t.Fatal("expected error for unknown method")
-	}
-	if resp.Error.Code != -32601 {
-		t.Errorf("expected code -32601, got %d", resp.Error.Code)
-	}
-}
-
-func TestMultipleRequests(t *testing.T) {
-	s := NewServer(".")
-	s.RegisterTool(Tool{
-		Name: "counter",
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
-			return textResult("counted"), nil
-		},
-	})
-
-	// Send multiple requests in one stream
-	var input bytes.Buffer
-	for i := 0; i < 3; i++ {
-		req := jsonRPCRequest{
-			JSONRPC: "2.0",
-			ID:      i + 1,
-			Method:  "tools/call",
-			Params:  json.RawMessage(`{"name":"counter","arguments":{}}`),
-		}
-		data, _ := json.Marshal(req)
-		input.Write(data)
-		input.WriteByte('\n')
-	}
-
-	var output bytes.Buffer
-	s.Run(&input, &output)
-
-	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
-	if len(lines) != 3 {
-		t.Errorf("expected 3 responses, got %d", len(lines))
 	}
 }

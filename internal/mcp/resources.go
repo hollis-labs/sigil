@@ -1,57 +1,98 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/chrispian/sigil/internal/components"
 	"github.com/chrispian/sigil/internal/config"
 )
 
-// RegisterAllResources registers MCP resources and the resource read handler.
+// RegisterAllResources registers Sigil's MCP resources and resource
+// templates. Resources are not wrapped by go-mcp, so registration goes
+// directly against the underlying official-SDK server.
 func RegisterAllResources(s *Server) {
-	s.SetResources([]Resource{
-		{URI: "sigil://pages", Name: "Page listing", Description: "List of all page configs", MimeType: "application/json"},
-		{URI: "sigil://pages/{id}", Name: "Page config", Description: "Full content of a specific page config", MimeType: "text/yaml"},
-		{URI: "sigil://components", Name: "Component schemas", Description: "All available component types and schemas", MimeType: "application/json"},
-		{URI: "sigil://components/{type}", Name: "Component schema", Description: "Schema for a specific component type", MimeType: "application/json"},
-		{URI: "sigil://datasources", Name: "DataSource manifests", Description: "All datasource manifests", MimeType: "application/json"},
-		{URI: "sigil://themes", Name: "Themes", Description: "All theme definitions", MimeType: "application/json"},
-		{URI: "sigil://project", Name: "Project config", Description: "Project configuration", MimeType: "text/yaml"},
+	sdk := s.SDKServer()
+
+	sdk.AddResource(&mcpsdk.Resource{
+		URI:         "sigil://pages",
+		Name:        "Page listing",
+		Description: "List of all page configs",
+		MIMEType:    "application/json",
+	}, func(ctx context.Context, req *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+		return readPagesResource(s)
 	})
 
-	s.SetResourceHandler(func(uri string) (*ResourceContent, error) {
-		return handleResourceRead(s, uri)
+	sdk.AddResourceTemplate(&mcpsdk.ResourceTemplate{
+		URITemplate: "sigil://pages/{id}",
+		Name:        "Page config",
+		Description: "Full content of a specific page config",
+		MIMEType:    "text/yaml",
+	}, func(ctx context.Context, req *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+		id := strings.TrimPrefix(req.Params.URI, "sigil://pages/")
+		return readPageResource(s, id)
+	})
+
+	sdk.AddResource(&mcpsdk.Resource{
+		URI:         "sigil://components",
+		Name:        "Component schemas",
+		Description: "All available component types and schemas",
+		MIMEType:    "application/json",
+	}, func(ctx context.Context, req *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+		return readComponentsResource()
+	})
+
+	sdk.AddResourceTemplate(&mcpsdk.ResourceTemplate{
+		URITemplate: "sigil://components/{type}",
+		Name:        "Component schema",
+		Description: "Schema for a specific component type",
+		MIMEType:    "application/json",
+	}, func(ctx context.Context, req *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+		typeName := strings.TrimPrefix(req.Params.URI, "sigil://components/")
+		return readComponentResource(typeName)
+	})
+
+	sdk.AddResource(&mcpsdk.Resource{
+		URI:         "sigil://datasources",
+		Name:        "DataSource manifests",
+		Description: "All datasource manifests",
+		MIMEType:    "application/json",
+	}, func(ctx context.Context, req *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+		return readDataSourcesResource(s)
+	})
+
+	sdk.AddResource(&mcpsdk.Resource{
+		URI:         "sigil://themes",
+		Name:        "Themes",
+		Description: "All theme definitions",
+		MIMEType:    "application/json",
+	}, func(ctx context.Context, req *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+		return readThemesResource(s)
+	})
+
+	sdk.AddResource(&mcpsdk.Resource{
+		URI:         "sigil://project",
+		Name:        "Project config",
+		Description: "Project configuration",
+		MIMEType:    "text/yaml",
+	}, func(ctx context.Context, req *mcpsdk.ReadResourceRequest) (*mcpsdk.ReadResourceResult, error) {
+		return readProjectResource(s)
 	})
 }
 
-func handleResourceRead(s *Server, uri string) (*ResourceContent, error) {
-	switch {
-	case uri == "sigil://pages":
-		return readPagesResource(s)
-	case strings.HasPrefix(uri, "sigil://pages/"):
-		id := strings.TrimPrefix(uri, "sigil://pages/")
-		return readPageResource(s, id)
-	case uri == "sigil://components":
-		return readComponentsResource()
-	case strings.HasPrefix(uri, "sigil://components/"):
-		typeName := strings.TrimPrefix(uri, "sigil://components/")
-		return readComponentResource(typeName)
-	case uri == "sigil://datasources":
-		return readDataSourcesResource(s)
-	case uri == "sigil://themes":
-		return readThemesResource(s)
-	case uri == "sigil://project":
-		return readProjectResource(s)
-	default:
-		return nil, fmt.Errorf("unknown resource URI: %s", uri)
+func textResourceResult(uri, mimeType, text string) *mcpsdk.ReadResourceResult {
+	return &mcpsdk.ReadResourceResult{
+		Contents: []*mcpsdk.ResourceContents{{URI: uri, MIMEType: mimeType, Text: text}},
 	}
 }
 
-func readPagesResource(s *Server) (*ResourceContent, error) {
+func readPagesResource(s *Server) (*mcpsdk.ReadResourceResult, error) {
 	pagesDir := filepath.Join(s.SigilDir(), "pages")
 	matches, _ := filepath.Glob(filepath.Join(pagesDir, "*.yaml"))
 
@@ -70,27 +111,19 @@ func readPagesResource(s *Server) (*ResourceContent, error) {
 	}
 
 	data, _ := json.MarshalIndent(pages, "", "  ")
-	return &ResourceContent{
-		URI:      "sigil://pages",
-		MimeType: "application/json",
-		Text:     string(data),
-	}, nil
+	return textResourceResult("sigil://pages", "application/json", string(data)), nil
 }
 
-func readPageResource(s *Server, id string) (*ResourceContent, error) {
+func readPageResource(s *Server, id string) (*mcpsdk.ReadResourceResult, error) {
 	path := filepath.Join(s.SigilDir(), "pages", id+".yaml")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("page %q not found", id)
 	}
-	return &ResourceContent{
-		URI:      "sigil://pages/" + id,
-		MimeType: "text/yaml",
-		Text:     string(data),
-	}, nil
+	return textResourceResult("sigil://pages/"+id, "text/yaml", string(data)), nil
 }
 
-func readComponentsResource() (*ResourceContent, error) {
+func readComponentsResource() (*mcpsdk.ReadResourceResult, error) {
 	registry := components.NewDefaultRegistry()
 	types := registry.Types()
 
@@ -108,14 +141,10 @@ func readComponentsResource() (*ResourceContent, error) {
 	}
 
 	data, _ := json.MarshalIndent(result, "", "  ")
-	return &ResourceContent{
-		URI:      "sigil://components",
-		MimeType: "application/json",
-		Text:     string(data),
-	}, nil
+	return textResourceResult("sigil://components", "application/json", string(data)), nil
 }
 
-func readComponentResource(typeName string) (*ResourceContent, error) {
+func readComponentResource(typeName string) (*mcpsdk.ReadResourceResult, error) {
 	registry := components.NewDefaultRegistry()
 	schema, ok := registry.Get(typeName)
 	if !ok {
@@ -141,14 +170,10 @@ func readComponentResource(typeName string) (*ResourceContent, error) {
 	}
 
 	data, _ := json.MarshalIndent(result, "", "  ")
-	return &ResourceContent{
-		URI:      "sigil://components/" + typeName,
-		MimeType: "application/json",
-		Text:     string(data),
-	}, nil
+	return textResourceResult("sigil://components/"+typeName, "application/json", string(data)), nil
 }
 
-func readDataSourcesResource(s *Server) (*ResourceContent, error) {
+func readDataSourcesResource(s *Server) (*mcpsdk.ReadResourceResult, error) {
 	dsDir := filepath.Join(s.SigilDir(), "datasources")
 	matches, _ := filepath.Glob(filepath.Join(dsDir, "*.yaml"))
 
@@ -159,20 +184,16 @@ func readDataSourcesResource(s *Server) (*ResourceContent, error) {
 			continue
 		}
 		result = append(result, map[string]interface{}{
-			"alias": strings.TrimSuffix(filepath.Base(path), ".yaml"),
+			"alias":   strings.TrimSuffix(filepath.Base(path), ".yaml"),
 			"content": string(data),
 		})
 	}
 
 	data, _ := json.MarshalIndent(result, "", "  ")
-	return &ResourceContent{
-		URI:      "sigil://datasources",
-		MimeType: "application/json",
-		Text:     string(data),
-	}, nil
+	return textResourceResult("sigil://datasources", "application/json", string(data)), nil
 }
 
-func readThemesResource(s *Server) (*ResourceContent, error) {
+func readThemesResource(s *Server) (*mcpsdk.ReadResourceResult, error) {
 	themesDir := filepath.Join(s.SigilDir(), "themes")
 	matches, _ := filepath.Glob(filepath.Join(themesDir, "*.yaml"))
 
@@ -198,22 +219,14 @@ func readThemesResource(s *Server) (*ResourceContent, error) {
 	}
 
 	data, _ := json.MarshalIndent(result, "", "  ")
-	return &ResourceContent{
-		URI:      "sigil://themes",
-		MimeType: "application/json",
-		Text:     string(data),
-	}, nil
+	return textResourceResult("sigil://themes", "application/json", string(data)), nil
 }
 
-func readProjectResource(s *Server) (*ResourceContent, error) {
+func readProjectResource(s *Server) (*mcpsdk.ReadResourceResult, error) {
 	path := filepath.Join(s.SigilDir(), "sigil.yaml")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("project config not found: %w", err)
 	}
-	return &ResourceContent{
-		URI:      "sigil://project",
-		MimeType: "text/yaml",
-		Text:     string(data),
-	}, nil
+	return textResourceResult("sigil://project", "text/yaml", string(data)), nil
 }

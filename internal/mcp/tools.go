@@ -1,11 +1,13 @@
 package mcp
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	gomcpserver "github.com/hollis-labs/go-mcp/server"
 
 	"github.com/chrispian/sigil/internal/components"
 	"github.com/chrispian/sigil/internal/config"
@@ -26,10 +28,12 @@ func RegisterAllTools(s *Server) {
 
 func toolListPages(s *Server) Tool {
 	return Tool{
-		Name:        "sigil_list_pages",
-		Description: "List all page configs in the project",
-		InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
+		Name:           "sigil_list_pages",
+		Description:    "List all page configs in the project",
+		InputSchema:    gomcpserver.EmptyObjectSchema(),
+		ReadOnlyHint:   true,
+		IdempotentHint: true,
+		Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			pagesDir := filepath.Join(s.SigilDir(), "pages")
 			matches, err := filepath.Glob(filepath.Join(pagesDir, "*.yaml"))
 			if err != nil {
@@ -55,8 +59,7 @@ func toolListPages(s *Server) Tool {
 				})
 			}
 
-			data, _ := json.MarshalIndent(pages, "", "  ")
-			return textResult(string(data)), nil
+			return pages, nil
 		},
 	}
 }
@@ -65,22 +68,21 @@ func toolGetPage(s *Server) Tool {
 	return Tool{
 		Name:        "sigil_get_page",
 		Description: "Get the full config for a page",
-		InputSchema: json.RawMessage(`{"type":"object","properties":{"id":{"type":"string","description":"Page ID"}},"required":["id"]}`),
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
-			var args struct {
-				ID string `json:"id"`
-			}
-			if err := json.Unmarshal(params, &args); err != nil {
-				return nil, err
-			}
+		InputSchema: gomcpserver.ObjectSchema(map[string]interface{}{
+			"id": map[string]interface{}{"type": "string", "description": "Page ID"},
+		}, "id"),
+		ReadOnlyHint:   true,
+		IdempotentHint: true,
+		Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			id, _ := args["id"].(string)
 
-			path := filepath.Join(s.SigilDir(), "pages", args.ID+".yaml")
+			path := filepath.Join(s.SigilDir(), "pages", id+".yaml")
 			data, err := os.ReadFile(path)
 			if err != nil {
-				return nil, fmt.Errorf("page %q not found: %w", args.ID, err)
+				return nil, fmt.Errorf("page %q not found: %w", id, err)
 			}
 
-			return textResult(string(data)), nil
+			return string(data), nil
 		},
 	}
 }
@@ -89,20 +91,19 @@ func toolCreatePage(s *Server) Tool {
 	return Tool{
 		Name:        "sigil_create_page",
 		Description: "Create a new page config (validates before saving)",
-		InputSchema: json.RawMessage(`{"type":"object","properties":{"id":{"type":"string","description":"Page ID"},"config":{"type":"string","description":"Page YAML content"}},"required":["id","config"]}`),
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
-			var args struct {
-				ID     string `json:"id"`
-				Config string `json:"config"`
-			}
-			if err := json.Unmarshal(params, &args); err != nil {
-				return nil, err
-			}
+		InputSchema: gomcpserver.ObjectSchema(map[string]interface{}{
+			"id":     map[string]interface{}{"type": "string", "description": "Page ID"},
+			"config": map[string]interface{}{"type": "string", "description": "Page YAML content"},
+		}, "id", "config"),
+		IdempotentHint: true,
+		Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			id, _ := args["id"].(string)
+			cfg, _ := args["config"].(string)
 
 			// Parse and validate
-			page, err := config.Parse([]byte(args.Config))
+			page, err := config.Parse([]byte(cfg))
 			if err != nil {
-				return errorResult(fmt.Sprintf("parse error: %s", err)), nil
+				return nil, fmt.Errorf("parse error: %w", err)
 			}
 
 			registry := components.NewDefaultRegistry()
@@ -113,20 +114,18 @@ func toolCreatePage(s *Server) Tool {
 				for _, e := range result.Errors {
 					errs = append(errs, e.String())
 				}
-				resp := map[string]interface{}{
+				return map[string]interface{}{
 					"valid":  false,
 					"errors": errs,
-				}
-				data, _ := json.MarshalIndent(resp, "", "  ")
-				return textResult(string(data)), nil
+				}, nil
 			}
 
 			// Write file
-			path := filepath.Join(s.SigilDir(), "pages", args.ID+".yaml")
+			path := filepath.Join(s.SigilDir(), "pages", id+".yaml")
 			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 				return nil, err
 			}
-			if err := os.WriteFile(path, []byte(args.Config), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(cfg), 0600); err != nil {
 				return nil, err
 			}
 
@@ -135,13 +134,11 @@ func toolCreatePage(s *Server) Tool {
 				warnings = append(warnings, w.String())
 			}
 
-			resp := map[string]interface{}{
+			return map[string]interface{}{
 				"path":     path,
 				"valid":    true,
 				"warnings": warnings,
-			}
-			data, _ := json.MarshalIndent(resp, "", "  ")
-			return textResult(string(data)), nil
+			}, nil
 		},
 	}
 }
@@ -150,25 +147,25 @@ func toolUpdatePage(s *Server) Tool {
 	return Tool{
 		Name:        "sigil_update_page",
 		Description: "Update an existing page config",
-		InputSchema: json.RawMessage(`{"type":"object","properties":{"id":{"type":"string","description":"Page ID"},"config":{"type":"string","description":"Page YAML content"}},"required":["id","config"]}`),
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
-			var args struct {
-				ID     string `json:"id"`
-				Config string `json:"config"`
-			}
-			if err := json.Unmarshal(params, &args); err != nil {
-				return nil, err
-			}
+		InputSchema: gomcpserver.ObjectSchema(map[string]interface{}{
+			"id":     map[string]interface{}{"type": "string", "description": "Page ID"},
+			"config": map[string]interface{}{"type": "string", "description": "Page YAML content"},
+		}, "id", "config"),
+		DestructiveHint: true,
+		IdempotentHint:  true,
+		Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			id, _ := args["id"].(string)
+			cfg, _ := args["config"].(string)
 
-			path := filepath.Join(s.SigilDir(), "pages", args.ID+".yaml")
+			path := filepath.Join(s.SigilDir(), "pages", id+".yaml")
 			if _, err := os.Stat(path); err != nil {
-				return nil, fmt.Errorf("page %q not found", args.ID)
+				return nil, fmt.Errorf("page %q not found", id)
 			}
 
 			// Parse and validate
-			page, err := config.Parse([]byte(args.Config))
+			page, err := config.Parse([]byte(cfg))
 			if err != nil {
-				return errorResult(fmt.Sprintf("parse error: %s", err)), nil
+				return nil, fmt.Errorf("parse error: %w", err)
 			}
 
 			registry := components.NewDefaultRegistry()
@@ -179,24 +176,20 @@ func toolUpdatePage(s *Server) Tool {
 				for _, e := range result.Errors {
 					errs = append(errs, e.String())
 				}
-				resp := map[string]interface{}{
+				return map[string]interface{}{
 					"valid":  false,
 					"errors": errs,
-				}
-				data, _ := json.MarshalIndent(resp, "", "  ")
-				return textResult(string(data)), nil
+				}, nil
 			}
 
-			if err := os.WriteFile(path, []byte(args.Config), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(cfg), 0600); err != nil {
 				return nil, err
 			}
 
-			resp := map[string]interface{}{
+			return map[string]interface{}{
 				"path":  path,
 				"valid": true,
-			}
-			data, _ := json.MarshalIndent(resp, "", "  ")
-			return textResult(string(data)), nil
+			}, nil
 		},
 	}
 }
@@ -205,37 +198,36 @@ func toolValidate(s *Server) Tool {
 	return Tool{
 		Name:        "sigil_validate",
 		Description: "Validate a Sigil config (YAML string or file path)",
-		InputSchema: json.RawMessage(`{"type":"object","properties":{"config":{"type":"string","description":"YAML content to validate"},"path":{"type":"string","description":"Path to YAML file to validate"}}}`),
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
-			var args struct {
-				Config string `json:"config"`
-				Path   string `json:"path"`
-			}
-			if err := json.Unmarshal(params, &args); err != nil {
-				return nil, err
-			}
+		InputSchema: gomcpserver.ObjectSchema(map[string]interface{}{
+			"config": map[string]interface{}{"type": "string", "description": "YAML content to validate"},
+			"path":   map[string]interface{}{"type": "string", "description": "Path to YAML file to validate"},
+		}),
+		ReadOnlyHint:   true,
+		IdempotentHint: true,
+		Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			cfg, _ := args["config"].(string)
+			path, _ := args["path"].(string)
 
 			var yamlData []byte
-			if args.Config != "" {
-				yamlData = []byte(args.Config)
-			} else if args.Path != "" {
-				data, err := os.ReadFile(args.Path)
+			switch {
+			case cfg != "":
+				yamlData = []byte(cfg)
+			case path != "":
+				data, err := os.ReadFile(path) //nolint:gosec // sigil_validate's whole purpose is validating a caller-specified file
 				if err != nil {
 					return nil, err
 				}
 				yamlData = data
-			} else {
+			default:
 				return nil, fmt.Errorf("either 'config' or 'path' is required")
 			}
 
 			page, err := config.Parse(yamlData)
 			if err != nil {
-				resp := map[string]interface{}{
+				return map[string]interface{}{
 					"valid":  false,
 					"errors": []string{fmt.Sprintf("parse error: %s", err)},
-				}
-				data, _ := json.MarshalIndent(resp, "", "  ")
-				return textResult(string(data)), nil
+				}, nil
 			}
 
 			registry := components.NewDefaultRegistry()
@@ -250,13 +242,11 @@ func toolValidate(s *Server) Tool {
 				warnings = append(warnings, w.String())
 			}
 
-			resp := map[string]interface{}{
+			return map[string]interface{}{
 				"valid":    result.Valid,
 				"errors":   errors,
 				"warnings": warnings,
-			}
-			data, _ := json.MarshalIndent(resp, "", "  ")
-			return textResult(string(data)), nil
+			}, nil
 		},
 	}
 }
@@ -265,12 +255,13 @@ func toolListComponents(s *Server) Tool {
 	return Tool{
 		Name:        "sigil_list_components",
 		Description: "List available component types with their schemas",
-		InputSchema: json.RawMessage(`{"type":"object","properties":{"category":{"type":"string","description":"Filter by category (primitives, layouts, navigation, composites, data, forms)"}}}`),
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
-			var args struct {
-				Category string `json:"category"`
-			}
-			json.Unmarshal(params, &args)
+		InputSchema: gomcpserver.ObjectSchema(map[string]interface{}{
+			"category": map[string]interface{}{"type": "string", "description": "Filter by category (primitives, layouts, navigation, composites, data, forms)"},
+		}),
+		ReadOnlyHint:   true,
+		IdempotentHint: true,
+		Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			category, _ := args["category"].(string)
 
 			registry := components.NewDefaultRegistry()
 			types := registry.Types()
@@ -281,7 +272,7 @@ func toolListComponents(s *Server) Tool {
 				if !ok {
 					continue
 				}
-				if args.Category != "" && schema.Category != args.Category {
+				if category != "" && schema.Category != category {
 					continue
 				}
 
@@ -318,8 +309,7 @@ func toolListComponents(s *Server) Tool {
 				result = append(result, comp)
 			}
 
-			data, _ := json.MarshalIndent(result, "", "  ")
-			return textResult(string(data)), nil
+			return result, nil
 		},
 	}
 }
@@ -328,19 +318,18 @@ func toolGetComponentSchema(s *Server) Tool {
 	return Tool{
 		Name:        "sigil_get_component_schema",
 		Description: "Get the full schema for a component type",
-		InputSchema: json.RawMessage(`{"type":"object","properties":{"type":{"type":"string","description":"Component type name"}},"required":["type"]}`),
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
-			var args struct {
-				Type string `json:"type"`
-			}
-			if err := json.Unmarshal(params, &args); err != nil {
-				return nil, err
-			}
+		InputSchema: gomcpserver.ObjectSchema(map[string]interface{}{
+			"type": map[string]interface{}{"type": "string", "description": "Component type name"},
+		}, "type"),
+		ReadOnlyHint:   true,
+		IdempotentHint: true,
+		Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			typeName, _ := args["type"].(string)
 
 			registry := components.NewDefaultRegistry()
-			schema, ok := registry.Get(args.Type)
+			schema, ok := registry.Get(typeName)
 			if !ok {
-				return nil, fmt.Errorf("unknown component type %q", args.Type)
+				return nil, fmt.Errorf("unknown component type %q", typeName)
 			}
 
 			result := map[string]interface{}{
@@ -361,22 +350,23 @@ func toolGetComponentSchema(s *Server) Tool {
 				result["shortcuts"] = schema.Shortcuts
 			}
 
-			data, _ := json.MarshalIndent(result, "", "  ")
-			return textResult(string(data)), nil
+			return result, nil
 		},
 	}
 }
 
 func toolListDataSources(s *Server) Tool {
 	return Tool{
-		Name:        "sigil_list_datasources",
-		Description: "List registered datasource manifests",
-		InputSchema: json.RawMessage(`{"type":"object","properties":{}}`),
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
+		Name:           "sigil_list_datasources",
+		Description:    "List registered datasource manifests",
+		InputSchema:    gomcpserver.EmptyObjectSchema(),
+		ReadOnlyHint:   true,
+		IdempotentHint: true,
+		Handler: func(ctx context.Context, args map[string]any) (any, error) {
 			dsDir := filepath.Join(s.SigilDir(), "datasources")
 			matches, err := filepath.Glob(filepath.Join(dsDir, "*.yaml"))
 			if err != nil {
-				return textResult("[]"), nil
+				return nil, err
 			}
 
 			var result []map[string]interface{}
@@ -410,8 +400,7 @@ func toolListDataSources(s *Server) Tool {
 				})
 			}
 
-			out, _ := json.MarshalIndent(result, "", "  ")
-			return textResult(string(out)), nil
+			return result, nil
 		},
 	}
 }
@@ -420,44 +409,26 @@ func toolCreateDataSource(s *Server) Tool {
 	return Tool{
 		Name:        "sigil_create_datasource",
 		Description: "Create a new datasource manifest",
-		InputSchema: json.RawMessage(`{"type":"object","properties":{"alias":{"type":"string","description":"DataSource alias"},"config":{"type":"string","description":"DataSource YAML content"}},"required":["alias","config"]}`),
-		Handler: func(params json.RawMessage) (*ToolResult, error) {
-			var args struct {
-				Alias  string `json:"alias"`
-				Config string `json:"config"`
-			}
-			if err := json.Unmarshal(params, &args); err != nil {
-				return nil, err
-			}
+		InputSchema: gomcpserver.ObjectSchema(map[string]interface{}{
+			"alias":  map[string]interface{}{"type": "string", "description": "DataSource alias"},
+			"config": map[string]interface{}{"type": "string", "description": "DataSource YAML content"},
+		}, "alias", "config"),
+		IdempotentHint: true,
+		Handler: func(ctx context.Context, args map[string]any) (any, error) {
+			alias, _ := args["alias"].(string)
+			cfg, _ := args["config"].(string)
 
 			dsDir := filepath.Join(s.SigilDir(), "datasources")
 			if err := os.MkdirAll(dsDir, 0755); err != nil {
 				return nil, err
 			}
 
-			path := filepath.Join(dsDir, strings.ToLower(args.Alias)+".yaml")
-			if err := os.WriteFile(path, []byte(args.Config), 0644); err != nil {
+			path := filepath.Join(dsDir, strings.ToLower(alias)+".yaml")
+			if err := os.WriteFile(path, []byte(cfg), 0600); err != nil {
 				return nil, err
 			}
 
-			resp := map[string]interface{}{"path": path}
-			data, _ := json.MarshalIndent(resp, "", "  ")
-			return textResult(string(data)), nil
+			return map[string]interface{}{"path": path}, nil
 		},
-	}
-}
-
-// Helpers
-
-func textResult(text string) *ToolResult {
-	return &ToolResult{
-		Content: []ContentBlock{{Type: "text", Text: text}},
-	}
-}
-
-func errorResult(text string) *ToolResult {
-	return &ToolResult{
-		Content: []ContentBlock{{Type: "text", Text: text}},
-		IsError: true,
 	}
 }

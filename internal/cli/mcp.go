@@ -33,5 +33,5 @@ func runMCPServe(cmd *cobra.Command, args []string) error {
 	mcp.RegisterAllTools(server)
 	mcp.RegisterAllResources(server)
 	mcp.RegisterAllPrompts(server)
-	return server.Serve()
+	return server.Run(cmd.Context())
 }

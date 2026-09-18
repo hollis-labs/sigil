@@ -55,8 +55,16 @@ because SWR 2.x does not work with React 19. The demo targets protect them with
 `rsync --ignore-existing`; if a generated hook lands on one, restore the mock,
 because the generated version does not run.
 
-Three runtime dependencies only — Cobra, pflag, yaml.v3. A fourth needs a real
-argument.
+Cobra, pflag and yaml.v3 were the only runtime dependencies until 2026-09-18,
+when `internal/mcp/` — previously a hand-rolled, zero-dependency stdio
+JSON-RPC server on the legacy 2024-11-05 protocol — was rebuilt on the
+portfolio's shared MCP library, `github.com/hollis-labs/go-mcp` (and, since
+go-mcp deliberately doesn't wrap resources/prompts, `github.com/
+modelcontextprotocol/go-sdk` directly), targeting the 2026-07-28 spec. That
+was a real argument: a documented portfolio-wide consolidation (see Torque
+CW-20260917-0011, Sigil's own adoption at CW-20260918-0019), not an
+incidental convenience import. A further, unrelated dependency still needs
+one.
 
 A component renders in every target or its unsupported status is documented. A
 schema added without a case in each renderer validates and then emits nothing.
