@@ -1,23 +1,77 @@
 # Sigil
 
-**Declarative UI configs to framework-specific code.**
+Sigil is a build-time UI compiler. Pages, themes, and datasources are
+authored once as YAML, validated against 49 built-in component schemas, and
+compiled into framework-native source for Go/Templ+HTMX or React/shadcn+
+Tailwind. It has no runtime component: generated code never depends on Sigil
+once it's written.
 
-Sigil turns YAML page definitions into working UI code for Go/Templ+HTMX or React/shadcn+Tailwind. Define your pages once, generate for any target.
+> **Pre-release.** Sigil is in real internal use — it's the compiler behind
+> its own dogfood project and the Sysop admin app — but it isn't a published
+> package yet. No versioned releases, no compatibility guarantees, no
+> external support channel. Built in the open as the surface stabilizes.
 
-## Features
+## What it is today
 
-- **49 component types** — layouts, forms, data tables, modals, buttons, badges, and more
-- **Two render targets** — `go-templ` (Go/Templ+HTMX) and `react-shadcn` (React/TypeScript+shadcn/ui)
-- **Live dev server** — `sigil serve` with auto-reload on config changes
-- **Preview** — instant browser preview with mock data, no backend needed
-- **Validation** — deep prop validation against component schemas with "did you mean?" suggestions
-- **MCP server** — AI/agent integration via JSON-RPC 2.0 over stdio
-- **Theme system** — design tokens as CSS variables with Tailwind integration
-- **DataSource model** — declare data shapes, get typed hooks/handlers generated
-- **Export/Import** — JSON round-trip for page configs
-- **Config diffing** — semantic comparison of page configs
-- **Schema migration** — auto-fix missing IDs, set defaults
-- **JSON Schema** — export for IDE autocomplete (VS Code YAML extension)
+- **49 component types** across layout, primitive, form, data, overlay, and
+  navigation categories.
+- **Two render targets** — `go-templ` (Go/Templ+HTMX) and `react-shadcn`
+  (React/TypeScript+shadcn/ui), including an opt-in mode that generates
+  against the shared `@hollis-labs/sysop-ui` design-system kit.
+- **Live dev server and preview** — `sigil serve` with auto-reload, and
+  instant browser preview against mock data with no backend needed.
+- **Validation** — deep prop validation against component schemas with "did
+  you mean?" suggestions.
+- **An MCP server** — `sigil mcp serve` exposes 9 tools, 7 resource types,
+  and 2 prompts over stdio, so an agent can list, create, update, and
+  validate page configs directly.
+- **DataSource model, export/import, config diffing, schema migration, and
+  JSON Schema export** for IDE autocomplete.
+
+## Where it sits in the stack
+
+```
+   YAML: pages, themes, datasources        (authored by hand or by an agent)
+              │
+        ┌──────────┐
+        │  Sigil   │   validate → resolve → compile → generate
+        └──────────┘
+              │
+   generated source: Go/Templ+HTMX, React/shadcn+Tailwind —
+   optionally against the shared @hollis-labs/sysop-ui component kit
+```
+
+Sigil is a compiler, not a service — it doesn't run alongside the app it
+generates for, and the other Hollis Labs tools don't call into it at runtime.
+Its two seams are build-time (CLI) and agent-time (its MCP server).
+
+## Examples
+
+**Daily use.** Define a page once in YAML, then run
+`sigil generate --target go-templ` for the Go backend and
+`--target react-shadcn` for a throwaway prototype, without hand-porting the
+UI between them.
+
+**Agent-driven UI.** A coding agent (running in Nanite, Claude Code, or
+elsewhere) connects to `sigil mcp serve`, creates and validates a page config
+directly through MCP tool calls, then triggers generation — building a UI
+from a description without a human hand-authoring YAML first.
+
+**Composition.** With `--ui-kit sysop`, generated React output imports
+shared primitives, data tables, and shell components from
+`@hollis-labs/sysop-ui` instead of per-app copies, so a page generated for
+one internal tool matches the look of the others.
+
+## Roadmap
+
+- **Sysop UI kit coverage.** `--ui-kit sysop` currently re-exports 13 shadcn
+  primitives from the shared kit; the rest still fall back to per-app
+  components. Closing that gap is active, tracked work (the Sysop admin
+  screens aren't at parity yet — see `AGENTS.md`).
+- **Portfolio compiler direction.** `docs/ui-compiler-direction.md` sets out
+  a direction for Sigil resolving shared design-system, datasource, and
+  route contracts across Hollis Labs apps, rather than per-project component
+  schemas. This is a directional draft, not a scheduled change.
 
 ## Quick Start
 
@@ -215,7 +269,7 @@ Sigil includes an MCP server for AI agent workflows:
 sigil mcp serve
 ```
 
-Provides 9 tools (list/get/create/update pages, validate, component info, datasource management), 7 resource types, and 2 prompts for page design and config review.
+Provides 9 tools (list/get/create/update pages, validate, component info, datasource management), 7 resource types, and 2 prompts for page design and config review. See `docs/08_mcp-integration.md`.
 
 ## Project Structure
 
