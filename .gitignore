@@ -35,8 +35,9 @@ stack-explorer-demo-backup-*/
 # TypeScript incremental build output
 *.tsbuildinfo
 
-# Local agent docs (not published)
+# Local agent docs (not published); the root AGENTS.md is tracked
 CLAUDE.md
+*/AGENTS.md
 /artifacts/
 /docs/projects/
 /docs/golden-template-plan.md
