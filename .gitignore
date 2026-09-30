@@ -36,7 +36,6 @@ stack-explorer-demo-backup-*/
 *.tsbuildinfo
 
 # Local agent docs (not published)
-AGENTS.md
 CLAUDE.md
 /artifacts/
 /docs/projects/
