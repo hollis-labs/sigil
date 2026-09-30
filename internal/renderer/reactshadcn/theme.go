@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 // renderTheme generates Tailwind config and global CSS from theme tokens.

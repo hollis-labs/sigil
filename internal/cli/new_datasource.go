@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/chrispian/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -26,13 +26,13 @@ func NewNewDataSourceCmd() *cobra.Command {
 
 // dsManifest represents the datasource YAML output.
 type dsManifest struct {
-	Alias        string         `yaml:"alias"`
-	Description  string         `yaml:"description"`
-	Capabilities []string       `yaml:"capabilities"`
-	Fields       []dsField      `yaml:"fields"`
-	Relations    []interface{}  `yaml:"relations"`
-	Endpoints    dsEndpoints    `yaml:"endpoints"`
-	Defaults     dsDefaults     `yaml:"defaults"`
+	Alias        string        `yaml:"alias"`
+	Description  string        `yaml:"description"`
+	Capabilities []string      `yaml:"capabilities"`
+	Fields       []dsField     `yaml:"fields"`
+	Relations    []interface{} `yaml:"relations"`
+	Endpoints    dsEndpoints   `yaml:"endpoints"`
+	Defaults     dsDefaults    `yaml:"defaults"`
 }
 
 type dsField struct {

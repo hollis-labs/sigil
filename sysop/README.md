@@ -101,7 +101,7 @@ pages can be regenerated from `.sigil/pages/*.yaml` definitions.
   consumed as a pinned git dependency. For local kit development, link a
   working copy: `npm install file:<path-to>/libs/sysop-ui` from `frontend/`.
 - **`github.com/hollis-labs/go-webui`** (`v0.1.0`) — the SPA-serving harness.
-- **`github.com/chrispian/sigil`** — the parent module, wired via a `replace`
+- **`github.com/hollis-labs/sigil`** — the parent module, wired via a `replace`
   to `../`; provides `internal/server` (the JSON API).
 
 ## License

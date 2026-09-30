@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/chrispian/sigil/internal/renderer"
-	_ "github.com/chrispian/sigil/internal/renderer/gotempl"     // register go-templ renderer
-	_ "github.com/chrispian/sigil/internal/renderer/reactshadcn" // register react-shadcn renderer
+	"github.com/hollis-labs/sigil/internal/renderer"
+	_ "github.com/hollis-labs/sigil/internal/renderer/gotempl"     // register go-templ renderer
+	_ "github.com/hollis-labs/sigil/internal/renderer/reactshadcn" // register react-shadcn renderer
 	"github.com/spf13/cobra"
 )
 

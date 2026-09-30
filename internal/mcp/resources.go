@@ -10,8 +10,8 @@ import (
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/chrispian/sigil/internal/components"
-	"github.com/chrispian/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/components"
+	"github.com/hollis-labs/sigil/internal/config"
 )
 
 // RegisterAllResources registers Sigil's MCP resources and resource

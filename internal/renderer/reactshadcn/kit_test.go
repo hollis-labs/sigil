@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chrispian/sigil/internal/config"
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 // kitCtx returns a RenderContext for the given page with sysop kit mode on.

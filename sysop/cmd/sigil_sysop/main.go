@@ -12,8 +12,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/chrispian/sigil/internal/server"
-	"github.com/chrispian/sigil/sysop/internal/webui"
+	"github.com/hollis-labs/sigil/internal/server"
+	"github.com/hollis-labs/sigil/sysop/internal/webui"
 )
 
 func main() {

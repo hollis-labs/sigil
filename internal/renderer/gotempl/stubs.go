@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 // renderDataSourceStubs generates Go handler stub files for a datasource.

@@ -3,8 +3,8 @@ package reactshadcn
 import (
 	"fmt"
 
-	"github.com/chrispian/sigil/internal/config"
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 // renderAPIClient generates lib/api.ts — a typed fetch client for REST APIs.

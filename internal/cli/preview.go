@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/chrispian/sigil/internal/config"
-	"github.com/chrispian/sigil/internal/renderer"
-	"github.com/chrispian/sigil/internal/renderer/preview"
+	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/renderer/preview"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

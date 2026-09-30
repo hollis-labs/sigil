@@ -86,7 +86,13 @@ MIT — see [LICENSE](LICENSE).
 
 ## Install
 
-Requires Go 1.26.1+. There are no published binaries yet; build from source:
+Requires Go 1.26.1+. There are no published binaries yet. Install with Go:
+
+```bash
+go install github.com/hollis-labs/sigil/cmd/sigil@latest
+```
+
+or build from source:
 
 ```bash
 git clone https://github.com/hollis-labs/sigil.git

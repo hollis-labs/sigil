@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/chrispian/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/config"
 	"github.com/spf13/cobra"
 )
 

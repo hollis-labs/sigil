@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/chrispian/sigil/internal/config"
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 // renderRoutes emits routes.tsx — a SPA route table built from the page list.

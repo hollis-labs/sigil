@@ -6,8 +6,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/chrispian/sigil/internal/config"
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 // renderPage generates a .templ file for a page config.

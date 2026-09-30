@@ -1,5 +1,5 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-LDFLAGS := -ldflags "-X github.com/chrispian/sigil/internal/cli.Version=$(VERSION)"
+LDFLAGS := -ldflags "-X github.com/hollis-labs/sigil/internal/cli.Version=$(VERSION)"
 
 .PHONY: build test vet install clean demo demo-generate demo-dev se-demo-generate se-demo-dev se-demo
 

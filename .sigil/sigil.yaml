@@ -13,4 +13,4 @@ themes:
   dir: .sigil/themes
 generation:
   clean: false
-  go_module: github.com/chrispian/sigil
+  go_module: github.com/hollis-labs/sigil

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chrispian/sigil/internal/components"
-	"github.com/chrispian/sigil/internal/config"
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/components"
+	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 func testPage(layout config.Component) *config.Page {

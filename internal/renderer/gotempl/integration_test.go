@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 // TestEndToEndGeneration verifies the complete pipeline:

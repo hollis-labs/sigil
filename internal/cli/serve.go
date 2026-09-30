@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/chrispian/sigil/internal/server"
+	"github.com/hollis-labs/sigil/internal/server"
 	"github.com/spf13/cobra"
 )
 

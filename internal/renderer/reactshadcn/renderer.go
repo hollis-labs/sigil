@@ -2,8 +2,8 @@
 package reactshadcn
 
 import (
-	"github.com/chrispian/sigil/internal/config"
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 const rendererName = "react-shadcn"

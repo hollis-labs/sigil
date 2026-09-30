@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/chrispian/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/config"
 )
 
 func TestLoadProjectConfig(t *testing.T) {

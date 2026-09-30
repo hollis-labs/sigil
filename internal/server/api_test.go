@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chrispian/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/config"
 )
 
 // validPageJSON returns the JSON body for a minimal valid Sigil page.

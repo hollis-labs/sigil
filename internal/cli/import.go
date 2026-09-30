@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/chrispian/sigil/internal/components"
-	"github.com/chrispian/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/components"
+	"github.com/hollis-labs/sigil/internal/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

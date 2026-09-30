@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 // renderSharedComponents generates shared React components and utilities.

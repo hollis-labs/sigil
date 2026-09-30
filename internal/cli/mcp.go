@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"github.com/chrispian/sigil/internal/mcp"
+	"github.com/hollis-labs/sigil/internal/mcp"
 	"github.com/spf13/cobra"
 )
 

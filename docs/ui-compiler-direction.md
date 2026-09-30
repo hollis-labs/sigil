@@ -1509,7 +1509,7 @@ components.
 ### Version and repository identity are inconsistent
 
 The project is a Hollis Labs application while the Go module, install examples,
-linker path, and imports still use `github.com/chrispian/sigil`. Release and
+linker path, and imports still use `github.com/hollis-labs/sigil`. Release and
 package authority should have one canonical identity or an explicit transition
 contract.
 

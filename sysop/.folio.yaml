@@ -15,7 +15,7 @@ inputs:
   sysop_ui_version: v0.4.0
 computed:
   app_title: SigilSysop
-  module_path: github.com/chrispian/sigil_sysop
+  module_path: github.com/hollis-labs/sigil_sysop
   year: "2026"
 files:
   .github/workflows/ci.yml:

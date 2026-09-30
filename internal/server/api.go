@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/chrispian/sigil/internal/components"
-	"github.com/chrispian/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/components"
+	"github.com/hollis-labs/sigil/internal/config"
 	"gopkg.in/yaml.v3"
 )
 

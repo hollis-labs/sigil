@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/chrispian/sigil/internal/components"
-	"github.com/chrispian/sigil/internal/config"
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/components"
+	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 // renderPage generates a React TSX component file for a page.

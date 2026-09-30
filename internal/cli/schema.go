@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/chrispian/sigil/internal/components"
+	"github.com/hollis-labs/sigil/internal/components"
 	"github.com/spf13/cobra"
 )
 

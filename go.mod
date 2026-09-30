@@ -1,4 +1,4 @@
-module github.com/chrispian/sigil
+module github.com/hollis-labs/sigil
 
 go 1.26.1
 

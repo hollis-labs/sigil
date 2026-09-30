@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/chrispian/sigil/internal/cli"
+	"github.com/hollis-labs/sigil/internal/cli"
 )
 
 func main() {

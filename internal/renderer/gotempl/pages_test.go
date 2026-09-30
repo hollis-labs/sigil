@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chrispian/sigil/internal/config"
-	"github.com/chrispian/sigil/internal/renderer"
+	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/renderer"
 )
 
 func TestRenderSimplePage(t *testing.T) {
@@ -187,8 +187,8 @@ func TestRenderPageWithSearchBar(t *testing.T) {
 func TestRenderPageWithGrid(t *testing.T) {
 	ctx := &renderer.RenderContext{
 		Page: &config.Page{
-			ID:    "grid-page",
-			Title: "Grid Page",
+			ID:      "grid-page",
+			Title:   "Grid Page",
 			Overlay: "page",
 			Layout: config.Component{
 				ID:   "root",
@@ -334,8 +334,8 @@ func TestRenderHTMXAttrs(t *testing.T) {
 			contains: []string{`hx-confirm="Are you sure?"`, `hx-delete="/api/delete"`},
 		},
 		{
-			name:    "empty actions",
-			actions: map[string]config.Action{},
+			name:     "empty actions",
+			actions:  map[string]config.Action{},
 			contains: []string{},
 		},
 	}

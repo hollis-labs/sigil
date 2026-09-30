@@ -3,7 +3,7 @@ package components
 import (
 	"sort"
 
-	"github.com/chrispian/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/config"
 )
 
 // Schema defines a component type's props, actions, and slots.
