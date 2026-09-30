@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	addr := flag.String("addr", ":8080", "TCP address the server listens on")
+	addr := flag.String("addr", "127.0.0.1:8080", "TCP address the server listens on (use :8080 to listen on all interfaces)")
 	sigilDir := flag.String("sigil-dir", ".sigil",
 		"path to the Sigil project's .sigil directory to administer")
 	flag.Parse()

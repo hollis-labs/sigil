@@ -63,7 +63,7 @@ func (s *Server) Handler() http.Handler {
 // ListenAndServe starts the server.
 func (s *Server) ListenAndServe() error {
 	s.srv = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.Port),
+		Addr:    fmt.Sprintf("127.0.0.1:%d", s.Port),
 		Handler: s.mux,
 	}
 	return s.srv.ListenAndServe()

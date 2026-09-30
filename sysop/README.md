@@ -52,7 +52,7 @@ make all                       # ui-build (vite → internal/webui/dist) then bu
 ```
 
 `-sigil-dir` defaults to `.sigil`, so running from a Sigil project root needs
-no flag. `-addr` (default `:8080`) sets the listen address. The UI is then at
+no flag. `-addr` (default `127.0.0.1:8080`, loopback only) sets the listen address. The UI is then at
 <http://localhost:8080/sysop/>; the bare root redirects there.
 
 Before the first `make ui-build`, `go-webui` serves a "not built" placeholder
