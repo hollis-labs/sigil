@@ -31,3 +31,13 @@ stack-explorer-demo/.next/
 # Build artifacts
 .next/
 stack-explorer-demo-backup-*/
+
+# TypeScript incremental build output
+*.tsbuildinfo
+
+# Local agent docs (not published)
+AGENTS.md
+CLAUDE.md
+/artifacts/
+/docs/projects/
+/docs/golden-template-plan.md

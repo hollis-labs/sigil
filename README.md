@@ -1,20 +1,21 @@
 # Sigil
 
 Sigil is a build-time UI compiler. Pages, themes, and datasources are
-authored once as YAML, validated against 49 built-in component schemas, and
+authored once as YAML, validated against 57 built-in component schemas, and
 compiled into framework-native source for Go/Templ+HTMX or React/shadcn+
 Tailwind. It has no runtime component: generated code never depends on Sigil
 once it's written.
 
-> **Pre-release.** Sigil is in real internal use — it's the compiler behind
-> its own dogfood project and the Sysop admin app — but it isn't a published
-> package yet. No versioned releases, no compatibility guarantees, no
-> external support channel. Built in the open as the surface stabilizes.
+> **Pre-release.** Sigil is unreleased, not deployed, and has no outside
+> consumers. It's being built in the open: the code, the docs, and this
+> README describe what exists today, not a pitch for what's planned.
+> Interfaces and behavior change without notice, and there are no
+> compatibility guarantees yet.
 
 ## What it is today
 
-- **49 component types** across layout, primitive, form, data, overlay, and
-  navigation categories.
+- **57 built-in component types** across layout, primitive, input, form,
+  data, composite, and navigation categories.
 - **Two render targets** — `go-templ` (Go/Templ+HTMX) and `react-shadcn`
   (React/TypeScript+shadcn/ui), including an opt-in mode that generates
   against the shared `@hollis-labs/sysop-ui` design-system kit.
@@ -62,25 +63,41 @@ shared primitives, data tables, and shell components from
 `@hollis-labs/sysop-ui` instead of per-app copies, so a page generated for
 one internal tool matches the look of the others.
 
+**In this repo.** `examples/` holds small page configs plus a task-board demo
+with its generated Go/Templ and React output checked in. Three demo apps are
+generated from the `.sigil/` project: `demo/` (the "Forge" infra dashboard,
+`make demo`), `stack-explorer-demo/` (`make se-demo`), and `demo-clockwork/`
+(`make cw-demo`). `sysop/` is a Sysop UI admin app over a Sigil project.
+
 ## Roadmap
 
 - **Sysop UI kit coverage.** `--ui-kit sysop` currently re-exports 13 shadcn
   primitives from the shared kit; the rest still fall back to per-app
-  components. Closing that gap is active, tracked work (the Sysop admin
-  screens aren't at parity yet — see `AGENTS.md`).
+  components. Closing that gap is active work; the Sysop admin screens
+  aren't at parity yet.
 - **Portfolio compiler direction.** `docs/ui-compiler-direction.md` sets out
   a direction for Sigil resolving shared design-system, datasource, and
   route contracts across Hollis Labs apps, rather than per-project component
   schemas. This is a directional draft, not a scheduled change.
 
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+## Install
+
+Requires Go 1.26.1+. There are no published binaries yet; build from source:
+
+```bash
+git clone https://github.com/hollis-labs/sigil.git
+cd sigil
+make build     # bin/sigil
+make install   # or install sigil to $GOBIN
+```
+
 ## Quick Start
 
 ```bash
-# Install
-go install github.com/chrispian/sigil/cmd/sigil@latest
-
-# Or build from source
-make build
 
 # Initialize a project
 sigil init --name my-app
@@ -107,7 +124,7 @@ sigil generate --target react-shadcn --output src/generated
 ## How It Works
 
 1. **Define pages in YAML** — describe your UI as a component tree with props, actions, and data bindings
-2. **Validate** — Sigil checks types, required props, and structure against 49 component schemas
+2. **Validate** — Sigil checks types, required props, and structure against 57 component schemas
 3. **Generate** — choose a render target and get framework-specific source files
 4. **Preview** — see your pages instantly with mock data before writing any backend code
 
@@ -174,6 +191,8 @@ layout:
 |---------|-------------|
 | `sigil init` | Initialize a new project |
 | `sigil new page <id>` | Create a page config |
+| `sigil new theme <id>` | Create a theme |
+| `sigil new datasource <alias>` | Create a DataSource manifest |
 | `sigil validate` | Validate all configs |
 | `sigil generate` | Generate framework code |
 | `sigil preview <page>` | Preview a page in browser |
@@ -230,16 +249,19 @@ src/generated/
 
 ## Component Types
 
-49 built-in types across 6 categories:
+57 built-in types across 7 categories:
 
 | Category | Types |
 |----------|-------|
-| **Layout** | rows, columns, grid, card, sidebar, split |
-| **Primitive** | heading, text, button, icon, badge, label, separator, spacer, avatar, progress, alert |
-| **Form** | input, textarea, select, checkbox, radio, toggle, slider, date-picker, form |
-| **Data** | data-table, list, detail-view, stat-card, chart, tree, timeline |
-| **Overlay** | modal, sheet, drawer, popover, tooltip, dropdown, context-menu, command-palette |
-| **Navigation** | tabs, breadcrumb, pagination, stepper, nav-menu, search-bar |
+| **Layouts** | rows, columns, grid, split, spacer, card, sidebar, scroll-area, tabs, tab, accordion, accordion-item |
+| **Primitives** | heading, text, button, icon, icon-button, badge, label, separator, avatar, progress, alert, input, textarea, select, combobox, checkbox, switch |
+| **Inputs** | date-picker, radio-group, slider, toggle-group |
+| **Forms** | form, field-group |
+| **Data** | data-table, list, detail-view, stat-card, chart, timeline, search-bar |
+| **Composites** | modal, dialog, confirm-dialog, sheet, popover, tooltip, toast, dropdown-menu, context-menu, collapsible, command-group |
+| **Navigation** | nav-menu, breadcrumb, pagination, command-palette |
+
+Custom component schemas can be added per project under `.sigil/components/`.
 
 ## Theme System
 
@@ -289,6 +311,9 @@ docs/
   06_datasource-model.md  DataSource abstraction
   07_theme-system.md  Theme tokens and CSS
   08_mcp-integration.md  MCP server docs
+  09_sysop-ui-kit.md  --ui-kit sysop integration
+  ui-compiler-direction.md  Directional architecture draft
+  adr/                Architecture decision records
 ```
 
 ## Development
@@ -306,7 +331,3 @@ make build
 # Install locally
 make install
 ```
-
-## License
-
-MIT

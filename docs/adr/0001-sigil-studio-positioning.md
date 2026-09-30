@@ -2,14 +2,13 @@
 
 - **Status:** Proposed
 - **Date:** 2026-04-14
-- **Deciders:** Chrispian (with renderer-agent review)
-- **Context pack:** `/Users/chrispian/Projects-apps/agent-workspaces/inbox/sigil_studio_agent_pack`
+- **Deciders:** Chrispian
 
 ## Context
 
 A context pack from an ideation session proposes **Sigil Studio**: a Wails + Go + React + tldraw desktop app that wraps Sigil and provides a turn-based, agent-first whiteboard with two modes — *Scene* (freeform tldraw canvas) and *Compose* (Sigil-native semantic authoring). The pack frames it as the "missing tool" for iterative UI design collaboration between a human and an agent.
 
-Sigil itself is a system-agnostic UI configuration and code-generation tool. It already has: a config engine, a component registry with 49 component schemas, three render targets (react-shadcn, go-templ, preview), a theme system, a live dev server (`sigil serve`), and an MCP server. A static-HTML **catalog render target** is currently planned (see `docs/projects/catalog-renderer-prompt.md`).
+Sigil itself is a system-agnostic UI configuration and code-generation tool. It already has: a config engine, a component registry with 49 component schemas, three render targets (react-shadcn, go-templ, preview), a theme system, a live dev server (`sigil serve`), and an MCP server. A static-HTML **catalog render target** is currently planned.
 
 We need to decide how Sigil Studio relates to Sigil, whether to pursue it, and in what order against the catalog work already planned.
 
@@ -70,6 +69,6 @@ Chose library + MCP client. CLI shell-out is brittle, slow, and harder to debug.
 
 ## Next actions
 
-1. Spike prompt: `docs/projects/lightweight-studio-exploration-prompt.md` — validate whether catalog + `sigil serve` + MCP covers the workflow.
-2. Planning prompt: `docs/projects/sigil-studio-planning-prompt.md` — if the spike concludes we still want Studio, the planning agent takes this ADR + the original context pack and produces four sub-project specs.
-3. Catalog work proceeds in parallel per `docs/projects/catalog-renderer-prompt.md`.
+1. Spike: validate whether catalog + `sigil serve` + MCP covers the workflow.
+2. Planning: if the spike concludes we still want Studio, turn this ADR and the original context pack into four sub-project specs.
+3. Catalog work proceeds in parallel under its own plan.
