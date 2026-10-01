@@ -18,7 +18,7 @@ resources:
         - serve
         - --port
         - "3210"
-      dir: /Users/chrispian/dev/hollis-labs/apps/sigil
+      dir: ~/dev/hollis-labs/apps/sigil
       mode: os_service
       port: 3210
       run_from: artifact
@@ -31,3 +31,16 @@ resources:
       - devserver
       - v2
 registry_urn: msg://agent/agent-mux/prj_o8loxv2k5e
+  - name: Sigil DB Backup
+    type: process
+    project: sigil
+    connector: local
+    config:
+      command:
+        - sqlite-backup
+        - --db=./main.db
+        - --dest=~/dev/backups/sigil
+        - --interval=1h
+        - --keep-hourly=48
+        - --keep-daily=14
+      dir: .
