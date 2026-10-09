@@ -17,6 +17,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- Use published `libs/plugin-mcp` v0.1.1 for MCP and `libs/ui-go` v0.1.0
+  for the Sysop SPA harness. Both Go modules require Go 1.26.8 and pin the
+  1.26.9 toolchain; their external dependencies use released module versions.
+  The Sysop module retains its existing link to the parent Sigil module in
+  the same checkout. CI checks both modules, including the embedded Sysop UI
+  build, without regenerating the hand-authored demo or admin screens.
+
 - **MCP server rebuilt on `go-mcp`** and the official MCP Go SDK, targeting the 2026-07-28 spec, replacing the hand-rolled stdio JSON-RPC server.
 - Module path renamed to `github.com/hollis-labs/sigil`.
 - **`sigil serve` and `sigil_sysop` now bind `127.0.0.1` by default**; they previously listened on every interface with no authentication.

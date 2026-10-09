@@ -1,10 +1,10 @@
 // Package mcp implements Sigil's Model Context Protocol server on top of
-// the portfolio's go-mcp library (github.com/hollis-labs/go-mcp), targeting
+// the portfolio's go-mcp library (github.com/hollis-labs/libs/plugin-mcp/go-mcp), targeting
 // the 2026-07-28 MCP specification.
 package mcp
 
 import (
-	gomcpserver "github.com/hollis-labs/go-mcp/server"
+	gomcpserver "github.com/hollis-labs/libs/plugin-mcp/go-mcp/server"
 )
 
 // Tool is go-mcp's tool registration type, re-exported so callers of this

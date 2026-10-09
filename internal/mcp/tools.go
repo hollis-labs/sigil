@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	gomcpserver "github.com/hollis-labs/go-mcp/server"
+	gomcpserver "github.com/hollis-labs/libs/plugin-mcp/go-mcp/server"
 
 	"github.com/hollis-labs/sigil/internal/components"
 	"github.com/hollis-labs/sigil/internal/config"

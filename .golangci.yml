@@ -19,7 +19,7 @@ version: "2"
 
 run:
   # Go version for the portfolio.
-  go: "1.25"
+  go: "1.26.8"
 
 # ---------------------------------------------------------------------------
 # Linter selection

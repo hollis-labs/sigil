@@ -1,9 +1,11 @@
 module github.com/hollis-labs/sigil
 
-go 1.26.1
+go 1.26.8
+
+toolchain go1.26.9
 
 require (
-	github.com/hollis-labs/go-mcp v0.5.0
+	github.com/hollis-labs/libs/plugin-mcp v0.1.1
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
