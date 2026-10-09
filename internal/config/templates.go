@@ -53,7 +53,7 @@ func NewPageTemplate(id, title, overlay, module, layout, datasource string) *Pag
 			Props: map[string]interface{}{
 				"datasource": datasource,
 				"columns":    []interface{}{},
-				"pagination":  map[string]interface{}{"enabled": true, "pageSize": 25},
+				"pagination": map[string]interface{}{"enabled": true, "pageSize": 25},
 			},
 		})
 	}

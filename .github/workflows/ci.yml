@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: ${{ matrix.module }} (lint + build + race)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [root, sysop]
+        include:
+          - module: root
+            path: .
+          - module: sysop
+            path: sysop
+    env:
+      GOWORK: "off"
+      GOMAXPROCS: "4"
+      GOFLAGS: "-p=2"
+    defaults:
+      run:
+        working-directory: ${{ matrix.path }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.path }}/go.mod
+          cache-dependency-path: ${{ matrix.path }}/go.sum
+      - name: Set up Node for Sysop frontend
+        if: matrix.module == 'sysop'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+          cache: npm
+          cache-dependency-path: sysop/frontend/package-lock.json
+      - name: Build embedded Sysop frontend
+        if: matrix.module == 'sysop'
+        working-directory: sysop/frontend
+        run: npm ci --no-audit --no-fund && npm run build
+      - name: Check formatting
+        run: test -z "$(gofmt -l cmd internal)"
+      - name: Lint changed code
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.11.4
+          working-directory: ${{ matrix.path }}
+          args: --config ${{ github.workspace }}/.golangci.yml --timeout=3m --new-from-rev=${{ github.event.pull_request.base.sha || github.event.before }} ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Build
+        run: go build ./...
+      - name: Test under race
+        run: go test -p 2 -race -count=1 -timeout=3m ./...

@@ -56,7 +56,7 @@ because SWR 2.x does not work with React 19. The demo targets protect them with
 because the generated version does not run.
 
 Runtime dependencies are deliberately few: Cobra, pflag and yaml.v3, plus
-`github.com/hollis-labs/go-mcp` and `github.com/modelcontextprotocol/go-sdk` for
+`github.com/hollis-labs/libs/plugin-mcp/go-mcp` and `github.com/modelcontextprotocol/go-sdk` for
 `internal/mcp/`, which targets the 2026-07-28 MCP spec. go-mcp deliberately
 doesn't wrap resources/prompts, which is why the SDK is used directly. A
 further dependency needs the same kind of argument, not an incidental import.
