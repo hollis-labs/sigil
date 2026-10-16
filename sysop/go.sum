@@ -1,5 +1,5 @@
-github.com/hollis-labs/libs/ui-go v0.1.0 h1:vR7BvLAagpopIB/+QA7JjLPmOuX0QSOyJp/uisV0Mhg=
-github.com/hollis-labs/libs/ui-go v0.1.0/go.mod h1:bDgeIvyrJqQNOEnmvNH2Xw2HxLyB3y6xoqgTZxMf7y4=
+github.com/hollis-labs/libs/ui/ui-go v0.1.0 h1:GFztthzyhlbrKemRItwyNlV+e83pZT+yFr5Y37iXlL4=
+github.com/hollis-labs/libs/ui/ui-go v0.1.0/go.mod h1:MBO41Mrbgo6YfRbm8MI50qQXjDfwhkvA/WxRdtOiL38=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
