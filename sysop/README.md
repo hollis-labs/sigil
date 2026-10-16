@@ -7,7 +7,7 @@ project: browse and inspect its pages, components, datasources, and themes.
 This sub-project is the dogfood loop for the Hollis Labs UI toolchain — it
 was scaffolded by `folio new sysop-ui` and built on the shared
 [`@hollis-labs/sysop-ui`](https://github.com/hollis-labs/sysop-ui) kit, served
-by [`go-webui`](https://github.com/hollis-labs/libs/tree/main/ui-go/webui).
+by [`go-webui`](https://github.com/hollis-labs/libs/tree/main/ui/ui-go/webui).
 
 ## What it shows
 
@@ -100,7 +100,7 @@ pages can be regenerated from `.sigil/pages/*.yaml` definitions.
 - **`@hollis-labs/sysop-ui`** (`v0.4.0`) — the React kit + canonical theme,
   consumed as a pinned git dependency. For local kit development, link a
   working copy: `npm install file:<path-to>/libs/sysop-ui` from `frontend/`.
-- **`github.com/hollis-labs/libs/ui-go/webui`** (`ui-go/v0.1.0`) — the SPA-serving harness.
+- **`github.com/hollis-labs/libs/ui/ui-go/webui`** (`ui-go/v0.1.0`) — the SPA-serving harness.
 - **`github.com/hollis-labs/sigil`** — the parent module, wired via a `replace`
   to `../`; provides `internal/server` (the JSON API).
 

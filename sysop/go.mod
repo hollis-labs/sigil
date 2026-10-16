@@ -5,7 +5,7 @@ go 1.26.8
 toolchain go1.26.9
 
 require (
-	github.com/hollis-labs/libs/ui-go v0.1.0
+	github.com/hollis-labs/libs/ui/ui-go v0.1.0
 	github.com/hollis-labs/sigil v0.0.0
 )
 
