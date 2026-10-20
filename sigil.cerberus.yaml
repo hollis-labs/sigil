@@ -10,6 +10,9 @@ resources:
     type: process
     project: sigil
     connector: local
+    env: dev
+    owner: self
+    admin: self
     config:
       build_strategy:
         kind: make_standard
@@ -30,11 +33,14 @@ resources:
       - launchd
       - devserver
       - v2
-registry_urn: msg://agent/agent-mux/prj_o8loxv2k5e
-  - name: Sigil DB Backup
+  - id: sigil-db-backup
+    name: Sigil DB Backup
     type: process
     project: sigil
     connector: local
+    env: dev
+    owner: self
+    admin: self
     config:
       command:
         - sqlite-backup
@@ -44,3 +50,4 @@ registry_urn: msg://agent/agent-mux/prj_o8loxv2k5e
         - --keep-hourly=48
         - --keep-daily=14
       dir: .
+registry_urn: msg://agent/agent-mux/prj_o8loxv2k5e
