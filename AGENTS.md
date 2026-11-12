@@ -51,8 +51,8 @@ holds that. Pins live in Substrate's `bom/bom.yaml`: do not edit versions in `go
 by hand, run `pins check`. Sigil is one binary with one manifest
 (`cmd/sigil/substrate.yaml`): the compile commands, `serve` and `mcp serve`. Every HTTP
 route and every MCP tool needs a declared scope (`sigil.read` / `sigil.write`; the MCP
-endpoint is `sigil.mcp`). `serve` runs with `auth.mode: off` and the framework refuses a
-non-loopback address in that mode; never change that mode without adding identity. Gaps
+endpoint is `sigil.mcp`). `serve` runs with `auth.mode: off` and Sigil refuses any
+non-loopback address (`loopbackAddr`, stricter than the framework's check); never change that mode without adding identity. Gaps
 go in `docs/conversion-notes.md`.
 
 Hooks under `demo/src/hooks/` and the sibling demo apps are hand-written mocks,

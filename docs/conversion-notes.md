@@ -20,14 +20,11 @@ Shape: one binary (`cmd/sigil`), one manifest (`cmd/sigil/substrate.yaml`): `var
 
 ## Gaps
 
-1. **No per-command module set (framework gap, reported).** `boot.Start` starts every manifest module and the
-   catalogue cannot start fewer for one command; branching on `os.Args` in `main` was rejected as inventing around
-   the framework. Consequence now that Sigil is one binary: `httphost`, `auth` and `mcp` start for every command,
-   including `sigil generate`. They hold nothing on disk and open no listener until `serve`, but the guard logs
-   `auth is not enforcing` at WARN on stderr for every command. Setting `logging.level: error` would silence it, and
-   would also hide it for `serve`, so it is left on. Ruling: leave it and record it as a framework gap; the warning
-   belongs where a listener starts, not at module start. It must be fixed in the framework before Sigil's PR
-   merges (a compiler that prints a warning on every `generate` is a regression).
+1. **No per-command module set (resolved in the framework).** `boot.Start` starts every manifest module, so
+   `httphost`, `auth` and `mcp` start for every command, including `sigil generate`. They hold nothing on disk and
+   open no listener until `serve`. The `auth is not enforcing` warning used to be logged at module start, on stderr
+   for every command; Substrate now logs it where a listener starts (`httphost.Serve`), so compile commands print
+   nothing (`TestCompileCommandsPrintNothingOnStderr`) and `sigil serve` prints it once with the listen address.
 2. **No shared Host check.** Basalisk carries its own `internal/hostguard`; Substrate has none. Sigil uses a copy of
    Basalisk's file and test as they are (`internal/hostguard`, package comment says so), called with no extra host
    names, outermost in the handler chain. A third variant was not written.
@@ -43,8 +40,8 @@ Shape: one binary (`cmd/sigil`), one manifest (`cmd/sigil/substrate.yaml`): `var
    The owner's decision is auth off on loopback only, so `sigil serve` checks the effective address (the configured
    `httphost.addr`, or its host with `--port`) before `httphost.Serve` and refuses anything but 127.0.0.0/8, `::1` and
    `localhost` (`loopbackAddr` in `internal/cli/serve.go`; tests cover 0.0.0.0, a LAN address, a tailnet range
-   address and a `.ts.net` name). Whether "off" meaning "loopback or tailnet" is intended in the framework is a
-   question the driver has taken to it.
+   address and a `.ts.net` name). The framework's acceptance of tailnet addresses in modes off and permissive is
+   intended (Substrate `docs/identity.md`); Sigil's stricter rule is deliberate and stays.
 5. **`mcp` mounts `/mcp` whenever it is selected.** `sigil serve` therefore also serves the module's Streamable HTTP
    endpoint at `/mcp` (scope `sigil.mcp`). Sigil registers its tools, resources and prompts only in `mcp serve`, so
    over HTTP the server answers with no tools; nothing new is exposed. The module offers no stdio-only selection.

@@ -28,8 +28,8 @@ react-shadcn targets and fails if an emitted file mentions `hollis-labs/substrat
 ## Modules
 
 `cmd/sigil/substrate.yaml`: `config`, `logging`, `health` (profile `minimal`), `httphost`, `auth` (`mode: off`), `mcp`,
-`cli`. `httphost.Start` does not listen; only `serve` calls `httphost.Serve`. Because there is no per-command module
-set, all of them start for every command (Gap 1).
+`cli`. `httphost.Start` does not listen; only `serve` calls `httphost.Serve`. There is no per-command module set, so all
+of them start for every command (Gap 1); none prints anything until `serve` starts a listener.
 
 ## Layout
 
@@ -63,7 +63,7 @@ client -> hostguard (Host check) -> httphost
 - Hosts other than loopback names and addresses get `403` before any handler runs (DNS rebinding).
 - Every write under `/api/` needs a non-empty `X-Requested-With` header (Gap 3).
 - There is no data owner: no accounts, no per-user rows. The project directory belongs to the user running `sigil`.
-- The guard logs `auth is not enforcing` at WARN on stderr at start (Gap 1).
+- `serve` logs `auth is not enforcing` at WARN once, with the listen address, when the listener starts (Gap 1).
 
 ## Scopes
 

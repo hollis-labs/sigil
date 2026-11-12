@@ -243,6 +243,43 @@ func TestServePortFlagKeepsTheLoopbackHost(t *testing.T) {
 	}
 }
 
+// A compile command prints nothing on stderr from the framework: the "auth is not enforcing"
+// notice belongs to a listener, so only serve logs it.
+func TestCompileCommandsPrintNothingOnStderr(t *testing.T) {
+	project(t)
+	t.Setenv("SUBSTRATE_CONFIG", "")
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	origStderr := os.Stderr
+	os.Stderr = w
+	t.Cleanup(func() { os.Stderr = origStderr })
+
+	for _, args := range [][]string{{"validate"}, {"generate", "--target", "go-templ", "--output", "out"}, {"version"}} {
+		started, err := boot.Start(context.Background(), substrateApp, substrateModules, substrateConfigJSON)
+		if err != nil {
+			t.Fatalf("boot: %v", err)
+		}
+		root := substratecli.Root(started.App)
+		root.SetOut(io.Discard)
+		root.SetErr(io.Discard)
+		cli.Install(root, started.App)
+		root.SetArgs(args)
+		err = root.ExecuteContext(context.Background())
+		_ = started.Stop(context.Background())
+		if err != nil {
+			t.Fatalf("sigil %v: %v", args, err)
+		}
+	}
+	os.Stderr = origStderr
+	_ = w.Close()
+	got, _ := io.ReadAll(r)
+	if len(got) != 0 {
+		t.Errorf("stderr should be empty, got %q", got)
+	}
+}
+
 func TestMCPServeOverStdio(t *testing.T) {
 	sigilDir := project(t)
 	root, stop := start(t, "127.0.0.1:0")
