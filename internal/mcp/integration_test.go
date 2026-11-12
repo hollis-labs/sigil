@@ -23,7 +23,7 @@ func setupTestProject(t *testing.T) (*Server, string) {
 		filepath.Join(sigilDir, "datasources"),
 		filepath.Join(sigilDir, "themes"),
 	} {
-		os.MkdirAll(dir, 0755)
+		os.MkdirAll(dir, 0o750)
 	}
 
 	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte(`
@@ -32,7 +32,7 @@ name: test-project
 defaults:
   theme: default
   renderer: go-templ
-`), 0644)
+`), 0o600)
 
 	os.WriteFile(filepath.Join(sigilDir, "themes", "default.yaml"), []byte(`
 name: default
@@ -42,7 +42,7 @@ tokens:
     background: "9 9 21"
     text: "244 244 245"
     accent: "16 185 129"
-`), 0644)
+`), 0o600)
 
 	os.WriteFile(filepath.Join(sigilDir, "pages", "dashboard.yaml"), []byte(`
 sigil: "1.0"
@@ -58,7 +58,7 @@ layout:
       props:
         level: 2
         text: Dashboard
-`), 0644)
+`), 0o600)
 
 	os.WriteFile(filepath.Join(sigilDir, "datasources", "sprint.yaml"), []byte(`
 alias: Sprint
@@ -74,7 +74,7 @@ fields:
 endpoints:
   list: "GET /api/sprints"
   create: "POST /api/sprints"
-`), 0644)
+`), 0o600)
 
 	s := newTestServer(sigilDir)
 	RegisterAllTools(s)

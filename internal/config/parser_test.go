@@ -191,7 +191,7 @@ layout:
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.yaml")
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("failed to write temp file: %v", err)
 	}
 

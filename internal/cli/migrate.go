@@ -83,7 +83,7 @@ func runMigrate(cmd *cobra.Command, args []string) error {
 				if err != nil {
 					return fmt.Errorf("marshaling %s: %w", page.ID, err)
 				}
-				if err := os.WriteFile(path, data, 0644); err != nil {
+				if err := os.WriteFile(path, data, 0644); err != nil { //nolint:gosec // project files are user-editable; mode matches sigil init
 					return fmt.Errorf("writing %s: %w", path, err)
 				}
 			}

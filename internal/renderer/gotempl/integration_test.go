@@ -23,7 +23,7 @@ func TestEndToEndGeneration(t *testing.T) {
 		filepath.Join(sigilDir, "datasources"),
 		filepath.Join(sigilDir, "themes"),
 	} {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			t.Fatalf("mkdir %s: %v", dir, err)
 		}
 	}
@@ -38,7 +38,7 @@ defaults:
   output: out/
 generation:
   go_module: github.com/test/project
-`), 0644)
+`), 0o600)
 
 	// Write theme
 	os.WriteFile(filepath.Join(sigilDir, "themes", "default.yaml"), []byte(`
@@ -76,7 +76,7 @@ variants:
     default:
       bg: surface
       text: text
-`), 0644)
+`), 0o600)
 
 	// Write datasource
 	os.WriteFile(filepath.Join(sigilDir, "datasources", "sprint.yaml"), []byte(`
@@ -108,7 +108,7 @@ endpoints:
   read: "GET /api/sprints/{id}"
   update: "PUT /api/sprints/{id}"
   delete: "DELETE /api/sprints/{id}"
-`), 0644)
+`), 0o600)
 
 	// Write page config
 	os.WriteFile(filepath.Join(sigilDir, "pages", "dashboard.yaml"), []byte(`
@@ -170,7 +170,7 @@ layout:
         columns:
           - { field: title, label: Title, sortable: true }
           - { field: status, label: Status }
-`), 0644)
+`), 0o600)
 
 	// Run generation
 	cfg := renderer.GenerateConfig{
@@ -236,7 +236,7 @@ layout:
 	}
 
 	// Verify page templ content
-	pageContent, _ := os.ReadFile(filepath.Join(outDir, "pages/dashboard.templ"))
+	pageContent, _ := os.ReadFile(filepath.Join(outDir, "pages/dashboard.templ")) //nolint:gosec // test reads a file it created in a temp directory
 	pc := string(pageContent)
 	if !strings.Contains(pc, "templ Dashboard()") {
 		t.Error("expected Dashboard templ function")
@@ -249,7 +249,7 @@ layout:
 	}
 
 	// Verify theme.css content
-	themeContent, _ := os.ReadFile(filepath.Join(outDir, "theme.css"))
+	themeContent, _ := os.ReadFile(filepath.Join(outDir, "theme.css")) //nolint:gosec // test reads a file it created in a temp directory
 	tc := string(themeContent)
 	if !strings.Contains(tc, ":root {") {
 		t.Error("expected :root in theme.css")
@@ -262,7 +262,7 @@ layout:
 	}
 
 	// Verify handler stub content
-	handlerContent, _ := os.ReadFile(filepath.Join(outDir, "handlers/sprint_handler.go"))
+	handlerContent, _ := os.ReadFile(filepath.Join(outDir, "handlers/sprint_handler.go")) //nolint:gosec // test reads a file it created in a temp directory
 	hc := string(handlerContent)
 	if !strings.Contains(hc, "type SprintHandler struct") {
 		t.Error("expected SprintHandler struct")
@@ -289,7 +289,7 @@ func TestEndToEndDryRun(t *testing.T) {
 		filepath.Join(sigilDir, "datasources"),
 		filepath.Join(sigilDir, "themes"),
 	} {
-		os.MkdirAll(dir, 0755)
+		os.MkdirAll(dir, 0o750)
 	}
 
 	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte(`
@@ -298,14 +298,14 @@ name: test
 defaults:
   theme: default
   renderer: go-templ
-`), 0644)
+`), 0o600)
 
 	os.WriteFile(filepath.Join(sigilDir, "themes", "default.yaml"), []byte(`
 name: default
 tokens:
   colors:
     text: "255 255 255"
-`), 0644)
+`), 0o600)
 
 	os.WriteFile(filepath.Join(sigilDir, "pages", "test.yaml"), []byte(`
 sigil: "1.0"
@@ -315,7 +315,7 @@ overlay: page
 layout:
   id: root
   type: rows
-`), 0644)
+`), 0o600)
 
 	cfg := renderer.GenerateConfig{
 		Target:    "go-templ",
@@ -348,8 +348,8 @@ func TestEndToEndClean(t *testing.T) {
 	outDir := filepath.Join(root, "out")
 
 	// Create pre-existing output
-	os.MkdirAll(filepath.Join(outDir, "old"), 0755)
-	os.WriteFile(filepath.Join(outDir, "old", "stale.txt"), []byte("stale"), 0644)
+	os.MkdirAll(filepath.Join(outDir, "old"), 0o750)
+	os.WriteFile(filepath.Join(outDir, "old", "stale.txt"), []byte("stale"), 0o600)
 
 	// Minimal setup
 	for _, dir := range []string{
@@ -357,7 +357,7 @@ func TestEndToEndClean(t *testing.T) {
 		filepath.Join(sigilDir, "datasources"),
 		filepath.Join(sigilDir, "themes"),
 	} {
-		os.MkdirAll(dir, 0755)
+		os.MkdirAll(dir, 0o750)
 	}
 
 	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte(`
@@ -366,14 +366,14 @@ name: test
 defaults:
   theme: default
   renderer: go-templ
-`), 0644)
+`), 0o600)
 
 	os.WriteFile(filepath.Join(sigilDir, "themes", "default.yaml"), []byte(`
 name: default
 tokens:
   colors:
     text: "255 255 255"
-`), 0644)
+`), 0o600)
 
 	os.WriteFile(filepath.Join(sigilDir, "pages", "test.yaml"), []byte(`
 sigil: "1.0"
@@ -383,7 +383,7 @@ overlay: page
 layout:
   id: root
   type: rows
-`), 0644)
+`), 0o600)
 
 	cfg := renderer.GenerateConfig{
 		Target:    "go-templ",
@@ -417,7 +417,7 @@ func TestEndToEndValidationFailure(t *testing.T) {
 		filepath.Join(sigilDir, "datasources"),
 		filepath.Join(sigilDir, "themes"),
 	} {
-		os.MkdirAll(dir, 0755)
+		os.MkdirAll(dir, 0o750)
 	}
 
 	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte(`
@@ -425,14 +425,14 @@ version: "1.0"
 name: test
 defaults:
   theme: default
-`), 0644)
+`), 0o600)
 
 	os.WriteFile(filepath.Join(sigilDir, "themes", "default.yaml"), []byte(`
 name: default
 tokens:
   colors:
     text: "255"
-`), 0644)
+`), 0o600)
 
 	// Invalid page — missing required fields
 	os.WriteFile(filepath.Join(sigilDir, "pages", "bad.yaml"), []byte(`
@@ -440,7 +440,7 @@ id: ""
 title: ""
 layout:
   type: ""
-`), 0644)
+`), 0o600)
 
 	cfg := renderer.GenerateConfig{
 		Target:    "go-templ",
@@ -466,7 +466,7 @@ func TestEndToEndNoPages(t *testing.T) {
 		filepath.Join(sigilDir, "datasources"),
 		filepath.Join(sigilDir, "themes"),
 	} {
-		os.MkdirAll(dir, 0755)
+		os.MkdirAll(dir, 0o750)
 	}
 
 	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte(`
@@ -474,14 +474,14 @@ version: "1.0"
 name: test
 defaults:
   theme: default
-`), 0644)
+`), 0o600)
 
 	os.WriteFile(filepath.Join(sigilDir, "themes", "default.yaml"), []byte(`
 name: default
 tokens:
   colors:
     text: "255"
-`), 0644)
+`), 0o600)
 
 	cfg := renderer.GenerateConfig{
 		Target:    "go-templ",

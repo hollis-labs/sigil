@@ -28,9 +28,9 @@ func tools(s *Server) []scopedTool {
 		{toolGetPage(s), scopes.Read},
 		{toolCreatePage(s), scopes.Write},
 		{toolUpdatePage(s), scopes.Write},
-		{toolValidate(s), scopes.Read},
-		{toolListComponents(s), scopes.Read},
-		{toolGetComponentSchema(s), scopes.Read},
+		{toolValidate(), scopes.Read},
+		{toolListComponents(), scopes.Read},
+		{toolGetComponentSchema(), scopes.Read},
 		{toolListDataSources(s), scopes.Read},
 		{toolCreateDataSource(s), scopes.Write},
 	}
@@ -111,7 +111,7 @@ func toolGetPage(s *Server) Tool {
 			id, _ := args["id"].(string)
 
 			path := filepath.Join(s.SigilDir(), "pages", id+".yaml")
-			data, err := os.ReadFile(path)
+			data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 			if err != nil {
 				return nil, fmt.Errorf("page %q not found: %w", id, err)
 			}
@@ -156,7 +156,7 @@ func toolCreatePage(s *Server) Tool {
 
 			// Write file
 			path := filepath.Join(s.SigilDir(), "pages", id+".yaml")
-			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 				return nil, err
 			}
 			if err := os.WriteFile(path, []byte(cfg), 0600); err != nil {
@@ -228,7 +228,7 @@ func toolUpdatePage(s *Server) Tool {
 	}
 }
 
-func toolValidate(s *Server) Tool {
+func toolValidate() Tool {
 	return Tool{
 		Name:        "sigil_validate",
 		Description: "Validate a Sigil config (YAML string or file path)",
@@ -285,7 +285,7 @@ func toolValidate(s *Server) Tool {
 	}
 }
 
-func toolListComponents(s *Server) Tool {
+func toolListComponents() Tool {
 	return Tool{
 		Name:        "sigil_list_components",
 		Description: "List available component types with their schemas",
@@ -348,7 +348,7 @@ func toolListComponents(s *Server) Tool {
 	}
 }
 
-func toolGetComponentSchema(s *Server) Tool {
+func toolGetComponentSchema() Tool {
 	return Tool{
 		Name:        "sigil_get_component_schema",
 		Description: "Get the full schema for a component type",
@@ -406,7 +406,7 @@ func toolListDataSources(s *Server) Tool {
 			var result []map[string]interface{}
 			for _, path := range matches {
 				name := strings.TrimSuffix(filepath.Base(path), ".yaml")
-				data, err := os.ReadFile(path)
+				data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 				if err != nil {
 					continue
 				}
@@ -453,7 +453,7 @@ func toolCreateDataSource(s *Server) Tool {
 			cfg, _ := args["config"].(string)
 
 			dsDir := filepath.Join(s.SigilDir(), "datasources")
-			if err := os.MkdirAll(dsDir, 0755); err != nil {
+			if err := os.MkdirAll(dsDir, 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 				return nil, err
 			}
 

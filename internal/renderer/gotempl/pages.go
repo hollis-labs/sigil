@@ -78,11 +78,12 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int) {
 		justify := getPropString(c.Props, "justify", "")
 		align := getPropString(c.Props, "align", "")
 		classes := fmt.Sprintf("flex flex-row gap-%s", gap)
-		if justify == "between" {
+		switch justify {
+		case "between":
 			classes += " justify-between"
-		} else if justify == "center" {
+		case "center":
 			classes += " justify-center"
-		} else if justify == "end" {
+		case "end":
 			classes += " justify-end"
 		}
 		if align == "center" {
@@ -144,7 +145,7 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int) {
 		renderDataTable(buf, c, prefix)
 
 	case "form":
-		renderForm(buf, c, prefix, depth)
+		renderForm(buf, c, prefix)
 
 	case "badge":
 		text := getPropString(c.Props, "text", "")
@@ -173,8 +174,8 @@ func renderComponent(buf *bytes.Buffer, c *config.Component, depth int) {
 
 	case "progress":
 		value := getPropString(c.Props, "value", "0")
-		max := getPropString(c.Props, "max", "100")
-		fmt.Fprintf(buf, "%s<progress class=\"sigil-progress\" value=%q max=%q></progress>\n", prefix, value, max)
+		maxValue := getPropString(c.Props, "max", "100")
+		fmt.Fprintf(buf, "%s<progress class=\"sigil-progress\" value=%q max=%q></progress>\n", prefix, value, maxValue)
 
 	case "avatar":
 		src := getPropString(c.Props, "src", "")
@@ -257,7 +258,7 @@ func renderDataTable(buf *bytes.Buffer, c *config.Component, prefix string) {
 	fmt.Fprintf(buf, "%s</div>\n", prefix)
 }
 
-func renderForm(buf *bytes.Buffer, c *config.Component, prefix string, depth int) {
+func renderForm(buf *bytes.Buffer, c *config.Component, prefix string) {
 	htmx := renderHTMXAttrs(c.Actions)
 	fmt.Fprintf(buf, "%s<form class=\"sigil-form flex flex-col gap-4\"%s>\n", prefix, htmx)
 

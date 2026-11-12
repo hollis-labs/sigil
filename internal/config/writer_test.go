@@ -109,7 +109,7 @@ func TestWriteFile(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // test reads a file it created in a temp directory
 	if err != nil {
 		t.Fatalf("failed to read written file: %v", err)
 	}

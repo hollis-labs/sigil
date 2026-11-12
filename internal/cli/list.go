@@ -82,8 +82,7 @@ func runListPages(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\n", page.ID, page.Title, page.Overlay, page.Module)
 	}
-	w.Flush()
-	return nil
+	return w.Flush()
 }
 
 func runListDataSources(cmd *cobra.Command, args []string) error {
@@ -104,8 +103,7 @@ func runListDataSources(cmd *cobra.Command, args []string) error {
 		name := strings.TrimSuffix(filepath.Base(path), ".yaml")
 		fmt.Fprintf(w, "  %s\n", name)
 	}
-	w.Flush()
-	return nil
+	return w.Flush()
 }
 
 func runListThemes(cmd *cobra.Command, args []string) error {
@@ -126,8 +124,7 @@ func runListThemes(cmd *cobra.Command, args []string) error {
 		name := strings.TrimSuffix(filepath.Base(path), ".yaml")
 		fmt.Fprintf(w, "  %s\n", name)
 	}
-	w.Flush()
-	return nil
+	return w.Flush()
 }
 
 func runListComponents(cmd *cobra.Command, args []string) error {
@@ -204,7 +201,9 @@ func showComponentDetail(cmd *cobra.Command, registry *components.Registry, type
 			}
 			fmt.Fprintf(w, "  %s\t%s%s%s%s%s\n", name, p.Type, req, def, enumStr, desc)
 		}
-		w.Flush()
+		if err := w.Flush(); err != nil {
+			return err
+		}
 		fmt.Fprintln(out)
 	}
 

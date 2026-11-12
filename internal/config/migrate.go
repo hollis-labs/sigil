@@ -97,14 +97,14 @@ func FormatMigrateResult(result *MigrateResult, color bool) string {
 	}
 
 	var buf strings.Builder
-	buf.WriteString(fmt.Sprintf("Migrated %s → %s (%d changes):\n\n",
-		result.FromVersion, result.ToVersion, len(result.Changes)))
+	fmt.Fprintf(&buf, "Migrated %s → %s (%d changes):\n\n",
+		result.FromVersion, result.ToVersion, len(result.Changes))
 
 	for _, c := range result.Changes {
 		if color {
-			buf.WriteString(fmt.Sprintf("  \033[36m%s\033[0m: %s\n", c.Path, c.Message))
+			fmt.Fprintf(&buf, "  \033[36m%s\033[0m: %s\n", c.Path, c.Message)
 		} else {
-			buf.WriteString(fmt.Sprintf("  %s: %s\n", c.Path, c.Message))
+			fmt.Fprintf(&buf, "  %s: %s\n", c.Path, c.Message)
 		}
 	}
 

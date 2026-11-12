@@ -113,7 +113,7 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	html = injectDevExtras(html, pageID)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(html)
+	_, _ = w.Write(html)
 }
 
 // handleThemeCSS serves the theme as a CSS file.
@@ -121,7 +121,7 @@ func (s *Server) handleThemeCSS(w http.ResponseWriter, r *http.Request) {
 	theme := s.loadTheme()
 	if theme == nil {
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
-		w.Write([]byte("/* no theme found */\n"))
+		_, _ = w.Write([]byte("/* no theme found */\n"))
 		return
 	}
 
@@ -134,13 +134,13 @@ func (s *Server) handleThemeCSS(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		for key, val := range tokens {
-			buf.WriteString(fmt.Sprintf("  --sigil-%s: %v;\n", key, val))
+			fmt.Fprintf(&buf, "  --sigil-%s: %v;\n", key, val)
 		}
 	}
 	buf.WriteString("}\n")
 
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
-	w.Write(buf.Bytes())
+	_, _ = w.Write(buf.Bytes())
 }
 
 // handleSSE sends server-sent events for live reload.
@@ -195,7 +195,7 @@ func (s *Server) loadTheme() *renderer.ThemeConfig {
 	// Try project config for default theme name
 	themeName := "default"
 	projPath := filepath.Join(s.SigilDir, "sigil.yaml")
-	data, err := os.ReadFile(projPath)
+	data, err := os.ReadFile(projPath) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 	if err == nil {
 		var proj config.ProjectConfig
 		if yaml.Unmarshal(data, &proj) == nil && proj.Defaults.Theme != "" {
@@ -204,7 +204,7 @@ func (s *Server) loadTheme() *renderer.ThemeConfig {
 	}
 
 	path := filepath.Join(s.SigilDir, "themes", themeName+".yaml")
-	data, err = os.ReadFile(path)
+	data, err = os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 	if err != nil {
 		return nil
 	}
@@ -224,7 +224,7 @@ func (s *Server) loadDataSources() map[string]*renderer.DataSourceManifest {
 
 	result := map[string]*renderer.DataSourceManifest{}
 	for _, path := range matches {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 		if err != nil {
 			continue
 		}

@@ -14,7 +14,7 @@ func WriteFile(path string, v interface{}) error {
 	if err != nil {
 		return fmt.Errorf("marshaling YAML: %w", err)
 	}
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0644) //nolint:gosec // project files are user-editable; mode matches sigil init
 }
 
 // MarshalYAML encodes v as clean, human-readable YAML with 2-space indent.

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -74,16 +73,4 @@ func dim(s string) string {
 		return s
 	}
 	return colorDim + s + colorReset
-}
-
-func successf(format string, a ...interface{}) string {
-	return green(fmt.Sprintf(format, a...))
-}
-
-func errorf(format string, a ...interface{}) string {
-	return red(fmt.Sprintf(format, a...))
-}
-
-func warnf(format string, a ...interface{}) string {
-	return yellow(fmt.Sprintf(format, a...))
 }

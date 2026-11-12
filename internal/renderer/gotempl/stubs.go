@@ -160,7 +160,7 @@ func writeInputStruct(buf *bytes.Buffer, fields []renderer.DataSourceField) {
 		}
 		goType := fieldGoType(f.Type)
 		fieldName := toPascalCase(f.Name)
-		buf.WriteString(fmt.Sprintf("\t\t%s %s `json:\"%s\"`\n", fieldName, goType, f.Name))
+		fmt.Fprintf(buf, "\t\t%s %s `json:\"%s\"`\n", fieldName, goType, f.Name)
 	}
 	buf.WriteString("\t}\n")
 }

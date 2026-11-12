@@ -52,7 +52,7 @@ func LoadCustomSchemas(r *Registry, dir string) error {
 			continue
 		}
 		path := filepath.Join(dir, entry.Name())
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 		if err != nil {
 			return fmt.Errorf("reading %s: %w", path, err)
 		}

@@ -16,9 +16,9 @@ func setupTestProject(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	sigilDir := filepath.Join(dir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
-	os.MkdirAll(filepath.Join(sigilDir, "themes"), 0755)
-	os.MkdirAll(filepath.Join(sigilDir, "datasources"), 0755)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
+	os.MkdirAll(filepath.Join(sigilDir, "themes"), 0o750)
+	os.MkdirAll(filepath.Join(sigilDir, "datasources"), 0o750)
 
 	// Project config
 	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte(`
@@ -26,7 +26,7 @@ version: "1.0"
 name: test-project
 defaults:
   theme: default
-`), 0644)
+`), 0o600)
 
 	// Theme
 	os.WriteFile(filepath.Join(sigilDir, "themes", "default.yaml"), []byte(`
@@ -41,7 +41,7 @@ tokens:
     border: "63 63 70"
   radius:
     md: "0.375rem"
-`), 0644)
+`), 0o600)
 
 	// Test page
 	os.WriteFile(filepath.Join(sigilDir, "pages", "test-page.yaml"), []byte(`
@@ -61,7 +61,7 @@ layout:
       props:
         level: 2
         text: Hello World
-`), 0644)
+`), 0o600)
 
 	return sigilDir
 }
@@ -141,8 +141,8 @@ func TestHandleIndex(t *testing.T) {
 func TestHandleIndexNoPages(t *testing.T) {
 	dir := t.TempDir()
 	sigilDir := filepath.Join(dir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
-	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte("version: \"1.0\"\nname: empty"), 0644)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
+	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte("version: \"1.0\"\nname: empty"), 0o600)
 
 	srv := New(sigilDir)
 	req := httptest.NewRequest("GET", "/", nil)
@@ -186,7 +186,7 @@ func TestHandleThemeCSS(t *testing.T) {
 func TestHandleThemeCSSNoTheme(t *testing.T) {
 	dir := t.TempDir()
 	sigilDir := filepath.Join(dir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
 
 	srv := New(sigilDir)
 	req := httptest.NewRequest("GET", "/assets/theme.css", nil)

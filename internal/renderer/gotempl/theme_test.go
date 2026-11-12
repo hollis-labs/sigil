@@ -92,10 +92,7 @@ func TestRenderThemeCSS(t *testing.T) {
 
 func TestGenerateCSSTokens(t *testing.T) {
 	theme := testTheme()
-	css, err := generateCSS(theme)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	css := generateCSS(theme)
 
 	content := string(css)
 
@@ -140,10 +137,7 @@ func TestGenerateCSSTokens(t *testing.T) {
 
 func TestGenerateCSSComponentClasses(t *testing.T) {
 	theme := testTheme()
-	css, err := generateCSS(theme)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	css := generateCSS(theme)
 
 	content := string(css)
 
@@ -192,10 +186,7 @@ func TestGenerateCSSComponentClasses(t *testing.T) {
 
 func TestGenerateTailwindPreset(t *testing.T) {
 	theme := testTheme()
-	preset, err := generateTailwindPreset(theme)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	preset := generateTailwindPreset(theme)
 
 	content := string(preset)
 
@@ -239,10 +230,7 @@ func TestGenerateCSSNoVariants(t *testing.T) {
 		},
 	}
 
-	css, err := generateCSS(theme)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	css := generateCSS(theme)
 
 	content := string(css)
 	if !strings.Contains(content, "--sigil-background: 0 0 0") {

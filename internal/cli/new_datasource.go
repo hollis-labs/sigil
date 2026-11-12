@@ -71,7 +71,7 @@ func runNewDataSource(cmd *cobra.Command, args []string) error {
 	}
 
 	outDir := filepath.Join(".sigil", "datasources")
-	if err := os.MkdirAll(outDir, 0755); err != nil {
+	if err := os.MkdirAll(outDir, 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 		return fmt.Errorf("creating datasources directory: %w", err)
 	}
 

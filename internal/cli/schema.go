@@ -49,12 +49,12 @@ func runSchemaExport(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("marshaling schema: %w", err)
 	}
 
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 		return fmt.Errorf("creating output dir: %w", err)
 	}
 
 	outPath := filepath.Join(outputDir, "page.schema.json")
-	if err := os.WriteFile(outPath, data, 0644); err != nil {
+	if err := os.WriteFile(outPath, data, 0644); err != nil { //nolint:gosec // project files are user-editable; mode matches sigil init
 		return fmt.Errorf("writing schema: %w", err)
 	}
 

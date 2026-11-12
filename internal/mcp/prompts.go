@@ -62,10 +62,10 @@ func handleDesignPage(ctx context.Context, req *mcpsdk.GetPromptRequest) (*mcpsd
 			continue
 		}
 		label := strings.ToUpper(cat[:1]) + cat[1:]
-		catalog.WriteString(fmt.Sprintf("## %s\n", label))
+		fmt.Fprintf(&catalog, "## %s\n", label)
 		for _, name := range names {
 			schema, _ := registry.Get(name)
-			catalog.WriteString(fmt.Sprintf("- **%s**: %s\n", name, schema.Description))
+			fmt.Fprintf(&catalog, "- **%s**: %s\n", name, schema.Description)
 			if len(schema.Props) > 0 {
 				catalog.WriteString("  Props: ")
 				var props []string
@@ -137,7 +137,7 @@ func handleReviewConfig(s *Server) mcpsdk.PromptHandler {
 		result := config.Validate(page, registry)
 
 		var review strings.Builder
-		review.WriteString(fmt.Sprintf("Review the following Sigil config:\n\n```yaml\n%s\n```\n\n", yamlConfig))
+		fmt.Fprintf(&review, "Review the following Sigil config:\n\n```yaml\n%s\n```\n\n", yamlConfig)
 
 		if result.Valid && len(result.Warnings) == 0 {
 			review.WriteString("**Validation: PASS** — No errors or warnings.\n\n")
@@ -150,14 +150,14 @@ func handleReviewConfig(s *Server) mcpsdk.PromptHandler {
 			if !result.Valid {
 				review.WriteString("**Validation: FAIL**\n\nErrors:\n")
 				for _, e := range result.Errors {
-					review.WriteString(fmt.Sprintf("- %s\n", e.String()))
+					fmt.Fprintf(&review, "- %s\n", e.String())
 				}
 				review.WriteString("\n")
 			}
 			if len(result.Warnings) > 0 {
 				review.WriteString("Warnings:\n")
 				for _, w := range result.Warnings {
-					review.WriteString(fmt.Sprintf("- %s\n", w.String()))
+					fmt.Fprintf(&review, "- %s\n", w.String())
 				}
 				review.WriteString("\n")
 			}
@@ -169,7 +169,7 @@ func handleReviewConfig(s *Server) mcpsdk.PromptHandler {
 			"errors":   len(result.Errors),
 			"warnings": len(result.Warnings),
 		}, "", "  ")
-		review.WriteString(fmt.Sprintf("\nValidation summary:\n```json\n%s\n```\n", string(data)))
+		fmt.Fprintf(&review, "\nValidation summary:\n```json\n%s\n```\n", string(data))
 
 		return &mcpsdk.GetPromptResult{
 			Messages: []*mcpsdk.PromptMessage{

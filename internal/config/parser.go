@@ -9,7 +9,7 @@ import (
 
 // ParseFile reads a YAML file and returns a Page config.
 func ParseFile(path string) (*Page, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", path, err)
 	}

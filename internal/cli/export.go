@@ -46,7 +46,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		filterSet[id] = true
 	}
 
-	if err := os.MkdirAll(output, 0755); err != nil {
+	if err := os.MkdirAll(output, 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 		return fmt.Errorf("creating output directory: %w", err)
 	}
 
@@ -70,7 +70,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		}
 
 		outPath := filepath.Join(output, page.ID+".json")
-		if err := os.WriteFile(outPath, append(data, '\n'), 0644); err != nil {
+		if err := os.WriteFile(outPath, append(data, '\n'), 0644); err != nil { //nolint:gosec // project files are user-editable; mode matches sigil init
 			return fmt.Errorf("writing %s: %w", outPath, err)
 		}
 

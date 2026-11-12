@@ -116,7 +116,7 @@ func readPagesResource(s *Server) (*mcpsdk.ReadResourceResult, error) {
 
 func readPageResource(s *Server, id string) (*mcpsdk.ReadResourceResult, error) {
 	path := filepath.Join(s.SigilDir(), "pages", id+".yaml")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 	if err != nil {
 		return nil, fmt.Errorf("page %q not found", id)
 	}
@@ -179,7 +179,7 @@ func readDataSourcesResource(s *Server) (*mcpsdk.ReadResourceResult, error) {
 
 	var result []map[string]interface{}
 	for _, path := range matches {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 		if err != nil {
 			continue
 		}
@@ -199,7 +199,7 @@ func readThemesResource(s *Server) (*mcpsdk.ReadResourceResult, error) {
 
 	var result []map[string]interface{}
 	for _, path := range matches {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 		if err != nil {
 			continue
 		}
@@ -224,7 +224,7 @@ func readThemesResource(s *Server) (*mcpsdk.ReadResourceResult, error) {
 
 func readProjectResource(s *Server) (*mcpsdk.ReadResourceResult, error) {
 	path := filepath.Join(s.SigilDir(), "sigil.yaml")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 	if err != nil {
 		return nil, fmt.Errorf("project config not found: %w", err)
 	}

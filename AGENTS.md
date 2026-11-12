@@ -38,7 +38,7 @@ go run github.com/hollis-labs/substrate/cmd/substrate pins check --app .
 python3 scripts/scan-public --tree   # history gate (--ref HEAD) returns after the program-wide history pass
 ```
 
-`lefthook` gates commits on gofmt/goimports, `golangci-lint run` and
+`lefthook` gates commits on gofmt/goimports, the pinned `golangci-lint` v2.11.4 (the version CI runs) and
 `go vet ./...`, and pushes on `go test ./...`. The `make demo`, `make se-demo`
 and `make cw-demo` targets regenerate output into the checked-in demo apps —
 use them to see a renderer change, not to verify one.

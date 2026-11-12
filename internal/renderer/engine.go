@@ -214,9 +214,9 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 			Modules:       modulesForCtx,
 			UIKit:         cfg.UIKit,
 		}
-		files, err := r.Render(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("rendering page %q: %w", page.ID, err)
+		files, renderErr := r.Render(ctx)
+		if renderErr != nil {
+			return nil, fmt.Errorf("rendering page %q: %w", page.ID, renderErr)
 		}
 		allFiles = append(allFiles, files...)
 
@@ -417,7 +417,7 @@ func Generate(cfg GenerateConfig) (*GenerateResult, error) {
 	// 11. Write all files
 	for _, f := range allFiles {
 		outPath := filepath.Join(cfg.OutputDir, f.Path)
-		if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 			return nil, fmt.Errorf("creating directory for %s: %w", f.Path, err)
 		}
 		mode := f.Mode
@@ -453,7 +453,7 @@ func loadShellPage(pagesDir, shellID string) (*config.Page, error) {
 }
 
 func loadProjectConfig(path string) (*config.ProjectConfig, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +467,7 @@ func loadProjectConfig(path string) (*config.ProjectConfig, error) {
 // LoadTheme loads a theme by name, resolving inheritance via the extends field.
 func LoadTheme(themesDir, name string) (*ThemeConfig, error) {
 	path := filepath.Join(themesDir, name+".yaml")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 	if err != nil {
 		return nil, err
 	}
@@ -522,7 +522,7 @@ func loadDataSources(dir string) (map[string]*DataSourceManifest, error) {
 		return nil, err
 	}
 	for _, path := range matches {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 		if err != nil {
 			return nil, fmt.Errorf("reading %s: %w", path, err)
 		}

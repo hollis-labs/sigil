@@ -14,7 +14,7 @@ func TestExportImportRoundTrip(t *testing.T) {
 	tmpDir := t.TempDir()
 	sigilDir := filepath.Join(tmpDir, ".sigil")
 	pagesDir := filepath.Join(sigilDir, "pages")
-	os.MkdirAll(pagesDir, 0755)
+	os.MkdirAll(pagesDir, 0o750)
 
 	// Write a test page YAML
 	pageYAML := `sigil: "1.0"
@@ -44,7 +44,7 @@ shortcuts:
     action:
       type: close
 `
-	os.WriteFile(filepath.Join(pagesDir, "test-page.yaml"), []byte(pageYAML), 0644)
+	os.WriteFile(filepath.Join(pagesDir, "test-page.yaml"), []byte(pageYAML), 0o600)
 
 	// Export to JSON
 	exportDir := filepath.Join(tmpDir, "exported")
@@ -62,12 +62,12 @@ shortcuts:
 
 	// Verify JSON file exists and is valid
 	jsonPath := filepath.Join(exportDir, "test-page.json")
-	jsonData, err := os.ReadFile(jsonPath)
+	jsonData, err := os.ReadFile(jsonPath) //nolint:gosec // test reads a file it created in a temp directory
 	if err != nil {
 		t.Fatalf("reading exported JSON: %v", err)
 	}
 	var parsed map[string]interface{}
-	if err := json.Unmarshal(jsonData, &parsed); err != nil {
+	if err = json.Unmarshal(jsonData, &parsed); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 	if parsed["id"] != "test-page" {
@@ -79,13 +79,13 @@ shortcuts:
 
 	// Import back into a new sigil dir
 	newSigilDir := filepath.Join(tmpDir, ".sigil2")
-	os.MkdirAll(filepath.Join(newSigilDir, "pages"), 0755)
+	os.MkdirAll(filepath.Join(newSigilDir, "pages"), 0o750)
 
 	rootCmd2 := NewRootCmd()
 	rootCmd2.SetArgs([]string{"import", "--from", "json", "--input", exportDir, "--sigil-dir", newSigilDir})
 	var importOut bytes.Buffer
 	rootCmd2.SetOut(&importOut)
-	if err := rootCmd2.Execute(); err != nil {
+	if err = rootCmd2.Execute(); err != nil {
 		t.Fatalf("import failed: %v", err)
 	}
 
@@ -95,7 +95,7 @@ shortcuts:
 
 	// Verify YAML was written
 	yamlPath := filepath.Join(newSigilDir, "pages", "test-page.yaml")
-	if _, err := os.Stat(yamlPath); err != nil {
+	if _, err = os.Stat(yamlPath); err != nil {
 		t.Fatalf("imported YAML file not found: %v", err)
 	}
 
@@ -104,11 +104,11 @@ shortcuts:
 	rootCmd3 := NewRootCmd()
 	rootCmd3.SetArgs([]string{"export", "--sigil-dir", newSigilDir, "--output", reexportDir})
 	rootCmd3.SetOut(&bytes.Buffer{})
-	if err := rootCmd3.Execute(); err != nil {
+	if err = rootCmd3.Execute(); err != nil {
 		t.Fatalf("re-export failed: %v", err)
 	}
 
-	reexportJSON, err := os.ReadFile(filepath.Join(reexportDir, "test-page.json"))
+	reexportJSON, err := os.ReadFile(filepath.Join(reexportDir, "test-page.json")) //nolint:gosec // test reads a file it created in a temp directory
 	if err != nil {
 		t.Fatalf("reading re-exported JSON: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestExportFilterPages(t *testing.T) {
 	tmpDir := t.TempDir()
 	sigilDir := filepath.Join(tmpDir, ".sigil")
 	pagesDir := filepath.Join(sigilDir, "pages")
-	os.MkdirAll(pagesDir, 0755)
+	os.MkdirAll(pagesDir, 0o750)
 
 	page1 := `sigil: "1.0"
 kind: page
@@ -159,8 +159,8 @@ layout:
       props:
         text: Two
 `
-	os.WriteFile(filepath.Join(pagesDir, "page-one.yaml"), []byte(page1), 0644)
-	os.WriteFile(filepath.Join(pagesDir, "page-two.yaml"), []byte(page2), 0644)
+	os.WriteFile(filepath.Join(pagesDir, "page-one.yaml"), []byte(page1), 0o600)
+	os.WriteFile(filepath.Join(pagesDir, "page-two.yaml"), []byte(page2), 0o600)
 
 	exportDir := filepath.Join(tmpDir, "exported")
 	rootCmd := NewRootCmd()
@@ -182,12 +182,12 @@ layout:
 func TestImportInvalidJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 	sigilDir := filepath.Join(tmpDir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
 
 	// Write invalid JSON
 	inputDir := filepath.Join(tmpDir, "input")
-	os.MkdirAll(inputDir, 0755)
-	os.WriteFile(filepath.Join(inputDir, "bad.json"), []byte("{invalid json"), 0644)
+	os.MkdirAll(inputDir, 0o750)
+	os.WriteFile(filepath.Join(inputDir, "bad.json"), []byte("{invalid json"), 0o600)
 
 	rootCmd := NewRootCmd()
 	rootCmd.SetArgs([]string{"import", "--from", "json", "--input", inputDir, "--sigil-dir", sigilDir})
@@ -201,10 +201,10 @@ func TestImportInvalidJSON(t *testing.T) {
 func TestImportDryRun(t *testing.T) {
 	tmpDir := t.TempDir()
 	sigilDir := filepath.Join(tmpDir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
 
 	inputDir := filepath.Join(tmpDir, "input")
-	os.MkdirAll(inputDir, 0755)
+	os.MkdirAll(inputDir, 0o750)
 
 	pageJSON := `{
   "sigil": "1.0",
@@ -217,7 +217,7 @@ func TestImportDryRun(t *testing.T) {
     "children": [{"type": "heading", "props": {"text": "Hi", "level": 2}}]
   }
 }`
-	os.WriteFile(filepath.Join(inputDir, "dry-test.json"), []byte(pageJSON), 0644)
+	os.WriteFile(filepath.Join(inputDir, "dry-test.json"), []byte(pageJSON), 0o600)
 
 	rootCmd := NewRootCmd()
 	rootCmd.SetArgs([]string{"import", "--from", "json", "--input", inputDir, "--sigil-dir", sigilDir, "--dry-run"})

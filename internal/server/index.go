@@ -54,7 +54,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	buf.WriteString("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n")
 	buf.WriteString("  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n")
-	buf.WriteString(fmt.Sprintf("  <title>%s — Sigil Dev Server</title>\n", projectName))
+	fmt.Fprintf(&buf, "  <title>%s — Sigil Dev Server</title>\n", projectName)
 	buf.WriteString("  <script src=\"https://cdn.tailwindcss.com\"></script>\n")
 	buf.WriteString("  <style>\n")
 
@@ -64,7 +64,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		for _, cat := range []string{"colors", "typography", "radius"} {
 			if tokens, ok := theme.Tokens[cat]; ok {
 				for k, v := range tokens {
-					buf.WriteString(fmt.Sprintf("      --sigil-%s: %v;\n", k, v))
+					fmt.Fprintf(&buf, "      --sigil-%s: %v;\n", k, v)
 				}
 			}
 		}
@@ -83,9 +83,9 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 	// Header
 	buf.WriteString("  <div style=\"border-bottom:1px solid rgb(var(--sigil-border));padding:20px 32px;display:flex;align-items:center;gap:16px\">\n")
-	buf.WriteString(fmt.Sprintf("    <h1 style=\"font-size:1.25rem;font-weight:700;margin:0\">%s</h1>\n", projectName))
+	fmt.Fprintf(&buf, "    <h1 style=\"font-size:1.25rem;font-weight:700;margin:0\">%s</h1>\n", projectName)
 	buf.WriteString("    <span style=\"font-size:0.75rem;padding:2px 8px;border-radius:9999px;background:rgb(var(--sigil-accent));color:white\">Sigil Dev Server</span>\n")
-	buf.WriteString(fmt.Sprintf("    <span style=\"flex:1\"></span><span style=\"color:rgb(var(--sigil-text-muted));font-size:0.8rem\">%d pages</span>\n", len(rows)))
+	fmt.Fprintf(&buf, "    <span style=\"flex:1\"></span><span style=\"color:rgb(var(--sigil-text-muted));font-size:0.8rem\">%d pages</span>\n", len(rows))
 	buf.WriteString("  </div>\n")
 
 	// Page table
@@ -94,7 +94,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	buf.WriteString("      <thead>\n")
 	buf.WriteString("        <tr style=\"border-bottom:1px solid rgb(var(--sigil-border))\">\n")
 	for _, col := range []string{"Status", "ID", "Title", "Overlay", "Module", "Components"} {
-		buf.WriteString(fmt.Sprintf("          <th style=\"text-align:left;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:rgb(var(--sigil-text-muted));font-weight:600\">%s</th>\n", col))
+		fmt.Fprintf(&buf, "          <th style=\"text-align:left;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:rgb(var(--sigil-text-muted));font-weight:600\">%s</th>\n", col)
 	}
 	buf.WriteString("        </tr>\n")
 	buf.WriteString("      </thead>\n")
@@ -115,19 +115,19 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		case "error":
 			statusHTML = `<span style="color:#ef4444;font-size:0.75rem" title="Parse error">&#9888;</span>`
 		}
-		buf.WriteString(fmt.Sprintf("          <td style=\"padding:10px 12px;text-align:center\">%s</td>\n", statusHTML))
+		fmt.Fprintf(&buf, "          <td style=\"padding:10px 12px;text-align:center\">%s</td>\n", statusHTML)
 
 		// ID (linked)
 		if row.Error == "" {
-			buf.WriteString(fmt.Sprintf("          <td style=\"padding:10px 12px\"><a href=\"/pages/%s\" style=\"color:rgb(var(--sigil-accent));text-decoration:none;font-weight:500\">%s</a></td>\n", row.ID, row.ID))
+			fmt.Fprintf(&buf, "          <td style=\"padding:10px 12px\"><a href=\"/pages/%s\" style=\"color:rgb(var(--sigil-accent));text-decoration:none;font-weight:500\">%s</a></td>\n", row.ID, row.ID)
 		} else {
-			buf.WriteString(fmt.Sprintf("          <td style=\"padding:10px 12px;color:rgb(var(--sigil-text-muted))\">%s</td>\n", row.ID))
+			fmt.Fprintf(&buf, "          <td style=\"padding:10px 12px;color:rgb(var(--sigil-text-muted))\">%s</td>\n", row.ID)
 		}
 
-		buf.WriteString(fmt.Sprintf("          <td style=\"padding:10px 12px\">%s</td>\n", row.Title))
-		buf.WriteString(fmt.Sprintf("          <td style=\"padding:10px 12px\"><span style=\"font-size:0.75rem;padding:1px 6px;border-radius:4px;background:rgb(var(--sigil-surface));color:rgb(var(--sigil-text-muted))\">%s</span></td>\n", row.Overlay))
-		buf.WriteString(fmt.Sprintf("          <td style=\"padding:10px 12px;color:rgb(var(--sigil-text-muted))\">%s</td>\n", row.Module))
-		buf.WriteString(fmt.Sprintf("          <td style=\"padding:10px 12px;color:rgb(var(--sigil-text-muted))\">%d</td>\n", row.ComponentCount))
+		fmt.Fprintf(&buf, "          <td style=\"padding:10px 12px\">%s</td>\n", row.Title)
+		fmt.Fprintf(&buf, "          <td style=\"padding:10px 12px\"><span style=\"font-size:0.75rem;padding:1px 6px;border-radius:4px;background:rgb(var(--sigil-surface));color:rgb(var(--sigil-text-muted))\">%s</span></td>\n", row.Overlay)
+		fmt.Fprintf(&buf, "          <td style=\"padding:10px 12px;color:rgb(var(--sigil-text-muted))\">%s</td>\n", row.Module)
+		fmt.Fprintf(&buf, "          <td style=\"padding:10px 12px;color:rgb(var(--sigil-text-muted))\">%d</td>\n", row.ComponentCount)
 		buf.WriteString("        </tr>\n")
 	}
 
@@ -149,12 +149,12 @@ es.addEventListener('error', () => setTimeout(() => location.reload(), 2000));
 	buf.WriteString("\n</body>\n</html>\n")
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(buf.Bytes())
+	_, _ = w.Write(buf.Bytes())
 }
 
 func (s *Server) projectName() string {
 	path := filepath.Join(s.SigilDir, "sigil.yaml")
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 	if err != nil {
 		return "Sigil Project"
 	}
