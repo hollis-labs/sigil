@@ -1,20 +1,28 @@
 package cli
 
 import (
-	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
+	"strconv"
 	"time"
 
-	"github.com/hollis-labs/sigil/internal/server"
 	"github.com/spf13/cobra"
+
+	"github.com/hollis-labs/substrate/module"
+	"github.com/hollis-labs/substrate/modules/auth"
+	"github.com/hollis-labs/substrate/modules/httphost"
+
+	"github.com/hollis-labs/sigil/internal/hostguard"
+	"github.com/hollis-labs/sigil/internal/server"
 )
 
-// NewServeCmd creates the serve command.
-func NewServeCmd() *cobra.Command {
+// NewServeCmd creates the serve command. The listener is the Substrate httphost module's:
+// its address is httphost.addr (127.0.0.1:3210 unless the SUBSTRATE_CONFIG file says
+// otherwise), or that host with --port. Sigil refuses any address that is not loopback
+// (see loopbackAddr), which is stricter than the framework's check in mode off.
+func NewServeCmd(app *module.App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Start the live development server",
@@ -24,60 +32,106 @@ The server watches .sigil/ for changes and reloads the browser automatically.
 It also exposes a JSON/REST API under /api/* (pages, components, datasources,
 themes, project config; CRUD for pages and datasources) for browser SPAs.
 
+It listens on httphost.addr (default 127.0.0.1:3210), set in the YAML file named
+by SUBSTRATE_CONFIG, or on that host with --port. Authentication is off, so only a
+loopback address (127.0.0.0/8, ::1 or localhost) is accepted. Health is GET /healthz.
+
 Examples:
-  sigil serve                    Start on default port 3210
-  sigil serve --port 8080        Start on custom port
+  sigil serve                    Start on the configured address (port 3210)
+  sigil serve --port 8080        Start on a custom port
   sigil serve --sigil-dir path   Use custom .sigil directory`,
-		RunE: runServe,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error { return runServe(cmd, app) },
 	}
-	cmd.Flags().Int("port", 3210, "HTTP server port")
+	cmd.Flags().Int("port", 0, "HTTP server port (default: the port of httphost.addr, 3210)")
 	cmd.Flags().String("sigil-dir", ".sigil", "Path to .sigil directory")
 	return cmd
 }
 
-func runServe(cmd *cobra.Command, args []string) error {
-	port, _ := cmd.Flags().GetInt("port")
+func runServe(cmd *cobra.Command, app *module.App) error {
 	sigilDir, _ := cmd.Flags().GetString("sigil-dir")
+	port, _ := cmd.Flags().GetInt("port")
+	addr, err := loopbackAddr(app, port)
+	if err != nil {
+		return err
+	}
 
 	// Verify .sigil directory exists
-	if _, err := os.Stat(sigilDir); os.IsNotExist(err) {
+	if _, statErr := os.Stat(sigilDir); os.IsNotExist(statErr) {
 		return fmt.Errorf("%s not found — run 'sigil init' first", sigilDir)
 	}
 
-	srv := server.New(sigilDir, port)
+	srv := server.New(sigilDir)
+	api := server.NewAPI(sigilDir)
+	table := auth.ScopeTable(app)
+	if table == nil {
+		return fmt.Errorf("the auth module must be started")
+	}
+	server.RegisterScopes(table, srv.Previews(), api.Routes())
 
-	// Start file watcher
-	watcher := server.NewWatcher(sigilDir, 500*time.Millisecond, func() {
-		srv.NotifyReload()
-	})
-	watcher.Start()
-
-	out := cmd.OutOrStdout()
-	fmt.Fprintf(out, "\n  %s Sigil dev server running\n\n", green("●"))
-	fmt.Fprintf(out, "  %s  http://localhost:%d\n", bold("Local:"), port)
-	fmt.Fprintf(out, "  %s  %s\n\n", bold("Watching:"), sigilDir)
-	fmt.Fprintf(out, "  %s\n\n", dim("Press Ctrl+C to stop"))
-
-	// Handle shutdown
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
-
-	errCh := make(chan error, 1)
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			errCh <- err
-		}
-	}()
-
-	select {
-	case <-done:
-		fmt.Fprintf(out, "\n  Shutting down...\n")
-		watcher.Stop()
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		return srv.Shutdown(ctx)
-	case err := <-errCh:
-		watcher.Stop()
+	// The API writes project files, so its writes need X-Requested-With (see
+	// server.RequireRequestedWith). The preview pages and the reload stream are
+	// mounted outside /api/, each with the scope its route declares.
+	routes := http.NewServeMux()
+	routes.Handle("/api/", server.RequireRequestedWith(api.Handler()))
+	var mounts []httphost.Mount
+	for _, r := range srv.Previews() {
+		mounts = append(mounts, httphost.Mount{Pattern: r.Method + " " + r.Pattern, Handler: r.Handler})
+	}
+	handler, err := httphost.Handler(app, httphost.Options{Routes: routes, Mounts: mounts})
+	if err != nil {
 		return err
 	}
+	// Outermost: refuse a Host the server is not meant to answer (DNS rebinding).
+	handler = hostguard.Handler(nil, handler)
+
+	ctx := cmd.Context()
+	watcher := server.NewWatcher(sigilDir, 500*time.Millisecond, srv.NotifyReload)
+	watcher.Start()
+	defer watcher.Stop()
+	go func() {
+		<-ctx.Done()
+		srv.StopStreams()
+	}()
+
+	out := cmd.OutOrStdout()
+	err = httphost.Serve(ctx, app, handler, httphost.ServeOptions{
+		Addr: addr,
+		Ready: func(addr net.Addr) {
+			fmt.Fprintf(out, "\n  %s Sigil dev server running\n\n", green("●"))
+			fmt.Fprintf(out, "  %s  http://%s\n", bold("Local:"), addr)
+			fmt.Fprintf(out, "  %s  %s\n\n", bold("Watching:"), sigilDir)
+			fmt.Fprintf(out, "  %s\n\n", dim("Press Ctrl+C to stop"))
+		},
+	})
+	if ctx.Err() != nil && err == nil {
+		fmt.Fprintf(out, "\n  Shut down.\n")
+	}
+	return err
+}
+
+// loopbackAddr returns the address serve listens on: httphost.addr, with its port replaced by
+// port when that is non-zero. It refuses anything but a loopback host. The framework's check
+// in mode off also accepts tailnet ranges and *.ts.net names; this server has no
+// authentication and writes project files, so only 127.0.0.0/8, ::1 and localhost are allowed.
+func loopbackAddr(app *module.App, port int) (string, error) {
+	cfg, _ := app.Config["httphost"].(map[string]any)
+	addr, _ := cfg["addr"].(string)
+	if addr == "" {
+		addr = "127.0.0.1:3210"
+	}
+	host, p, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", fmt.Errorf("sigil serve: bad address %q: %w", addr, err)
+	}
+	if port != 0 {
+		if port < 0 || port > 65535 {
+			return "", fmt.Errorf("sigil serve: --port %d is out of range", port)
+		}
+		p = strconv.Itoa(port)
+	}
+	if ip := net.ParseIP(host); (ip == nil || !ip.IsLoopback()) && host != "localhost" {
+		return "", fmt.Errorf("sigil serve: %q is not a loopback address; the server has no authentication, so it listens on 127.0.0.1, ::1 or localhost only", host)
+	}
+	return net.JoinHostPort(host, p), nil
 }

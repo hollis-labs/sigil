@@ -10,9 +10,13 @@ import (
 	"sort"
 	"strings"
 
+	libauth "github.com/hollis-labs/libs/security/auth"
+	"github.com/hollis-labs/substrate/apierr"
+	"gopkg.in/yaml.v3"
+
 	"github.com/hollis-labs/sigil/internal/components"
 	"github.com/hollis-labs/sigil/internal/config"
-	"gopkg.in/yaml.v3"
+	"github.com/hollis-labs/sigil/internal/scopes"
 )
 
 // maxBodyBytes caps request bodies for the JSON API write endpoints.
@@ -27,9 +31,7 @@ const maxBodyBytes = 4 << 20 // 4 MiB
 // logic — page create/update run the same parse + validate path as the MCP
 // tools sigil_create_page / sigil_update_page.
 //
-// An API value can be mounted on the dev server's mux (see Server.buildMux) or
-// served standalone via Handler() so a Sysop UI binary can serve a static SPA
-// and this API same-origin.
+// The routes come from Routes(), one table that holds each handler and its scope.
 type API struct {
 	// SigilDir is the path to the .sigil project directory.
 	SigilDir string
@@ -40,36 +42,62 @@ func NewAPI(sigilDir string) *API {
 	return &API{SigilDir: sigilDir}
 }
 
-// Register adds the /api/* routes to mux. Use this to mount the API on an
-// existing server (the dev server) or alongside a static SPA handler.
-func (a *API) Register(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/health", a.handleHealth)
+// Scopes the routes require. Sigil runs with auth off on loopback, so they are not
+// enforced today; they are declared so the table is correct the day the mode changes.
+const (
+	ScopeRead  = scopes.Read
+	ScopeWrite = scopes.Write
+)
 
-	mux.HandleFunc("GET /api/pages", a.handleListPages)
-	mux.HandleFunc("POST /api/pages", a.handleCreatePage)
-	mux.HandleFunc("GET /api/pages/{id}", a.handleGetPage)
-	mux.HandleFunc("PUT /api/pages/{id}", a.handleUpdatePage)
-
-	mux.HandleFunc("GET /api/components", a.handleListComponents)
-	mux.HandleFunc("GET /api/components/{type}", a.handleGetComponent)
-
-	mux.HandleFunc("GET /api/datasources", a.handleListDataSources)
-	mux.HandleFunc("POST /api/datasources", a.handleCreateDataSource)
-	mux.HandleFunc("GET /api/datasources/{alias}", a.handleGetDataSource)
-
-	mux.HandleFunc("GET /api/themes", a.handleListThemes)
-	mux.HandleFunc("GET /api/themes/{name}", a.handleGetTheme)
-
-	mux.HandleFunc("GET /api/project", a.handleProject)
+// Route is one HTTP route and the scope it requires. The table registers both the
+// handler and the scope, so a route cannot exist without one.
+type Route struct {
+	Method  string
+	Pattern string // path pattern, "{name}" for one segment
+	Scope   string
+	Handler http.HandlerFunc
 }
 
-// Handler returns a standalone http.Handler serving only the /api/* routes.
-// A Sysop UI binary can mount this next to a static SPA handler to serve both
-// same-origin.
+// Routes lists the JSON API (all under /api/).
+func (a *API) Routes() []Route {
+	return []Route{
+		{"GET", "/api/pages", ScopeRead, a.handleListPages},
+		{"POST", "/api/pages", ScopeWrite, a.handleCreatePage},
+		{"GET", "/api/pages/{id}", ScopeRead, a.handleGetPage},
+		{"PUT", "/api/pages/{id}", ScopeWrite, a.handleUpdatePage},
+
+		{"GET", "/api/components", ScopeRead, a.handleListComponents},
+		{"GET", "/api/components/{type}", ScopeRead, a.handleGetComponent},
+
+		{"GET", "/api/datasources", ScopeRead, a.handleListDataSources},
+		{"POST", "/api/datasources", ScopeWrite, a.handleCreateDataSource},
+		{"GET", "/api/datasources/{alias}", ScopeRead, a.handleGetDataSource},
+
+		{"GET", "/api/themes", ScopeRead, a.handleListThemes},
+		{"GET", "/api/themes/{name}", ScopeRead, a.handleGetTheme},
+
+		{"GET", "/api/project", ScopeRead, a.handleProject},
+	}
+}
+
+// Handler returns a handler serving only the /api/* routes (the routes the host mounts
+// under /api/, and what the tests drive).
 func (a *API) Handler() http.Handler {
 	mux := http.NewServeMux()
-	a.Register(mux)
+	for _, r := range a.Routes() {
+		mux.HandleFunc(r.Method+" "+r.Pattern, r.Handler)
+	}
 	return mux
+}
+
+// RegisterScopes records each route's scope on the auth module's table. net/http's
+// "{$}" (end of path) is not a scope-table segment, so the index route is "/" there.
+func RegisterScopes(t *libauth.ScopeTable, routes ...[]Route) {
+	for _, list := range routes {
+		for _, r := range list {
+			t.Route(r.Method, strings.TrimSuffix(r.Pattern, "{$}"), r.Scope)
+		}
+	}
 }
 
 // --- JSON helpers ---
@@ -82,8 +110,27 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	_ = enc.Encode(v)
 }
 
+// writeAPIError answers with Substrate's flat error body {code, message, details?}.
 func writeAPIError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
+	apierr.Write(w, status, errorCode(status), msg, nil)
+}
+
+// errorCode names an HTTP status for the error body's code field.
+func errorCode(status int) string {
+	switch status {
+	case http.StatusBadRequest:
+		return "bad_request"
+	case http.StatusForbidden:
+		return "forbidden"
+	case http.StatusNotFound:
+		return "not_found"
+	case http.StatusConflict:
+		return "conflict"
+	case http.StatusUnprocessableEntity:
+		return "validation_failed"
+	default:
+		return "internal"
+	}
 }
 
 // safeName rejects path segments that could escape the project directory.
@@ -139,13 +186,6 @@ func readYAMLAsJSON(path string) (interface{}, error) {
 }
 
 // --- health ---
-
-func (a *API) handleHealth(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
-		"status":  "ok",
-		"service": "sigil",
-	})
-}
 
 // --- pages ---
 
@@ -261,10 +301,7 @@ func (a *API) writePage(w http.ResponseWriter, page *config.Page, raw []byte, pa
 		for _, e := range result.Errors {
 			errs = append(errs, e.String())
 		}
-		writeJSON(w, http.StatusUnprocessableEntity, map[string]interface{}{
-			"error":   "validation failed",
-			"details": errs,
-		})
+		apierr.Write(w, http.StatusUnprocessableEntity, errorCode(http.StatusUnprocessableEntity), "validation failed", errs)
 		return
 	}
 

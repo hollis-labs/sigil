@@ -76,7 +76,7 @@ endpoints:
   create: "POST /api/sprints"
 `), 0644)
 
-	s := NewServer(sigilDir)
+	s := newTestServer(sigilDir)
 	RegisterAllTools(s)
 	RegisterAllResources(s)
 	RegisterAllPrompts(s)

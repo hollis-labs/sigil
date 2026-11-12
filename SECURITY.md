@@ -37,7 +37,7 @@ Sigil keeps no database and stores no credentials. Project configs, themes and d
 
 ## Current security limitations
 
-- no authentication or TLS on the dev server, or REST API
+- no authentication or TLS on the dev server or REST API
 - the MCP server has full write access to the project it serves
 - generated output is not scanned or sandboxed
 - pre-release contracts

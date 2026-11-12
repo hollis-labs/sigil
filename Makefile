@@ -1,10 +1,7 @@
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-LDFLAGS := -ldflags "-X github.com/hollis-labs/sigil/internal/cli.Version=$(VERSION)"
-
 .PHONY: build test vet install clean demo demo-generate demo-dev se-demo-generate se-demo-dev se-demo
 
 build:
-	go build $(LDFLAGS) -o bin/sigil ./cmd/sigil
+	go build -o bin/sigil ./cmd/sigil
 
 test:
 	go test ./...
@@ -13,7 +10,7 @@ vet:
 	go vet ./...
 
 install:
-	go install $(LDFLAGS) ./cmd/sigil
+	go install ./cmd/sigil
 
 clean:
 	rm -rf bin/

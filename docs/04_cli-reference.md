@@ -232,7 +232,6 @@ Start a live development server with auto-reload.
 
 ```
 sigil serve
-sigil serve --port 8080
 sigil serve --sigil-dir path/to/.sigil
 ```
 
@@ -247,7 +246,7 @@ file changes and reloads the browser via SSE (Server-Sent Events).
 - JSON/REST API under `/api/*` for browser SPAs (see below)
 
 **Flags:**
-- `--port <int>` — HTTP server port (default: 3210)
+- `--port <int>` — HTTP server port (default: the port of the Substrate `httphost.addr` setting, `127.0.0.1:3210`, which the YAML file named by `SUBSTRATE_CONFIG` can change). Only loopback addresses are accepted.
 - `--sigil-dir <string>` — Path to .sigil directory (default: ".sigil")
 
 **JSON API (`/api/*`)**
@@ -258,7 +257,7 @@ logic as the MCP tools.
 
 | Method & path | Description |
 | --- | --- |
-| `GET /api/health` | Liveness probe — returns `{"status":"ok"}` |
+| `GET /healthz` | Liveness probe (served by the Substrate health module, not under `/api/`) |
 | `GET /api/pages` | List pages (id, title, overlay, module) |
 | `GET /api/pages/{id}` | Full page config as JSON |
 | `POST /api/pages` | Create a page (validates before saving) |
@@ -273,13 +272,19 @@ logic as the MCP tools.
 | `GET /api/project` | Project config (`sigil.yaml`) as JSON |
 
 Write endpoints accept a JSON object by default, or a raw YAML document when
-the request carries a YAML `Content-Type`. Page writes return `422` with a
-`details` array when validation fails, and `409` when the target already
-exists.
+the request carries a YAML `Content-Type`. Every write must send an
+`X-Requested-With` header (any non-empty value), or it is refused with `403`.
+Page writes return `422` with a `details` array when validation fails, and
+`409` when the target already exists.
 
-The API is also available as a standalone `http.Handler` via
-`server.NewAPI(sigilDir).Handler()`, so it can be mounted alongside a static
-SPA handler to serve a single-page app and its API same-origin.
+Errors use Substrate's flat body, `{"code": "...", "message": "...", "details": [...]}`
+(`details` only when there is something to list), not the old `{"error": "..."}`.
+
+**Access.** `sigil serve` runs with authentication off, so the Substrate framework
+accepts only a loopback address for `httphost.addr` and refuses to start on any other.
+Requests whose `Host` is not a loopback name or address get `403` (DNS rebinding).
+Each route declares a scope (`sigil.read` for reads and the preview pages,
+`sigil.write` for writes); the scopes are enforced only if the auth mode is ever changed.
 
 ### `sigil export`
 
@@ -381,7 +386,8 @@ Show the Sigil version.
 sigil version
 ```
 
-Version is embedded at build time via `-ldflags`.
+The version comes from the Go build information (the Substrate cli module): a tagged release build prints the tag and
+VCS revision, a plain checkout build prints a pseudo-version, and a build without VCS information prints `(devel)`.
 
 ### `sigil mcp serve`
 
@@ -392,7 +398,9 @@ sigil mcp serve
 ```
 
 Provides JSON-RPC 2.0 over stdio with 9 tools, 7 resource types, and
-2 prompts. See `docs/08_mcp-integration.md` for details.
+2 prompts. See `docs/08_mcp-integration.md` for details. The server is the Substrate
+`mcp` module's: with auth off no token is needed; each tool declares a scope
+(`sigil.read` or `sigil.write`) and the module's `/mcp` endpoint is `sigil.mcp`.
 
 ## Global Flags
 

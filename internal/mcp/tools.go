@@ -8,22 +8,56 @@ import (
 	"strings"
 
 	gomcpserver "github.com/hollis-labs/libs/mcp/plugin-mcp/go-mcp/server"
+	libauth "github.com/hollis-labs/libs/security/auth"
 
 	"github.com/hollis-labs/sigil/internal/components"
 	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/scopes"
 )
 
-// RegisterAllTools registers all Sigil MCP tools.
+// scopedTool is a tool and the scope it requires.
+type scopedTool struct {
+	tool  Tool
+	scope string
+}
+
+// tools is the one table of Sigil's tools: each is registered with its scope.
+func tools(s *Server) []scopedTool {
+	return []scopedTool{
+		{toolListPages(s), scopes.Read},
+		{toolGetPage(s), scopes.Read},
+		{toolCreatePage(s), scopes.Write},
+		{toolUpdatePage(s), scopes.Write},
+		{toolValidate(s), scopes.Read},
+		{toolListComponents(s), scopes.Read},
+		{toolGetComponentSchema(s), scopes.Read},
+		{toolListDataSources(s), scopes.Read},
+		{toolCreateDataSource(s), scopes.Write},
+	}
+}
+
+// RegisterAllTools registers all Sigil MCP tools. Each call is checked against the
+// tool's scope first (see UseAuthorizer).
 func RegisterAllTools(s *Server) {
-	s.RegisterTool(toolListPages(s))
-	s.RegisterTool(toolGetPage(s))
-	s.RegisterTool(toolCreatePage(s))
-	s.RegisterTool(toolUpdatePage(s))
-	s.RegisterTool(toolValidate(s))
-	s.RegisterTool(toolListComponents(s))
-	s.RegisterTool(toolGetComponentSchema(s))
-	s.RegisterTool(toolListDataSources(s))
-	s.RegisterTool(toolCreateDataSource(s))
+	for _, st := range tools(s) {
+		t, handler := st.tool, st.tool.Handler
+		t.Handler = func(ctx context.Context, args map[string]any) (any, error) {
+			if s.authorize != nil {
+				if err := s.authorize(ctx, t.Name); err != nil {
+					return nil, err
+				}
+			}
+			return handler(ctx, args)
+		}
+		s.RegisterTool(t)
+	}
+}
+
+// RegisterScopes records each tool's scope on the auth module's table.
+func RegisterScopes(t *libauth.ScopeTable) {
+	for _, st := range tools(&Server{}) {
+		t.Tool(st.tool.Name, st.scope)
+	}
 }
 
 func toolListPages(s *Server) Tool {

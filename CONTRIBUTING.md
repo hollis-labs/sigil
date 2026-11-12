@@ -12,7 +12,7 @@ How a change gets from your clone into `main`. This is deliberately short: most 
 
 1. **Branch.** `<type>/<short-slug>`, where the type matches the change — `feat`, `fix`, `docs`, `chore`. Nothing enforces this; it is what the history does.
 2. **Change one thing.** A branch carrying two unrelated changes costs the reviewer the ability to accept one and question the other.
-3. **Run the checks** when the change is done: `make vet test`.
+3. **Run the checks** when the change is done: `make vet test`, plus the Substrate pins check (`go run github.com/hollis-labs/substrate/cmd/substrate pins check --app .`).
 4. **Push, and open a pull request** against `main`.
 
 Commit subjects follow the conventional-commit shape — a type, an optional scope, a colon, then the summary. To see what is actually in use rather than trusting this sentence:

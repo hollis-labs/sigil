@@ -1,13 +1,33 @@
 package cli
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
 
-// NewRootCmd creates the root sigil command.
+	"github.com/hollis-labs/substrate/module"
+)
+
+// NewRootCmd creates a standalone root sigil command with the compile commands
+// installed. The binary does not use it: it installs everything on the Substrate cli
+// module's root instead (Install). Tests drive this one; it has no serve or mcp, which
+// need the started framework app.
 func NewRootCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "sigil",
-		Short: "UI configuration and code generation tool",
-		Long: `Sigil turns declarative YAML configs into framework-specific UI code.
+	cmd := &cobra.Command{Use: "sigil"}
+
+	installCompile(cmd)
+	return cmd
+}
+
+// Install adds sigil's global flags and commands to root, which supplies version,
+// config and health (the Substrate cli module), and wires serve and mcp to the app.
+func Install(root *cobra.Command, app *module.App) {
+	installCompile(root)
+	root.AddCommand(NewServeCmd(app))
+	root.AddCommand(NewMCPCmd(app))
+}
+
+func installCompile(cmd *cobra.Command) {
+	cmd.Short = "UI configuration and code generation tool"
+	cmd.Long = `Sigil turns declarative YAML configs into framework-specific UI code.
 
 Examples:
   sigil init                        Initialize a new Sigil project
@@ -24,16 +44,13 @@ Examples:
   sigil list components             List all registered component types
   sigil export --format json        Export pages as JSON
   sigil import --from json -i dir/  Import pages from JSON
-  sigil mcp serve                   Start MCP server for AI agents`,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			noColor, _ := cmd.Root().Flags().GetBool("no-color")
-			if noColor {
-				DisableColor()
-			}
-		},
+  sigil mcp serve                   Start MCP server for AI agents`
+	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		noColor, _ := cmd.Root().Flags().GetBool("no-color")
+		if noColor {
+			DisableColor()
+		}
 	}
-
-	// Global flags
 	cmd.PersistentFlags().Bool("no-color", false, "Disable colored output")
 	cmd.PersistentFlags().Bool("verbose", false, "Enable verbose/debug output")
 
@@ -45,12 +62,8 @@ Examples:
 	cmd.AddCommand(NewPreviewCmd())
 	cmd.AddCommand(NewExportCmd())
 	cmd.AddCommand(NewImportCmd())
-	cmd.AddCommand(NewServeCmd())
-	cmd.AddCommand(NewVersionCmd())
-	cmd.AddCommand(NewMCPCmd())
 	cmd.AddCommand(NewDiffCmd())
 	cmd.AddCommand(NewMigrateCmd())
 	cmd.AddCommand(NewSchemaCmd())
 	cmd.AddCommand(NewDoctorCmd())
-	return cmd
 }

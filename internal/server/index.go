@@ -13,11 +13,6 @@ import (
 )
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
 	pages := s.ListPages()
 	projectName := s.projectName()
 	theme := s.loadTheme()

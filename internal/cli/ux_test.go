@@ -51,30 +51,17 @@ func TestLevenshtein(t *testing.T) {
 	}
 }
 
-func TestVersionCmd(t *testing.T) {
-	rootCmd := NewRootCmd()
-	rootCmd.SetArgs([]string{"version"})
-	var out bytes.Buffer
-	rootCmd.SetOut(&out)
-	if err := rootCmd.Execute(); err != nil {
-		t.Fatalf("version command failed: %v", err)
-	}
-	if out.String() != "sigil dev\n" {
-		t.Errorf("expected 'sigil dev\\n', got %q", out.String())
-	}
-}
-
 func TestNoColorFlag(t *testing.T) {
 	// Save original state
 	origColor := colorEnabled
 	defer func() { colorEnabled = origColor }()
 
 	rootCmd := NewRootCmd()
-	rootCmd.SetArgs([]string{"version", "--no-color"})
+	rootCmd.SetArgs([]string{"list", "components", "--no-color"})
 	var out bytes.Buffer
 	rootCmd.SetOut(&out)
 	if err := rootCmd.Execute(); err != nil {
-		t.Fatalf("version --no-color failed: %v", err)
+		t.Fatalf("list components --no-color failed: %v", err)
 	}
 	if colorEnabled {
 		t.Error("expected color to be disabled after --no-color")
