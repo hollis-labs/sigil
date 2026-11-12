@@ -1,7 +1,8 @@
 # sigil on Substrate. One binary: the compile commands, `serve` (the dev preview and its
 # JSON API) and `mcp serve`. No database, no identity: Sigil keeps its state in the
-# project's .sigil directory. The preview runs with auth off on loopback; the framework
-# refuses any other bind address in that mode.
+# project's .sigil directory. The preview runs with auth off on loopback. The framework
+# also accepts tailnet addresses in that mode; Sigil's own check (loopbackAddr in
+# internal/cli/serve.go) allows loopback only.
 app: sigil
 variant: cli
 profiles: [minimal]

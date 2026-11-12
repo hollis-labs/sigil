@@ -146,6 +146,13 @@ Shape: one binary (`cmd/sigil`), one manifest (`cmd/sigil/substrate.yaml`): `var
     `Version`. The deployed sigil-sysop unit is being retired by the owner, so nothing downstream of it matters.
 
 
+## Known limits
+
+- **The preview index does not escape project values.** `internal/server/index.go` writes page id, title, overlay and
+  module into the index HTML as they are (it did so before the port). With the Host check and the write guard, a
+  page on another site cannot plant content, so the risk is low, but a project file with markup in a title runs in
+  the preview. Not changed here; the new Sigil GUI task (CW-20261112-0108) must not inherit it.
+
 ## Old to new
 
 ### Commands and flags
