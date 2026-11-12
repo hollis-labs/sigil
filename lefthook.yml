@@ -25,10 +25,10 @@ pre-commit:
         fi
 
     go-lint:
-      # Only lints new/modified code so existing warnings don't block commits.
+      # The whole repository lints clean; keep it that way.
       glob: "*.go"
       skip_empty: true
-      run: golangci-lint run --new --timeout 30s
+      run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.4 run --timeout 2m
 
     go-vet:
       glob: "*.go"

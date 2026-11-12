@@ -19,8 +19,6 @@ resources:
       command:
         - ./bin/sigil
         - serve
-        - --port
-        - "3210"
       dir: ~/dev/hollis-labs/apps/sigil
       mode: os_service
       port: 3210

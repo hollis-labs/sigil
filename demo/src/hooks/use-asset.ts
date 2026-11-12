@@ -9,7 +9,7 @@ const mockAssets: Asset[] = [
     provider: "aws",
     status: "healthy",
     region: "us-east-1",
-    ipAddress: "10.0.1.42",
+    ipAddress: "192.0.2.42",
     cost: "$142/mo",
     createdAt: "2025-11-15T08:00:00Z",
     lastSeenAt: "2026-03-29T10:15:00Z",

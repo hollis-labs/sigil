@@ -1,64 +1,33 @@
-name: CI
-
+name: ci
 on:
   push:
     branches: [main]
   pull_request:
-
 permissions:
   contents: read
-
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  go:
-    name: ${{ matrix.module }} (lint + build + race)
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        module: [root, sysop]
-        include:
-          - module: root
-            path: .
-          - module: sysop
-            path: sysop
     env:
       GOWORK: "off"
-      GOMAXPROCS: "4"
-      GOFLAGS: "-p=2"
-    defaults:
-      run:
-        working-directory: ${{ matrix.path }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
-          fetch-depth: 0
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: ${{ matrix.path }}/go.mod
-          cache-dependency-path: ${{ matrix.path }}/go.sum
-      - name: Set up Node for Sysop frontend
-        if: matrix.module == 'sysop'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22.12.0"
-          cache: npm
-          cache-dependency-path: sysop/frontend/package-lock.json
-      - name: Build embedded Sysop frontend
-        if: matrix.module == 'sysop'
-        working-directory: sysop/frontend
-        run: npm ci --no-audit --no-fund && npm run build
+          go-version-file: go.mod
       - name: Check formatting
         run: test -z "$(gofmt -l cmd internal)"
-      - name: Lint changed code
-        uses: golangci/golangci-lint-action@v8
+      - run: go vet ./...
+      - name: pins match the Substrate BOM
+        run: go run github.com/hollis-labs/substrate/cmd/substrate pins check --app .
+      - run: go test -p 2 -race -count=1 -timeout=5m ./...
+      - uses: golangci/golangci-lint-action@v7
         with:
           version: v2.11.4
-          working-directory: ${{ matrix.path }}
-          args: --config ${{ github.workspace }}/.golangci.yml --timeout=3m --new-from-rev=${{ github.event.pull_request.base.sha || github.event.before }} ./...
-      - name: Vet
-        run: go vet ./...
-      - name: Build
-        run: go build ./...
-      - name: Test under race
-        run: go test -p 2 -race -count=1 -timeout=3m ./...
+          args: --config .golangci.yml --timeout=5m ./...
+      # Tree only. The history gate (--ref HEAD) returns after the program-wide history pass.
+      - name: hygiene (secrets, hosts, private paths; tree)
+        run: python3 scripts/scan-public --tree

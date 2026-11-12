@@ -45,8 +45,8 @@ layout:
 `
 	pathA := filepath.Join(dir, "a.yaml")
 	pathB := filepath.Join(dir, "b.yaml")
-	os.WriteFile(pathA, []byte(pageA), 0644)
-	os.WriteFile(pathB, []byte(pageB), 0644)
+	os.WriteFile(pathA, []byte(pageA), 0o600)
+	os.WriteFile(pathB, []byte(pageB), 0o600)
 
 	cmd := NewRootCmd()
 	var out bytes.Buffer
@@ -80,7 +80,7 @@ layout:
   type: rows
 `
 	path := filepath.Join(dir, "page.yaml")
-	os.WriteFile(path, []byte(page), 0644)
+	os.WriteFile(path, []byte(page), 0o600)
 
 	cmd := NewRootCmd()
 	var out bytes.Buffer
@@ -100,7 +100,7 @@ layout:
 func TestMigrateCommandDryRun(t *testing.T) {
 	dir := t.TempDir()
 	sigilDir := filepath.Join(dir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
 
 	// Page without component IDs
 	page := `sigil: "1.0"
@@ -117,7 +117,7 @@ layout:
         level: 2
         text: Hello
 `
-	os.WriteFile(filepath.Join(sigilDir, "pages", "test.yaml"), []byte(page), 0644)
+	os.WriteFile(filepath.Join(sigilDir, "pages", "test.yaml"), []byte(page), 0o600)
 
 	cmd := NewRootCmd()
 	var out bytes.Buffer
@@ -141,7 +141,7 @@ layout:
 func TestMigrateCommandNoChanges(t *testing.T) {
 	dir := t.TempDir()
 	sigilDir := filepath.Join(dir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
 
 	page := `sigil: "1.0"
 kind: page
@@ -158,7 +158,7 @@ layout:
         level: 2
         text: Hello
 `
-	os.WriteFile(filepath.Join(sigilDir, "pages", "test.yaml"), []byte(page), 0644)
+	os.WriteFile(filepath.Join(sigilDir, "pages", "test.yaml"), []byte(page), 0o600)
 
 	cmd := NewRootCmd()
 	var out bytes.Buffer
@@ -191,7 +191,7 @@ func TestSchemaExportCommand(t *testing.T) {
 
 	// Verify schema file exists
 	schemaPath := filepath.Join(outputDir, "page.schema.json")
-	data, err := os.ReadFile(schemaPath)
+	data, err := os.ReadFile(schemaPath) //nolint:gosec // test reads a file it created in a temp directory
 	if err != nil {
 		t.Fatalf("reading schema: %v", err)
 	}
@@ -235,9 +235,9 @@ func TestSchemaExportCommand(t *testing.T) {
 func TestDoctorCommand(t *testing.T) {
 	dir := t.TempDir()
 	sigilDir := filepath.Join(dir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
-	os.MkdirAll(filepath.Join(sigilDir, "themes"), 0755)
-	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte("name: test\nversion: \"1.0\""), 0644)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
+	os.MkdirAll(filepath.Join(sigilDir, "themes"), 0o750)
+	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte("name: test\nversion: \"1.0\""), 0o600)
 
 	cmd := NewRootCmd()
 	var out bytes.Buffer

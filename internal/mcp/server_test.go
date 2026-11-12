@@ -2,18 +2,27 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"testing"
+
+	gomcpserver "github.com/hollis-labs/libs/mcp/plugin-mcp/go-mcp/server"
+	libauth "github.com/hollis-labs/libs/security/auth"
 )
 
+// newTestServer wraps a standalone go-mcp server, as the Substrate mcp module's would be.
+func newTestServer(sigilDir string) *Server {
+	return NewServer(gomcpserver.NewServer("sigil", "test"), sigilDir)
+}
+
 func TestNewServer(t *testing.T) {
-	s := NewServer("/tmp/example/.sigil")
+	s := newTestServer("/tmp/example/.sigil")
 	if got := s.SigilDir(); got != "/tmp/example/.sigil" {
 		t.Errorf("SigilDir() = %q, want %q", got, "/tmp/example/.sigil")
 	}
 }
 
 func TestRegisterAllToolsAnnotations(t *testing.T) {
-	s := NewServer(".")
+	s := newTestServer(".")
 	RegisterAllTools(s)
 
 	defs := s.ToolDefinitions()
@@ -59,7 +68,7 @@ func TestRegisterAllToolsAnnotations(t *testing.T) {
 }
 
 func TestRegisterAllToolsUpdatePageIsDestructive(t *testing.T) {
-	s := NewServer(".")
+	s := newTestServer(".")
 	RegisterAllTools(s)
 
 	for _, d := range s.ToolDefinitions() {
@@ -75,7 +84,7 @@ func TestRegisterAllToolsUpdatePageIsDestructive(t *testing.T) {
 }
 
 func TestCallToolDirect(t *testing.T) {
-	s := NewServer(".")
+	s := newTestServer(".")
 	RegisterAllTools(s)
 
 	if _, err := s.CallTool(context.Background(), "sigil_list_components", map[string]any{}); err != nil {
@@ -84,8 +93,42 @@ func TestCallToolDirect(t *testing.T) {
 }
 
 func TestCallToolUnknown(t *testing.T) {
-	s := NewServer(".")
+	s := newTestServer(".")
 	if _, err := s.CallTool(context.Background(), "nonexistent", map[string]any{}); err == nil {
 		t.Fatal("expected error for unknown tool")
+	}
+}
+
+// TestEveryToolHasAScope: the tool table is the only registration path and each entry
+// carries a scope, mapped onto the auth module's table.
+func TestEveryToolHasAScope(t *testing.T) {
+	table := libauth.NewScopeTable()
+	RegisterScopes(table)
+	s := newTestServer(".")
+	RegisterAllTools(s)
+	for _, d := range s.ToolDefinitions() {
+		scope, known := table.ForTool(d.Name)
+		if !known || (scope != "sigil.read" && scope != "sigil.write") {
+			t.Errorf("tool %s: scope %q (known %v)", d.Name, scope, known)
+		}
+		if wantWrite := !d.Annotations.ReadOnlyHint; wantWrite != (scope == "sigil.write") {
+			t.Errorf("tool %s: scope %q does not match its read-only hint %v", d.Name, scope, d.Annotations.ReadOnlyHint)
+		}
+	}
+}
+
+func TestToolsAreAuthorizedBeforeTheyRun(t *testing.T) {
+	s := newTestServer(".")
+	RegisterAllTools(s)
+	var asked []string
+	s.UseAuthorizer(func(_ context.Context, tool string) error {
+		asked = append(asked, tool)
+		return errors.New("denied")
+	})
+	if _, err := s.CallTool(context.Background(), "sigil_list_components", map[string]any{}); err == nil {
+		t.Fatal("a denied call must fail")
+	}
+	if len(asked) != 1 || asked[0] != "sigil_list_components" {
+		t.Errorf("authorizer saw %v", asked)
 	}
 }

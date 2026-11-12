@@ -39,7 +39,7 @@ func runNewTheme(cmd *cobra.Command, args []string) error {
 	force, _ := cmd.Flags().GetBool("force")
 
 	outDir := filepath.Join(".sigil", "themes")
-	if err := os.MkdirAll(outDir, 0755); err != nil {
+	if err := os.MkdirAll(outDir, 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 		return fmt.Errorf("creating themes directory: %w", err)
 	}
 

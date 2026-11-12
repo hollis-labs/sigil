@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- **Sigil is a Substrate app** (`cmd/sigil/substrate.yaml`): one binary with the framework's config, logging, health, HTTP host, auth guard, MCP server and CLI skeleton. `sigil version`, `sigil config` and `sigil health` come from the framework; `sigil version` prints the module version and VCS revision from the build instead of the `-ldflags` string.
+- `sigil serve` listens on `httphost.addr` (default `127.0.0.1:3210`, set in the `SUBSTRATE_CONFIG` file) (`--port` still overrides the port); Sigil refuses any address that is not loopback. A request for another `Host` gets 403, and API writes need an `X-Requested-With` header.
+- `/api/*` errors use `{code, message, details?}` instead of `{"error": "..."}`; health is `GET /healthz`, replacing `GET /api/health`.
+- `sigil mcp serve` runs on the Substrate `mcp` module; every route and tool declares a scope (`sigil.read`, `sigil.write`).
+- Lint gate: `golangci-lint run` is clean for the whole repository.
+
+### Removed
+
+- **Sysop** (the `sysop/` admin app and its `sigil_sysop` binary) is dropped. A new GUI is a separate, later task.
+
 ### Security
 
 - Go toolchain 1.26.10 (`go` directive and CI pin) for GO-2026-6809 (crypto/x509); no behavior change.

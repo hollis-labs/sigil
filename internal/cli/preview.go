@@ -73,10 +73,10 @@ func runPreview(cmd *cobra.Command, args []string) error {
 		outputPath = filepath.Join(tmpDir, fmt.Sprintf("sigil-preview-%s.html", pageID))
 	}
 
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 		return fmt.Errorf("creating output directory: %w", err)
 	}
-	if err := os.WriteFile(outputPath, html, 0644); err != nil {
+	if err := os.WriteFile(outputPath, html, 0644); err != nil { //nolint:gosec // project files are user-editable; mode matches sigil init
 		return fmt.Errorf("writing preview: %w", err)
 	}
 
@@ -97,7 +97,7 @@ func loadPreviewTheme(sigilDir, themeName string) *renderer.ThemeConfig {
 	// Try project config for default theme
 	if themeName == "" {
 		projPath := filepath.Join(sigilDir, "sigil.yaml")
-		data, err := os.ReadFile(projPath)
+		data, err := os.ReadFile(projPath) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 		if err == nil {
 			var proj config.ProjectConfig
 			if yaml.Unmarshal(data, &proj) == nil && proj.Defaults.Theme != "" {
@@ -126,7 +126,7 @@ func loadPreviewDataSources(sigilDir string) map[string]*renderer.DataSourceMani
 
 	result := map[string]*renderer.DataSourceManifest{}
 	for _, path := range matches {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 		if err != nil {
 			continue
 		}
@@ -153,11 +153,11 @@ func openBrowser(path string) error {
 
 	switch runtime.GOOS {
 	case "darwin":
-		return exec.Command("open", url).Start()
+		return exec.Command("open", url).Start() //nolint:gosec // fixed opener command; the argument is a local file URL, not a shell string
 	case "linux":
-		return exec.Command("xdg-open", url).Start()
+		return exec.Command("xdg-open", url).Start() //nolint:gosec // fixed opener command; the argument is a local file URL, not a shell string
 	case "windows":
-		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start() //nolint:gosec // fixed opener command; the argument is a local file URL, not a shell string
 	default:
 		return fmt.Errorf("unsupported platform %q", runtime.GOOS)
 	}

@@ -6,8 +6,8 @@ compiled into framework-native source for Go/Templ+HTMX or React/shadcn+
 Tailwind. It has no runtime component: generated code never depends on Sigil
 once it's written.
 
-> **Pre-release.** Sigil is unreleased, not deployed, and has no outside
-> consumers. It's being built in the open: the code, the docs, and this
+> **Pre-release.** Sigil is unreleased and has no outside consumers; its
+> a new GUI for Sigil is planned as a separate task. It's being built in the open: the code, the docs, and this
 > README describe what exists today, not a pitch for what's planned.
 > Interfaces and behavior change without notice, and there are no
 > compatibility guarantees yet.
@@ -67,14 +67,13 @@ one internal tool matches the look of the others.
 with its generated Go/Templ and React output checked in. Three demo apps are
 generated from the `.sigil/` project: `demo/` (the "Forge" infra dashboard,
 `make demo`), `stack-explorer-demo/` (`make se-demo`), and `demo-clockwork/`
-(`make cw-demo`). `sysop/` is a Sysop UI admin app over a Sigil project.
+(`make cw-demo`).
 
 ## Roadmap
 
 - **Sysop UI kit coverage.** `--ui-kit sysop` currently re-exports 13 shadcn
   primitives from the shared kit; the rest still fall back to per-app
-  components. Closing that gap is active work; the Sysop admin screens
-  aren't at parity yet.
+  components. Closing that gap is active work.
 - **Portfolio compiler direction.** `docs/ui-compiler-direction.md` sets out
   a direction for Sigil resolving shared design-system, datasource, and
   route contracts across Hollis Labs apps, rather than per-project component
@@ -83,6 +82,14 @@ generated from the `.sigil/` project: `demo/` (the "Forge" infra dashboard,
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Built on Substrate
+
+The `sigil` program is a [Substrate](https://github.com/hollis-labs/substrate) app: `cmd/sigil/substrate.yaml`
+selects the framework modules (config, logging, health, cli), and the generated `substrate_wiring.go` links them.
+The compile commands live in `internal/cli`. Substrate applies to the program only: what Sigil generates never
+imports it, and a test enforces that. See `docs/architecture.md` and `docs/conversion-notes.md` for the layout, the
+open decisions and the old-to-new mapping.
 
 ## Install
 
@@ -210,7 +217,9 @@ layout:
 | `sigil migrate` | Migrate configs to latest schema |
 | `sigil schema export` | Generate JSON Schema for IDE support |
 | `sigil doctor` | Check environment health |
-| `sigil version` | Show version |
+| `sigil version` | Show the version (module version and VCS revision from the build) |
+| `sigil config` | Print the effective module configuration |
+| `sigil health` | Run the health checks and print the report |
 | `sigil mcp serve` | Start MCP server for AI agents |
 
 ## Render Targets

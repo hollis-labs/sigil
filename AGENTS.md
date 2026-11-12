@@ -11,6 +11,9 @@ runtime.
 
 - `README.md` for the CLI surface, `docs/01_architecture.md` through
   `docs/09_sysop-ui-kit.md` for the specs.
+- `cmd/sigil/substrate.yaml` is the manifest of the `sigil` program (Substrate app, `variant: cli`);
+  `cmd/sigil/substrate_wiring.go` is generated from it (`go run github.com/hollis-labs/substrate/cmd/substrate
+  generate -f cmd/sigil/substrate.yaml`). Never edit the wiring file by hand.
 - `internal/renderer/renderer.go` defines the `Renderer` interface every target
   implements; `docs/05_renderer-contract.md` explains it.
 - `internal/renderer/engine.go` is the only place output reaches disk. Renderers
@@ -24,31 +27,33 @@ runtime.
   `internal/mcp/` is the agent-facing surface.
 - `.sigil/` is a real Sigil project — the dogfood workspace `sigil serve` and
   `sigil generate` read.
-- `sysop/` is a separate Go module: the Sysop admin binary and its Vite frontend.
 
 ## Commands
 
 ```bash
 make build              # → bin/sigil
-make test               # go test ./... — root module only
+make test               # go test ./...
 make vet
-cd sysop && go test ./...
+go run github.com/hollis-labs/substrate/cmd/substrate pins check --app .
+python3 scripts/scan-public --tree   # history gate (--ref HEAD) returns after the program-wide history pass
 ```
 
-`lefthook` gates commits on gofmt/goimports, `golangci-lint run --new` and
+`lefthook` gates commits on gofmt/goimports, the pinned `golangci-lint` v2.11.4 (the version CI runs) and
 `go vet ./...`, and pushes on `go test ./...`. The `make demo`, `make se-demo`
 and `make cw-demo` targets regenerate output into the checked-in demo apps —
 use them to see a renderer change, not to verify one.
 
 ## Boundaries
 
-`sysop/` is its own Go module. `go test ./...` at the repo root does not reach
-it, so a change touching both needs both commands.
-
-The five Sysop UI screens in `sysop/frontend/src/pages/` are hand-composed on
-purpose. The react-shadcn `--ui-kit` renderer is not at parity and its generated
-pages break at runtime against the server API. Do not "fix" these screens by
-regenerating them.
+Substrate applies to the `sigil` program, never to what it emits. Generated code
+must not import `github.com/hollis-labs/substrate`; `TestGeneratedOutputIsFreeOfSubstrate`
+holds that. Pins live in Substrate's `bom/bom.yaml`: do not edit versions in `go.mod`
+by hand, run `pins check`. Sigil is one binary with one manifest
+(`cmd/sigil/substrate.yaml`): the compile commands, `serve` and `mcp serve`. Every HTTP
+route and every MCP tool needs a declared scope (`sigil.read` / `sigil.write`; the MCP
+endpoint is `sigil.mcp`). `serve` runs with `auth.mode: off` and Sigil refuses any
+non-loopback address (`loopbackAddr`, stricter than the framework's check); never change that mode without adding identity. Gaps
+go in `docs/conversion-notes.md`.
 
 Hooks under `demo/src/hooks/` and the sibling demo apps are hand-written mocks,
 because SWR 2.x does not work with React 19. The demo targets protect them with

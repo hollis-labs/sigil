@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	libauth "github.com/hollis-labs/libs/security/auth"
+
 	"github.com/hollis-labs/sigil/internal/config"
 )
 
@@ -49,22 +51,6 @@ func apiRequest(t *testing.T, h http.Handler, method, path string, body []byte) 
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	return w
-}
-
-func TestAPIHealth(t *testing.T) {
-	h := NewAPI(setupTestProject(t)).Handler()
-	w := apiRequest(t, h, "GET", "/api/health", nil)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
-	}
-	var resp map[string]string
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if resp["status"] != "ok" {
-		t.Errorf("expected status ok, got %q", resp["status"])
-	}
 }
 
 func TestAPIListPages(t *testing.T) {
@@ -332,12 +318,12 @@ func TestAPIProject(t *testing.T) {
 // TestAPIMountedOnDevServer verifies the API coexists with the HTML preview
 // routes on the same mux: /api/* serves JSON and the existing routes still work.
 func TestAPIMountedOnDevServer(t *testing.T) {
-	srv := New(setupTestProject(t), 0)
+	srv := New(setupTestProject(t))
 	h := srv.Handler()
 
-	w := apiRequest(t, h, "GET", "/api/health", nil)
-	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "ok") {
-		t.Fatalf("api health failed: %d %s", w.Code, w.Body.String())
+	w := apiRequest(t, h, "GET", "/api/project", nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("api project failed: %d %s", w.Code, w.Body.String())
 	}
 
 	// Existing HTML preview routes unaffected.
@@ -348,5 +334,103 @@ func TestAPIMountedOnDevServer(t *testing.T) {
 	w = apiRequest(t, h, "GET", "/pages/test-page", nil)
 	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "Hello World") {
 		t.Errorf("page preview route broken: %d", w.Code)
+	}
+}
+
+// TestAPIErrorBodyIsFlat holds the Substrate error convention: {code, message, details?}
+// at the top level, never the old {"error": "..."} shape.
+func TestAPIErrorBodyIsFlat(t *testing.T) {
+	h := NewAPI(setupTestProject(t)).Handler()
+
+	w := apiRequest(t, h, "GET", "/api/pages/nope", nil)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body["code"] != "not_found" || body["message"] == "" || body["message"] == nil {
+		t.Errorf("want {code: not_found, message: ...}, got %v", body)
+	}
+	if _, old := body["error"]; old {
+		t.Errorf("old error field present: %v", body)
+	}
+
+	bad, _ := json.Marshal(config.Page{Sigil: "1.0", ID: "broken"})
+	w = apiRequest(t, h, "POST", "/api/pages", bad)
+	body = map[string]any{}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	details, _ := body["details"].([]any)
+	if body["code"] != "validation_failed" || len(details) == 0 {
+		t.Errorf("want validation_failed with details, got %v", body)
+	}
+}
+
+// TestEveryRouteHasAScope: the route tables are the only way a route is registered, and
+// each entry must carry a scope. RegisterScopes puts them on the auth module's table.
+func TestEveryRouteHasAScope(t *testing.T) {
+	srv := New(setupTestProject(t))
+	api := NewAPI(srv.SigilDir)
+	routes := append(srv.Previews(), api.Routes()...)
+	if len(routes) < 16 {
+		t.Fatalf("expected at least 16 routes, got %d", len(routes))
+	}
+	table := libauth.NewScopeTable()
+	RegisterScopes(table, srv.Previews(), api.Routes())
+	for _, r := range routes {
+		if r.Scope != ScopeRead && r.Scope != ScopeWrite {
+			t.Errorf("%s %s: scope %q is not declared", r.Method, r.Pattern, r.Scope)
+		}
+		if r.Handler == nil {
+			t.Errorf("%s %s: no handler", r.Method, r.Pattern)
+		}
+		want := ScopeRead
+		if r.Method != "GET" {
+			want = ScopeWrite
+		}
+		if r.Scope != want {
+			t.Errorf("%s %s: scope %q, want %q", r.Method, r.Pattern, r.Scope, want)
+		}
+		path := strings.NewReplacer("{id}", "x", "{type}", "x", "{alias}", "x", "{name}", "x", "{$}", "").Replace(r.Pattern)
+		if got, known := table.ForRoute(r.Method, path); !known || got != r.Scope {
+			t.Errorf("%s %s: scope table says %q (known %v), want %q", r.Method, r.Pattern, got, known, r.Scope)
+		}
+	}
+	// An unlisted route is unmapped: a route outside the tables has no scope.
+	if _, known := table.ForRoute("GET", "/api/unlisted"); known {
+		t.Error("an unlisted route must not be mapped")
+	}
+}
+
+func TestRequireRequestedWith(t *testing.T) {
+	h := RequireRequestedWith(NewAPI(setupTestProject(t)).Handler())
+	body, _ := json.Marshal(config.Page{Sigil: "1.0", ID: "broken"})
+
+	for _, method := range []string{"POST", "PUT", "DELETE"} {
+		req := httptest.NewRequest(method, "/api/pages", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("%s without the header: want 403, got %d", method, w.Code)
+		}
+		var resp map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil || resp["code"] != "forbidden" {
+			t.Errorf("%s: want a flat forbidden body, got %s", method, w.Body.String())
+		}
+	}
+
+	req := httptest.NewRequest("POST", "/api/pages", bytes.NewReader(body))
+	req.Header.Set("X-Requested-With", "sigil")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code == http.StatusForbidden {
+		t.Errorf("a write with the header must reach the handler, got 403")
+	}
+
+	if w := apiRequest(t, h, "GET", "/api/pages", nil); w.Code != http.StatusOK {
+		t.Errorf("reads need no header, got %d", w.Code)
 	}
 }

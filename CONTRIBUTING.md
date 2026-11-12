@@ -12,7 +12,7 @@ How a change gets from your clone into `main`. This is deliberately short: most 
 
 1. **Branch.** `<type>/<short-slug>`, where the type matches the change — `feat`, `fix`, `docs`, `chore`. Nothing enforces this; it is what the history does.
 2. **Change one thing.** A branch carrying two unrelated changes costs the reviewer the ability to accept one and question the other.
-3. **Run the checks** when the change is done: `make vet test`, and `cd sysop && go test ./...` if you touched `sysop/`.
+3. **Run the checks** when the change is done: `make vet test`, plus the Substrate pins check (`go run github.com/hollis-labs/substrate/cmd/substrate pins check --app .`).
 4. **Push, and open a pull request** against `main`.
 
 Commit subjects follow the conventional-commit shape — a type, an optional scope, a colon, then the summary. To see what is actually in use rather than trusting this sentence:
@@ -33,10 +33,9 @@ If a number appears in the description, put the command that produced it beside 
 
 ## Things that surprise people
 
-- **`sysop/` is its own Go module.** `go test ./...` at the root does not reach it.
 - **A component renders in every target or its unsupported status is documented.** A schema added under `internal/components/builtin/` without a case in each renderer validates and then emits nothing.
 - **Only `internal/renderer/engine.go` writes to disk.** Renderers return `[]OutputFile`; that is what makes `--dry-run` and `--clean` work.
-- **The Sysop UI screens are hand-composed on purpose**, and the demo hooks are hand-written mocks. Regenerating over them breaks them; the `make` demo targets protect the hooks with `rsync --ignore-existing`.
+- **The demo hooks are hand-written mocks.** Regenerating over them breaks them; the `make` demo targets protect the hooks with `rsync --ignore-existing`.
 - **`make demo`, `make se-demo` and `make cw-demo` regenerate checked-in apps.** Use them to see a renderer change, not to verify one.
 - **Generated code must never depend on Sigil at runtime.**
 

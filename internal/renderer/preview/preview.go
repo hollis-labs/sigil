@@ -25,8 +25,8 @@ func GenerateHTML(cfg *PreviewConfig) ([]byte, error) {
 	page := cfg.Page
 
 	buf.WriteString("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n")
-	buf.WriteString(fmt.Sprintf("  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"))
-	buf.WriteString(fmt.Sprintf("  <title>%s — Sigil Preview</title>\n", page.Title))
+	buf.WriteString("  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n")
+	fmt.Fprintf(&buf, "  <title>%s — Sigil Preview</title>\n", page.Title)
 	buf.WriteString("  <script src=\"https://cdn.tailwindcss.com\"></script>\n")
 	buf.WriteString("  <style>\n")
 
@@ -122,7 +122,7 @@ func writeDefaultTokens(buf *bytes.Buffer) {
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		buf.WriteString(fmt.Sprintf("      --sigil-%s: %s;\n", k, defaults[k]))
+		fmt.Fprintf(buf, "      --sigil-%s: %s;\n", k, defaults[k])
 	}
 }
 
@@ -380,11 +380,12 @@ func renderPreviewComponent(buf *bytes.Buffer, c *config.Component, depth int, c
 		justify := getPropString(c.Props, "justify", "")
 		align := getPropString(c.Props, "align", "")
 		classes := fmt.Sprintf("flex flex-row gap-%s", gap)
-		if justify == "between" {
+		switch justify {
+		case "between":
 			classes += " justify-between"
-		} else if justify == "center" {
+		case "center":
 			classes += " justify-center"
-		} else if justify == "end" {
+		case "end":
 			classes += " justify-end"
 		}
 		if align == "center" {
@@ -438,7 +439,7 @@ func renderPreviewComponent(buf *bytes.Buffer, c *config.Component, depth int, c
 		renderPreviewDataTable(buf, c, prefix, cfg)
 
 	case "form":
-		renderPreviewForm(buf, c, prefix, depth, cfg)
+		renderPreviewForm(buf, c, prefix)
 
 	case "badge":
 		text := getPropString(c.Props, "text", "")
@@ -560,7 +561,7 @@ func renderPreviewDataTable(buf *bytes.Buffer, c *config.Component, prefix strin
 	fmt.Fprintf(buf, "%s</div>\n", prefix)
 }
 
-func renderPreviewForm(buf *bytes.Buffer, c *config.Component, prefix string, depth int, cfg *PreviewConfig) {
+func renderPreviewForm(buf *bytes.Buffer, c *config.Component, prefix string) {
 	fmt.Fprintf(buf, "%s<form class=\"sigil-form flex flex-col gap-4\" onsubmit=\"event.preventDefault()\">\n", prefix)
 
 	if fields, ok := c.Props["fields"]; ok {

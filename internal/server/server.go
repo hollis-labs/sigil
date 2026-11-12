@@ -3,7 +3,6 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,63 +17,55 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Server is the Sigil live development server.
+// Server is the Sigil live development server: the preview pages and the reload
+// stream. The HTTP listener belongs to the Substrate httphost module; Server only
+// supplies handlers.
 type Server struct {
 	SigilDir string
-	Port     int
 
-	mu      sync.RWMutex
-	clients map[chan struct{}]struct{}
-	mux     *http.ServeMux
-	srv     *http.Server
+	mu       sync.RWMutex
+	clients  map[chan struct{}]struct{}
+	quit     chan struct{}
+	quitOnce sync.Once
 }
 
 // New creates a new dev server.
-func New(sigilDir string, port int) *Server {
-	s := &Server{
+func New(sigilDir string) *Server {
+	return &Server{
 		SigilDir: sigilDir,
-		Port:     port,
 		clients:  make(map[chan struct{}]struct{}),
+		quit:     make(chan struct{}),
 	}
-	s.mux = s.buildMux()
-	return s
 }
 
-func (s *Server) buildMux() *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /", s.handleIndex)
-	mux.HandleFunc("GET /pages/{id}", s.handlePage)
-	mux.HandleFunc("GET /assets/theme.css", s.handleThemeCSS)
-	mux.HandleFunc("GET /events", s.handleSSE)
-
-	// Mount the JSON/REST API. The /api/* routes coexist with the HTML
-	// preview routes above; a browser SPA consumes the API while the
-	// preview pages keep working unchanged.
-	NewAPI(s.SigilDir).Register(mux)
-
-	return mux
+// StopStreams ends every open reload stream and refuses new ones, so a graceful
+// shutdown is not held up by browsers keeping the page open.
+func (s *Server) StopStreams() {
+	s.quitOnce.Do(func() { close(s.quit) })
 }
 
-// Handler returns the HTTP handler (for testing).
+// Previews lists the HTML preview routes and the reload stream. They are outside /api/,
+// so the host mounts them; each declares a scope like the API routes do. "/{$}" is the
+// index page only (a plain "/" would shadow everything else).
+func (s *Server) Previews() []Route {
+	return []Route{
+		{"GET", "/{$}", ScopeRead, s.handleIndex},
+		{"GET", "/pages/{id}", ScopeRead, s.handlePage},
+		{"GET", "/assets/theme.css", ScopeRead, s.handleThemeCSS},
+		{"GET", "/events", ScopeRead, s.handleSSE},
+	}
+}
+
+// Handler returns the preview and API routes on one mux, for tests.
 func (s *Server) Handler() http.Handler {
-	return s.mux
-}
-
-// ListenAndServe starts the server.
-func (s *Server) ListenAndServe() error {
-	s.srv = &http.Server{
-		Addr:    fmt.Sprintf("127.0.0.1:%d", s.Port),
-		Handler: s.mux,
+	mux := http.NewServeMux()
+	for _, r := range s.Previews() {
+		mux.HandleFunc(r.Method+" "+r.Pattern, r.Handler)
 	}
-	return s.srv.ListenAndServe()
-}
-
-// Shutdown gracefully stops the server.
-func (s *Server) Shutdown(ctx context.Context) error {
-	if s.srv != nil {
-		return s.srv.Shutdown(ctx)
+	for _, r := range NewAPI(s.SigilDir).Routes() {
+		mux.HandleFunc(r.Method+" "+r.Pattern, r.Handler)
 	}
-	return nil
+	return mux
 }
 
 // NotifyReload sends a reload event to all connected SSE clients.
@@ -119,10 +110,10 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Inject reload script and navigation header before </body>
-	html = injectDevExtras(html, pageID, s.SigilDir)
+	html = injectDevExtras(html, pageID)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(html)
+	_, _ = w.Write(html)
 }
 
 // handleThemeCSS serves the theme as a CSS file.
@@ -130,7 +121,7 @@ func (s *Server) handleThemeCSS(w http.ResponseWriter, r *http.Request) {
 	theme := s.loadTheme()
 	if theme == nil {
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
-		w.Write([]byte("/* no theme found */\n"))
+		_, _ = w.Write([]byte("/* no theme found */\n"))
 		return
 	}
 
@@ -143,13 +134,13 @@ func (s *Server) handleThemeCSS(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		for key, val := range tokens {
-			buf.WriteString(fmt.Sprintf("  --sigil-%s: %v;\n", key, val))
+			fmt.Fprintf(&buf, "  --sigil-%s: %v;\n", key, val)
 		}
 	}
 	buf.WriteString("}\n")
 
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
-	w.Write(buf.Bytes())
+	_, _ = w.Write(buf.Bytes())
 }
 
 // handleSSE sends server-sent events for live reload.
@@ -184,6 +175,8 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-ctx.Done():
 			return
+		case <-s.quit:
+			return
 		case <-ch:
 			fmt.Fprintf(w, "event: reload\ndata: %d\n\n", time.Now().Unix())
 			flusher.Flush()
@@ -202,7 +195,7 @@ func (s *Server) loadTheme() *renderer.ThemeConfig {
 	// Try project config for default theme name
 	themeName := "default"
 	projPath := filepath.Join(s.SigilDir, "sigil.yaml")
-	data, err := os.ReadFile(projPath)
+	data, err := os.ReadFile(projPath) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 	if err == nil {
 		var proj config.ProjectConfig
 		if yaml.Unmarshal(data, &proj) == nil && proj.Defaults.Theme != "" {
@@ -211,7 +204,7 @@ func (s *Server) loadTheme() *renderer.ThemeConfig {
 	}
 
 	path := filepath.Join(s.SigilDir, "themes", themeName+".yaml")
-	data, err = os.ReadFile(path)
+	data, err = os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 	if err != nil {
 		return nil
 	}
@@ -231,7 +224,7 @@ func (s *Server) loadDataSources() map[string]*renderer.DataSourceManifest {
 
 	result := map[string]*renderer.DataSourceManifest{}
 	for _, path := range matches {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 		if err != nil {
 			continue
 		}
@@ -296,7 +289,7 @@ func countComponents(c *config.Component) int {
 }
 
 // injectDevExtras adds the reload script and a nav bar to the preview HTML.
-func injectDevExtras(html []byte, currentPage, sigilDir string) []byte {
+func injectDevExtras(html []byte, currentPage string) []byte {
 	reloadScript := `<script>
 const es = new EventSource('/events');
 es.addEventListener('reload', () => location.reload());

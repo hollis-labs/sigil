@@ -150,9 +150,9 @@ type DataSourceRelation struct {
 }
 
 // HasCapability checks if the datasource supports a given capability.
-func (ds *DataSourceManifest) HasCapability(cap string) bool {
+func (ds *DataSourceManifest) HasCapability(capability string) bool {
 	for _, c := range ds.Capabilities {
-		if c == cap {
+		if c == capability {
 			return true
 		}
 	}

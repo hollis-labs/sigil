@@ -55,7 +55,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		filepath.Join(sigilDir, "themes"),
 	}
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 			return fmt.Errorf("creating %s: %w", dir, err)
 		}
 	}
@@ -63,7 +63,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	// Create .gitkeep files
 	for _, dir := range dirs[:3] { // pages, components, datasources
 		keepFile := filepath.Join(dir, ".gitkeep")
-		if err := os.WriteFile(keepFile, []byte{}, 0644); err != nil {
+		if err := os.WriteFile(keepFile, []byte{}, 0644); err != nil { //nolint:gosec // project files are user-editable; mode matches sigil init
 			return fmt.Errorf("creating %s: %w", keepFile, err)
 		}
 	}

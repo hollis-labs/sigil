@@ -8,22 +8,56 @@ import (
 	"strings"
 
 	gomcpserver "github.com/hollis-labs/libs/mcp/plugin-mcp/go-mcp/server"
+	libauth "github.com/hollis-labs/libs/security/auth"
 
 	"github.com/hollis-labs/sigil/internal/components"
 	"github.com/hollis-labs/sigil/internal/config"
+	"github.com/hollis-labs/sigil/internal/scopes"
 )
 
-// RegisterAllTools registers all Sigil MCP tools.
+// scopedTool is a tool and the scope it requires.
+type scopedTool struct {
+	tool  Tool
+	scope string
+}
+
+// tools is the one table of Sigil's tools: each is registered with its scope.
+func tools(s *Server) []scopedTool {
+	return []scopedTool{
+		{toolListPages(s), scopes.Read},
+		{toolGetPage(s), scopes.Read},
+		{toolCreatePage(s), scopes.Write},
+		{toolUpdatePage(s), scopes.Write},
+		{toolValidate(), scopes.Read},
+		{toolListComponents(), scopes.Read},
+		{toolGetComponentSchema(), scopes.Read},
+		{toolListDataSources(s), scopes.Read},
+		{toolCreateDataSource(s), scopes.Write},
+	}
+}
+
+// RegisterAllTools registers all Sigil MCP tools. Each call is checked against the
+// tool's scope first (see UseAuthorizer).
 func RegisterAllTools(s *Server) {
-	s.RegisterTool(toolListPages(s))
-	s.RegisterTool(toolGetPage(s))
-	s.RegisterTool(toolCreatePage(s))
-	s.RegisterTool(toolUpdatePage(s))
-	s.RegisterTool(toolValidate(s))
-	s.RegisterTool(toolListComponents(s))
-	s.RegisterTool(toolGetComponentSchema(s))
-	s.RegisterTool(toolListDataSources(s))
-	s.RegisterTool(toolCreateDataSource(s))
+	for _, st := range tools(s) {
+		t, handler := st.tool, st.tool.Handler
+		t.Handler = func(ctx context.Context, args map[string]any) (any, error) {
+			if s.authorize != nil {
+				if err := s.authorize(ctx, t.Name); err != nil {
+					return nil, err
+				}
+			}
+			return handler(ctx, args)
+		}
+		s.RegisterTool(t)
+	}
+}
+
+// RegisterScopes records each tool's scope on the auth module's table.
+func RegisterScopes(t *libauth.ScopeTable) {
+	for _, st := range tools(&Server{}) {
+		t.Tool(st.tool.Name, st.scope)
+	}
 }
 
 func toolListPages(s *Server) Tool {
@@ -77,7 +111,7 @@ func toolGetPage(s *Server) Tool {
 			id, _ := args["id"].(string)
 
 			path := filepath.Join(s.SigilDir(), "pages", id+".yaml")
-			data, err := os.ReadFile(path)
+			data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 			if err != nil {
 				return nil, fmt.Errorf("page %q not found: %w", id, err)
 			}
@@ -122,7 +156,7 @@ func toolCreatePage(s *Server) Tool {
 
 			// Write file
 			path := filepath.Join(s.SigilDir(), "pages", id+".yaml")
-			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 				return nil, err
 			}
 			if err := os.WriteFile(path, []byte(cfg), 0600); err != nil {
@@ -194,7 +228,7 @@ func toolUpdatePage(s *Server) Tool {
 	}
 }
 
-func toolValidate(s *Server) Tool {
+func toolValidate() Tool {
 	return Tool{
 		Name:        "sigil_validate",
 		Description: "Validate a Sigil config (YAML string or file path)",
@@ -251,7 +285,7 @@ func toolValidate(s *Server) Tool {
 	}
 }
 
-func toolListComponents(s *Server) Tool {
+func toolListComponents() Tool {
 	return Tool{
 		Name:        "sigil_list_components",
 		Description: "List available component types with their schemas",
@@ -314,7 +348,7 @@ func toolListComponents(s *Server) Tool {
 	}
 }
 
-func toolGetComponentSchema(s *Server) Tool {
+func toolGetComponentSchema() Tool {
 	return Tool{
 		Name:        "sigil_get_component_schema",
 		Description: "Get the full schema for a component type",
@@ -372,7 +406,7 @@ func toolListDataSources(s *Server) Tool {
 			var result []map[string]interface{}
 			for _, path := range matches {
 				name := strings.TrimSuffix(filepath.Base(path), ".yaml")
-				data, err := os.ReadFile(path)
+				data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 				if err != nil {
 					continue
 				}
@@ -419,7 +453,7 @@ func toolCreateDataSource(s *Server) Tool {
 			cfg, _ := args["config"].(string)
 
 			dsDir := filepath.Join(s.SigilDir(), "datasources")
-			if err := os.MkdirAll(dsDir, 0755); err != nil {
+			if err := os.MkdirAll(dsDir, 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 				return nil, err
 			}
 

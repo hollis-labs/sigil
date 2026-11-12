@@ -2,7 +2,6 @@ package server
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -17,9 +16,9 @@ func setupTestProject(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	sigilDir := filepath.Join(dir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
-	os.MkdirAll(filepath.Join(sigilDir, "themes"), 0755)
-	os.MkdirAll(filepath.Join(sigilDir, "datasources"), 0755)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
+	os.MkdirAll(filepath.Join(sigilDir, "themes"), 0o750)
+	os.MkdirAll(filepath.Join(sigilDir, "datasources"), 0o750)
 
 	// Project config
 	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte(`
@@ -27,7 +26,7 @@ version: "1.0"
 name: test-project
 defaults:
   theme: default
-`), 0644)
+`), 0o600)
 
 	// Theme
 	os.WriteFile(filepath.Join(sigilDir, "themes", "default.yaml"), []byte(`
@@ -42,7 +41,7 @@ tokens:
     border: "63 63 70"
   radius:
     md: "0.375rem"
-`), 0644)
+`), 0o600)
 
 	// Test page
 	os.WriteFile(filepath.Join(sigilDir, "pages", "test-page.yaml"), []byte(`
@@ -62,14 +61,14 @@ layout:
       props:
         level: 2
         text: Hello World
-`), 0644)
+`), 0o600)
 
 	return sigilDir
 }
 
 func TestHandlePage(t *testing.T) {
 	sigilDir := setupTestProject(t)
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 
 	req := httptest.NewRequest("GET", "/pages/test-page", nil)
 	req.SetPathValue("id", "test-page")
@@ -97,7 +96,7 @@ func TestHandlePage(t *testing.T) {
 
 func TestHandlePageNotFound(t *testing.T) {
 	sigilDir := setupTestProject(t)
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 
 	req := httptest.NewRequest("GET", "/pages/nonexistent", nil)
 	req.SetPathValue("id", "nonexistent")
@@ -112,7 +111,7 @@ func TestHandlePageNotFound(t *testing.T) {
 
 func TestHandleIndex(t *testing.T) {
 	sigilDir := setupTestProject(t)
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 
 	req := httptest.NewRequest("GET", "/", nil)
 	w := httptest.NewRecorder()
@@ -142,10 +141,10 @@ func TestHandleIndex(t *testing.T) {
 func TestHandleIndexNoPages(t *testing.T) {
 	dir := t.TempDir()
 	sigilDir := filepath.Join(dir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
-	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte("version: \"1.0\"\nname: empty"), 0644)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
+	os.WriteFile(filepath.Join(sigilDir, "sigil.yaml"), []byte("version: \"1.0\"\nname: empty"), 0o600)
 
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 	req := httptest.NewRequest("GET", "/", nil)
 	w := httptest.NewRecorder()
 
@@ -161,7 +160,7 @@ func TestHandleIndexNoPages(t *testing.T) {
 
 func TestHandleThemeCSS(t *testing.T) {
 	sigilDir := setupTestProject(t)
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 
 	req := httptest.NewRequest("GET", "/assets/theme.css", nil)
 	w := httptest.NewRecorder()
@@ -187,9 +186,9 @@ func TestHandleThemeCSS(t *testing.T) {
 func TestHandleThemeCSSNoTheme(t *testing.T) {
 	dir := t.TempDir()
 	sigilDir := filepath.Join(dir, ".sigil")
-	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0755)
+	os.MkdirAll(filepath.Join(sigilDir, "pages"), 0o750)
 
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 	req := httptest.NewRequest("GET", "/assets/theme.css", nil)
 	w := httptest.NewRecorder()
 
@@ -205,7 +204,7 @@ func TestHandleThemeCSSNoTheme(t *testing.T) {
 
 func TestHandleSSE(t *testing.T) {
 	sigilDir := setupTestProject(t)
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
@@ -276,7 +275,7 @@ func TestHandleSSE(t *testing.T) {
 
 func TestListPages(t *testing.T) {
 	sigilDir := setupTestProject(t)
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 
 	pages := srv.ListPages()
 	if len(pages) != 1 {
@@ -295,7 +294,7 @@ func TestListPages(t *testing.T) {
 
 func TestIntegrationServer(t *testing.T) {
 	sigilDir := setupTestProject(t)
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
@@ -341,24 +340,9 @@ func TestIntegrationServer(t *testing.T) {
 	resp.Body.Close()
 }
 
-func TestGracefulShutdown(t *testing.T) {
-	sigilDir := setupTestProject(t)
-	srv := New(sigilDir, 0)
-
-	// Use httptest for this test
-	ts := httptest.NewServer(srv.Handler())
-	ts.Close() // immediate close should not panic
-
-	// Test Shutdown on unstarted server
-	err := srv.Shutdown(context.Background())
-	if err != nil {
-		t.Errorf("shutdown on unstarted server: %v", err)
-	}
-}
-
 func TestNotifyReloadNoClients(t *testing.T) {
 	sigilDir := setupTestProject(t)
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 
 	// Should not panic with no connected clients
 	srv.NotifyReload()
@@ -366,7 +350,7 @@ func TestNotifyReloadNoClients(t *testing.T) {
 
 func TestCountComponents(t *testing.T) {
 	sigilDir := setupTestProject(t)
-	srv := New(sigilDir, 0)
+	srv := New(sigilDir)
 
 	pages := srv.ListPages()
 	// Root (rows) + heading = 2
@@ -383,7 +367,7 @@ func TestInjectDevExtras(t *testing.T) {
 </body>
 </html>`)
 
-	result := injectDevExtras(html, "test-page", ".sigil")
+	result := injectDevExtras(html, "test-page")
 	content := string(result)
 
 	if !strings.Contains(content, "EventSource('/events')") {

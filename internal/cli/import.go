@@ -25,7 +25,7 @@ func NewImportCmd() *cobra.Command {
 	cmd.Flags().StringP("input", "i", "", "Input file or directory (required)")
 	cmd.Flags().String("sigil-dir", ".sigil", "Path to .sigil directory")
 	cmd.Flags().Bool("dry-run", false, "Validate without writing")
-	cmd.MarkFlagRequired("input")
+	_ = cmd.MarkFlagRequired("input")
 	return cmd
 }
 
@@ -62,7 +62,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 	pagesDir := filepath.Join(sigilDir, "pages")
 	if !dryRun {
-		if err := os.MkdirAll(pagesDir, 0755); err != nil {
+		if err := os.MkdirAll(pagesDir, 0755); err != nil { //nolint:gosec // project directories are user-editable; mode matches sigil init
 			return fmt.Errorf("creating pages directory: %w", err)
 		}
 	}
@@ -73,14 +73,14 @@ func runImport(cmd *cobra.Command, args []string) error {
 	var errors []string
 
 	for _, path := range jsonFiles {
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) //nolint:gosec // path is a project file chosen by the caller (CLI flag or .sigil layout)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("%s: %v", filepath.Base(path), err))
 			continue
 		}
 
 		var page config.Page
-		if err := json.Unmarshal(data, &page); err != nil {
+		if err = json.Unmarshal(data, &page); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: invalid JSON: %v", filepath.Base(path), err))
 			continue
 		}
@@ -113,7 +113,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 		}
 
 		outPath := filepath.Join(pagesDir, page.ID+".yaml")
-		if err := os.WriteFile(outPath, yamlData, 0644); err != nil {
+		if err := os.WriteFile(outPath, yamlData, 0644); err != nil { //nolint:gosec // project files are user-editable; mode matches sigil init
 			errors = append(errors, fmt.Sprintf("%s: write error: %v", filepath.Base(path), err))
 			continue
 		}

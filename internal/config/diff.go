@@ -236,7 +236,7 @@ func FormatDiff(result *DiffResult, color bool) string {
 	}
 
 	var buf strings.Builder
-	buf.WriteString(fmt.Sprintf("%d change(s):\n\n", len(result.Changes)))
+	fmt.Fprintf(&buf, "%d change(s):\n\n", len(result.Changes))
 
 	for _, c := range result.Changes {
 		var prefix, label string
@@ -249,9 +249,9 @@ func FormatDiff(result *DiffResult, color bool) string {
 				label = fmt.Sprintf("+ %s", c.Path)
 			}
 			if c.NewVal != "" {
-				buf.WriteString(fmt.Sprintf("  %s = %s\n", label, c.NewVal))
+				fmt.Fprintf(&buf, "  %s = %s\n", label, c.NewVal)
 			} else {
-				buf.WriteString(fmt.Sprintf("  %s\n", label))
+				fmt.Fprintf(&buf, "  %s\n", label)
 			}
 		case "removed":
 			if color {
@@ -261,9 +261,9 @@ func FormatDiff(result *DiffResult, color bool) string {
 				label = fmt.Sprintf("- %s", c.Path)
 			}
 			if c.OldVal != "" {
-				buf.WriteString(fmt.Sprintf("  %s = %s\n", label, c.OldVal))
+				fmt.Fprintf(&buf, "  %s = %s\n", label, c.OldVal)
 			} else {
-				buf.WriteString(fmt.Sprintf("  %s\n", label))
+				fmt.Fprintf(&buf, "  %s\n", label)
 			}
 		case "modified":
 			if color {
@@ -272,7 +272,7 @@ func FormatDiff(result *DiffResult, color bool) string {
 			} else {
 				label = fmt.Sprintf("~ %s", c.Path)
 			}
-			buf.WriteString(fmt.Sprintf("  %s: %s → %s\n", label, c.OldVal, c.NewVal))
+			fmt.Fprintf(&buf, "  %s: %s → %s\n", label, c.OldVal, c.NewVal)
 		}
 	}
 
