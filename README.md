@@ -67,14 +67,13 @@ one internal tool matches the look of the others.
 with its generated Go/Templ and React output checked in. Three demo apps are
 generated from the `.sigil/` project: `demo/` (the "Forge" infra dashboard,
 `make demo`), `stack-explorer-demo/` (`make se-demo`), and `demo-clockwork/`
-(`make cw-demo`). `sysop/` is a Sysop UI admin app over a Sigil project.
+(`make cw-demo`).
 
 ## Roadmap
 
 - **Sysop UI kit coverage.** `--ui-kit sysop` currently re-exports 13 shadcn
   primitives from the shared kit; the rest still fall back to per-app
-  components. Closing that gap is active work; the Sysop admin screens
-  aren't at parity yet.
+  components. Closing that gap is active work.
 - **Portfolio compiler direction.** `docs/ui-compiler-direction.md` sets out
   a direction for Sigil resolving shared design-system, datasource, and
   route contracts across Hollis Labs apps, rather than per-project component

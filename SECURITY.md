@@ -11,7 +11,7 @@ Do not include an exploit, token, credential or other sensitive material in a pu
 Use GitHub's private vulnerability-reporting flow when the repository's Security tab offers it. If it is unavailable, contact a repository maintainer privately through a contact channel published on the Hollis Labs organization or maintainer profile. Include:
 
 - the affected commit and operating system
-- which command was involved (`sigil serve`, `sigil mcp serve`, `sigil generate`, `sigil_sysop`)
+- which command was involved (`sigil serve`, `sigil mcp serve`, `sigil generate`)
 - how it was started, and whether the listener was reachable beyond the local machine
 - reproduction steps and the security impact
 - a safe way to contact you about coordination
@@ -23,7 +23,6 @@ Maintainers will acknowledge a private report, investigate it, and coordinate di
 Sigil is a build-time compiler and a local development tool, not a hosted service. Its networked pieces are for one developer on one machine:
 
 - **`sigil serve`** runs the dev server, preview and REST API (`/api/pages`, `/api/datasources`, and so on). It has **no authentication and no TLS**, and its write endpoints (`POST`/`PUT`) change the project's YAML on disk. It binds `127.0.0.1` by default. Do not bind it to another address unless something in front of it provides authentication and TLS.
-- **`sigil_sysop`** (in `sysop/`) is an admin UI over a Sigil project with the same properties: no authentication, loopback by default. Its `-addr` flag can widen that (for example `:8080` listens on all interfaces); treat doing so as exposing file-write access to anyone who can reach the port.
 - **`sigil mcp serve`** speaks MCP over stdio to the agent that spawned it and can create and update page configs. It runs with the invoking user's permissions; run it only for an agent you trust with the project directory.
 
 ## Generated code
@@ -38,7 +37,7 @@ Sigil keeps no database and stores no credentials. Project configs, themes and d
 
 ## Current security limitations
 
-- no authentication or TLS on the dev server, REST API or Sysop UI
+- no authentication or TLS on the dev server, or REST API
 - the MCP server has full write access to the project it serves
 - generated output is not scanned or sandboxed
 - pre-release contracts

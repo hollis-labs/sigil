@@ -24,15 +24,13 @@ runtime.
   `internal/mcp/` is the agent-facing surface.
 - `.sigil/` is a real Sigil project — the dogfood workspace `sigil serve` and
   `sigil generate` read.
-- `sysop/` is a separate Go module: the Sysop admin binary and its Vite frontend.
 
 ## Commands
 
 ```bash
 make build              # → bin/sigil
-make test               # go test ./... — root module only
+make test               # go test ./...
 make vet
-cd sysop && go test ./...
 ```
 
 `lefthook` gates commits on gofmt/goimports, `golangci-lint run --new` and
@@ -41,14 +39,6 @@ and `make cw-demo` targets regenerate output into the checked-in demo apps —
 use them to see a renderer change, not to verify one.
 
 ## Boundaries
-
-`sysop/` is its own Go module. `go test ./...` at the repo root does not reach
-it, so a change touching both needs both commands.
-
-The five Sysop UI screens in `sysop/frontend/src/pages/` are hand-composed on
-purpose. The react-shadcn `--ui-kit` renderer is not at parity and its generated
-pages break at runtime against the server API. Do not "fix" these screens by
-regenerating them.
 
 Hooks under `demo/src/hooks/` and the sibling demo apps are hand-written mocks,
 because SWR 2.x does not work with React 19. The demo targets protect them with

@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Go toolchain 1.26.10 (`go` directive and CI pin) for GO-2026-6809 (crypto/x509); no behavior change.
 
+### Removed
+
+- **Sigil Sysop** (`sysop/`: the `sigil_sysop` binary and its Vite frontend) is not supported and is removed with its CI steps and docs, by the owner's decision of 2026-11-12. The `--ui-kit sysop` renderer option stays.
+
 ### Added
 
 - **Sigil Sysop UI admin surface** (`sysop/`), a separate Go module with a Vite frontend over a Sigil project.
